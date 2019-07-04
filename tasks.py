@@ -5,7 +5,8 @@ import json
 import os
 import pathlib
 import subprocess
-from shutil import rmtree, copy
+import shutil
+from distutils.dir_util import copy_tree
 from glob import glob
 
 from src.version import __version__
@@ -13,8 +14,8 @@ from src.version import __version__
 
 REQUIREMENTS = 'requirements.txt'
 if sys.platform == 'win32':
-    GALAXY_PATH = 'D:\Program Files (x86)\GOG Galaxy\GalaxyClient.exe'
-    DIST_DIR = os.environ['localappdata'] + '\GOG.com\Galaxy\plugins\installed'
+    GALAXY_PATH = 'D:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe'
+    DIST_DIR = os.environ['localappdata'] + '\\GOG.com\\Galaxy\\plugins\\installed'
 elif sys.platform == 'darwin':
     GALAXY_PATH = "/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy"
     DIST_DIR = os.environ['HOME'] + r"/Library/Application\ Support/GOG.com/Galaxy/plugins/installed"
@@ -28,27 +29,29 @@ def install():
     subprocess.run(["pip", "install", REQUIREMENTS])
 
 def build(output=DIST_PLUGIN):
+    print('removing', output)
     if os.path.exists(output):
-        rmtree(output)
+        shutil.rmtree(output)
 
-    # install dependencies
     args = [
         "pip", "install",
         "-r", REQUIREMENTS,
         "--target", output,
-        "--implementation", "cp",
-        "--python-version", "37",
-        "--no-compile",
-        "--no-deps"
+        # "--implementation", "cp",
+        # "--python-version", "37",
+        # "--no-deps"
     ]
-    print('running', args)
-    subprocess.run(args)
+    print(f'running `{" ".join(args)}`')
+    subprocess.check_call(args)
 
-    # copy source
+    print('copying source code ...')
     for file_ in glob("src/*.py"):
-        copy(file_, output)
+        shutil.copy(file_, output)
 
-    # create manifest
+    print('copying galaxy api ...')
+    copy_tree("galaxy-integrations-python-api/src", output)
+
+    print('creating manifest ...')
     manifest = {
         "name": "Humble Bundle plugin",
         "platform": "humble",
