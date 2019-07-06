@@ -1,5 +1,6 @@
 import sys
 import logging
+import re
 
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
@@ -13,9 +14,9 @@ from backend import Backend
 AUTH_PARAMS = {
     "window_title": "Login to HumbleBundle",
     "window_width": 560,
-    "window_height": 600,
-    "start_uri": "https://www.humblebundle.com/login?goto=home",  # or https://www.humblebundle.com/account-start?goto=home"
-    "end_uri_regex": "https://www.humblebundle.com/home/library"
+    "window_height": 610,
+    "start_uri": "https://www.humblebundle.com/login?goto=/home/library",  # or https://www.humblebundle.com/account-start?goto=home"
+    "end_uri_regex": "^" + re.escape("https://www.humblebundle.com/home/library")
 }
 
 
