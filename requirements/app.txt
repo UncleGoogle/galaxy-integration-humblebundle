@@ -1,0 +1,4 @@
+# galaxy api dependencies
+aiohttp==3.5.4
+certifi==2019.3.9
+# plugin dependencies

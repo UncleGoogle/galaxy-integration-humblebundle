@@ -70,6 +70,11 @@ def dist(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     print(f'Reopening Galaxy from {galaxy_path}')
     subprocess.run([galaxy_path])
 
+def debug(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
+    print('copying source code ...')
+    for file_ in glob("src/*.py"):
+        shutil.copy(file_, output)
+
 def test():
     subprocess.run(["pytest"])
 
@@ -81,6 +86,8 @@ def main():
         build()
     elif args.command == 'dist':
         dist()
+    elif args.command == 'debug':
+        debug()
     elif args.command == 'test':
         test()
 

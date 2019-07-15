@@ -1,4 +1,6 @@
 import sys
+import os
+import json
 import logging
 import re
 
@@ -26,18 +28,43 @@ class HumbleBundlePlugin(Plugin):
         self._backend = Backend()
 
     async def authenticate(self, stored_credentials=None):
+        #debug
+        if not stored_credentials:
+            stored_credentials = {}
+            cookies_file = os.path.join(os.path.dirname(__file__), "cookies")
+            if os.path.exists(cookies_file):
+                with open(cookies_file, 'r') as f:
+                    cookies = json.load(f)
+                    for c in cookies:
+                        stored_credentials[c['name']] = c
+                    logging.debug(type(stored_credentials))
+                    logging.debug(stored_credentials)
+
         if not stored_credentials:
             return NextStep("web_session", AUTH_PARAMS)
 
-        # logging.info('stored credentials found')
-        # user = self._backend.auth_with_credentials(stored_credentials)
-        # return Authentication(user.id, user.nickname)
+        logging.info('stored credentials found')
+        user_id, user_name = await self._backend.authenticate(stored_credentials)
+        return Authentication(user_id, user_name)
 
     async def pass_login_credentials(self, step, credentials, cookies):
-        logging.info(cookies)
-        logging.info(credentials)
-        logging.info(step)
-        return Authentication('mock', 'mock')
+        logging.info(json.dumps(cookies, indent=4))
+
+        with open(os.path.join(os.path.dirname(__file__), "cookies"), 'w') as f:
+            json.dump(cookies, f, indent=4)
+        
+        # cookies = json.loads(cookies)
+        cookie_dict = {}
+        for c in cookies:
+            cookie_dict[c['name']] = c
+            logging.debug(c)
+            logging.debug(type(c))
+            if c['name'] == '_simpleauth_sess':
+                simple_auth = c['value']
+        
+        user_id, user_name = await self._backend.authenticate(cookie_dict)
+        self.store_credentials(cookie_dict)
+        return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
         return []
