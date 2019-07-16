@@ -17,7 +17,7 @@ parser.add_argument("command")
 
 
 def install():
-    subprocess.run(["pip", "install", REQUIREMENTS])
+    subprocess.run(["pip", "install", "-r", REQUIREMENTS])
 
 def build(output=DIST_PLUGIN):
     print('removing', output)
