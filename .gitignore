@@ -3,6 +3,7 @@
 .env
 galaxy/
 info.md
+credentials.data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
