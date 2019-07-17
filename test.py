@@ -64,7 +64,7 @@ if __name__ == "__main__":
             await asyncio.sleep(1)
 
     async def start_test():
-        await asyncio.start_server(run_server_connection, "127.0.0.1", "7996")
+        await asyncio.start_server(run_server_connection, "127.0.0.1", "7994")
 
     loop = asyncio.get_event_loop()
     loop.create_task(start_test())

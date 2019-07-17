@@ -12,13 +12,6 @@ from galaxy.api.errors import InvalidCredentials
 from version import __version__
 from backend import Backend
 
-import requests
-import http.cookiejar
-import http.cookies
-import aiohttp.cookiejar
-from http.cookies import Morsel, SimpleCookie
-
-from galaxy.http import create_client_session
 
 AUTH_PARAMS = {
     "window_title": "Login to HumbleBundle",
@@ -39,49 +32,25 @@ class HumbleBundlePlugin(Plugin):
             return NextStep("web_session", AUTH_PARAMS)
 
         logging.info('stored credentials found')
-        res = await self.poc(stored_credentials)
-        # user_id, user_name = await self._backend.authenticate(stored_credentials)
-        # return Authentication(user_id, user_name)
+        user_id, user_name = await self._backend.authenticate(stored_credentials)
+        return Authentication(user_id, user_name)
 
     async def pass_login_credentials(self, step, credentials, cookies):
         logging.info(json.dumps(cookies, indent=4))
+        auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
+        logging.debug(f'===auth cookie, type {type(auth_cookie)}, val: {auth_cookie}')
+        self.store_credentials(auth_cookie)
 
-        with open(os.path.join(os.path.dirname(__file__), "cookies"), 'w') as f:
-            json.dump(cookies, f, indent=4)
-        
-        for c in cookies:
-            if c['name'] == '_simpleauth_sess':
-                simple_auth = c['value']
-        
-        self.store_credentials(simple_auth)
-        await self.poc(simple_auth)
-        user_id, user_name = await self._backend.authenticate(cookie_dict)
+        user_id, user_name = await self._backend.authenticate(auth_cookie)
         return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
+        orders = await self._backend.get_orders_list()
+        log.info(orders)
         return []
-    
-    async def poc(self, auth_sess_cookie):
-        self.default_headers = {
-            "Accept": "application/json",
-            "Accept-Charset": "utf-8",
-            "Keep-Alive": "true",
-            "X-Requested-By": "hb_android_app",
-            "User-Agent": "Apache-HttpClient/UNAVAILABLE (java 1.4)"
-        }
-        self.default_params = {"ajax": "true"}
 
-        self.session = create_client_session(headers=self.default_headers)
-
-        cookie = SimpleCookie()
-        cookie['_simpleauth_sess'] = auth_sess_cookie['value']
-        self.session.cookie_jar.update_cookies(cookie)
-
-        ORDER_LIST_URL = "https://www.humblebundle.com/api/v1/user/order?ajax=true"
-        response = await self.session.request("GET", ORDER_LIST_URL)
-        j = await response.json()
-        print(j)
-
+    def shutdown(self):
+        self._backend._session.close()
 
 def main():
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)
