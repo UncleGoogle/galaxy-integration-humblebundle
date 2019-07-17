@@ -19,6 +19,7 @@ parser.add_argument("command")
 def install():
     subprocess.run(["pip", "install", "-r", REQUIREMENTS])
 
+
 def build(output=DIST_PLUGIN):
     print('removing', output)
     if os.path.exists(output):
@@ -57,6 +58,7 @@ def build(output=DIST_PLUGIN):
     with open(os.path.join(output, "manifest.json"), "w") as file_:
         json.dump(manifest, file_, indent=4)
 
+
 def dist(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     for proc in psutil.process_iter(attrs=['exe'], ad_value=''):
         if proc.info['exe'] == galaxy_path:
@@ -70,13 +72,16 @@ def dist(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     print(f'Reopening Galaxy from {galaxy_path}')
     subprocess.run([galaxy_path])
 
+
 def debug(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     print('copying source code ...')
     for file_ in glob("src/*.py"):
         shutil.copy(file_, output)
 
+
 def test():
     subprocess.run(["pytest"])
+
 
 def main():
     args = parser.parse_args()
@@ -90,11 +95,9 @@ def main():
         debug()
     elif args.command == 'test':
         test()
+    else:
+        print(f'command {args.command} not exits')
+
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
