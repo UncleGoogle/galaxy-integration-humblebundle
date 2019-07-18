@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import re
+import webbrowser
 
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
@@ -11,7 +12,8 @@ from galaxy.api.errors import InvalidCredentials
 
 from version import __version__
 from webservice import AuthorizedHumbleAPI
-from humblegame import HumbleGame
+from humblegame import HumbleGame, HumbleDownloader
+from consts import PlatformNotSupported, GAME_PLATFORMS
 
 
 AUTH_PARAMS = {
@@ -25,13 +27,12 @@ AUTH_PARAMS = {
 
 
 class HumbleBundlePlugin(Plugin):
-    GAME_PLATFORMS = ['windows', 'mac', 'linux']  # TODO think about 'android'
-    DLC_PLATFORMS = ['ebook', 'audio']  # TODO push those with base game
 
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
         self._games = []
+        self._downloader = HumbleDownloader()
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -49,23 +50,37 @@ class HumbleBundlePlugin(Plugin):
         user_id, user_name = await self._api.authenticate(auth_cookie)
         return Authentication(user_id, user_name)
 
-    def _is_game(self, sub):
-        whitelist = self.GAME_PLATFORMS
-        default = False
-        return next(filter(lambda x: x['platform'] in whitelist, sub['downloads']), default)
-
     async def get_owned_games(self):
-        games = []
+
+        def is_game(sub):
+            default = False
+            return next(filter(lambda x: x['platform'] in GAME_PLATFORMS, sub['downloads']), default)
+
+        games = {}
         gamekeys = await self._api.get_gamekeys()
         for gamekey in gamekeys:
             details = await self._api.get_order_details(gamekey)
             logging.info(f'Parsing details of order {gamekey}:\n{json.dumps(details, indent=4)}')
             for sub in details['subproducts']:
-                if self._is_game(sub):
-                    games.append(HumbleGame(sub))
+                if is_game(sub):
+                    games[sub['machine_name']] = HumbleGame(sub)
 
         self.games = games
-        return [g.in_galaxy_format() for g in games]
+        return [g.in_galaxy_format() for g in games.values()]
+
+    async def install_game(self, game_id):
+        game = self.games.get(game_id)
+        if game is None:
+            logging.error(f'Install game: game {game_id} not found')
+            return
+
+        try:
+            url = self._downloader.find_best_url(game.downloads)
+        except Exception as e:
+            logging.exception(e)
+        else:
+            webbrowser.open(url['web'])
+
 
     def shutdown(self):
         self._api._session.close()
