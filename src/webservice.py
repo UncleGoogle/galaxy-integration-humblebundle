@@ -30,6 +30,8 @@ class AuthorizedHumbleAPI:
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]
+        # get rid of escape characters
+        info = bytes(info, "utf-8").decode("unicode_escape")
         info_padded = info + '=='
         decoded = json.loads(base64.b64decode(info_padded))
         logging.debug(decoded)
