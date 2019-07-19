@@ -31,7 +31,7 @@ class HumbleBundlePlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
-        self._games = []
+        self._games = {}
         self._downloader = HumbleDownloader()
 
     async def authenticate(self, stored_credentials=None):
@@ -43,7 +43,6 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_name)
 
     async def pass_login_credentials(self, step, credentials, cookies):
-        logging.info(json.dumps(cookies, indent=4))
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
         self.store_credentials(auth_cookie)
 
@@ -60,16 +59,16 @@ class HumbleBundlePlugin(Plugin):
         gamekeys = await self._api.get_gamekeys()
         for gamekey in gamekeys:
             details = await self._api.get_order_details(gamekey)
-            logging.info(f'Parsing details of order {gamekey}:\n{json.dumps(details, indent=4)}')
+            # logging.info(f'Parsing details of order {gamekey}:\n{json.dumps(details, indent=4)}')
             for sub in details['subproducts']:
                 if is_game(sub):
                     games[sub['machine_name']] = HumbleGame(sub)
 
-        self.games = games
+        self._games = games
         return [g.in_galaxy_format() for g in games.values()]
 
     async def install_game(self, game_id):
-        game = self.games.get(game_id)
+        game = self._games.get(game_id)
         if game is None:
             logging.error(f'Install game: game {game_id} not found')
             return
@@ -80,6 +79,12 @@ class HumbleBundlePlugin(Plugin):
             logging.exception(e)
         else:
             webbrowser.open(url['web'])
+
+    # async def launch_game(self, game_id):
+    #     pass
+
+    # async def uninstall_game(self, game_id):
+    #     pass
 
 
     def shutdown(self):
