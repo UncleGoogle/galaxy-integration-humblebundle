@@ -1,6 +1,11 @@
 # galaxy-integration-humblebundle
 
-Integration for GOG Galaxy 2.0
+Integration for GOG Galaxy 2.0.
+
+## Features
+This plugin is currenly in early development stage.
+
+* Listing games from HumbleBundle library
 
 ## Installation
 
@@ -8,7 +13,3 @@ Integration for GOG Galaxy 2.0
 2. `cd galaxy-integration-humblebundle`
 3. `python tasks.py install`
 4. `python tasks.py dist`
-
-## Features
-
-* Listing games from HumbleBundle library
