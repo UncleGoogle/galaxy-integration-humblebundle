@@ -69,7 +69,10 @@ def dist(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     for proc in psutil.process_iter(attrs=['exe'], ad_value=''):
         if proc.info['exe'] == galaxy_path:
             print(f'Galaxy at {galaxy_path} is running!. Terminating...')
+            for child in proc.children():
+                child.terminate()
             proc.terminate()
+            break
     else:
         print('Galaxy instance not found.')
 

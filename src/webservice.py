@@ -4,7 +4,7 @@ import json
 import base64
 import logging
 
-from galaxy.http import create_client_session
+from galaxy.http import create_client_session, handle_exception
 
 
 class AuthorizedHumbleAPI:
@@ -24,24 +24,33 @@ class AuthorizedHumbleAPI:
         self._session = create_client_session(headers=self._DEFAULT_HEADERS)
 
     async def _request(self, *args, **kwargs):
-        if 'params' not in kwargs:
-            kwargs['params'] = self._DEFAULT_PARAMS
-        return await self._session.request(*args, **kwargs)
+        with handle_exception():
+            if 'params' not in kwargs:
+                kwargs['params'] = self._DEFAULT_PARAMS
+            return await self._session.request(*args, **kwargs)
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]
-        # get rid of escape characters
-        info = bytes(info, "utf-8").decode("unicode_escape")
-        info_padded = info + '=='
-        decoded = json.loads(base64.b64decode(info_padded))
-        logging.debug(decoded)
+        logging.debug(f'user info cookie: {info}')
+        info += '=='  # ensure full padding
+        decoded = json.loads(base64.b64decode(info))
         return decoded['user_id']
 
     async def authenticate(self, auth_cookie: dict):
+        # recreate original cookie
         cookie = SimpleCookie()
-        cookie[auth_cookie['name']] = auth_cookie['value']
+        cookie_val = bytes(auth_cookie['value'], "utf-8").decode("unicode_escape")
+        # some users have cookies with escaped characters, some not...
+        # for the first group strip quotes:
+        cookie_val = cookie_val.replace('"', '')
+        cookie[auth_cookie['name']] = cookie_val
+
+        user_id = self._decode_user_id(cookie_val)
         self._session.cookie_jar.update_cookies(cookie)
-        user_id = self._decode_user_id(auth_cookie['value'])
+
+        # check if auth session is valid
+        await self.get_gamekeys()
+
         return (user_id, user_id)
 
     async def get_gamekeys(self):

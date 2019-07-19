@@ -43,10 +43,11 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_name)
 
     async def pass_login_credentials(self, step, credentials, cookies):
+        logging.debug(json.dumps(cookies, indent=2))
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
-        self.store_credentials(auth_cookie)
 
         user_id, user_name = await self._api.authenticate(auth_cookie)
+        self.store_credentials(auth_cookie)
         return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
@@ -59,7 +60,7 @@ class HumbleBundlePlugin(Plugin):
         gamekeys = await self._api.get_gamekeys()
         for gamekey in gamekeys:
             details = await self._api.get_order_details(gamekey)
-            # logging.info(f'Parsing details of order {gamekey}:\n{json.dumps(details, indent=4)}')
+            logging.info(f'Parsing details of order {gamekey}:\n{json.dumps(details, indent=4)}')
             for sub in details['subproducts']:
                 if is_game(sub):
                     games[sub['machine_name']] = HumbleGame(sub)
