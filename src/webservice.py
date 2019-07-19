@@ -4,7 +4,7 @@ import json
 import base64
 import logging
 
-from galaxy.http import create_client_session
+from galaxy.http import create_client_session, handle_exception
 
 
 class AuthorizedHumbleAPI:
@@ -24,9 +24,10 @@ class AuthorizedHumbleAPI:
         self._session = create_client_session(headers=self._DEFAULT_HEADERS)
 
     async def _request(self, *args, **kwargs):
-        if 'params' not in kwargs:
-            kwargs['params'] = self._DEFAULT_PARAMS
-        return await self._session.request(*args, **kwargs)
+        with handle_exception():
+            if 'params' not in kwargs:
+                kwargs['params'] = self._DEFAULT_PARAMS
+            return await self._session.request(*args, **kwargs)
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]
