@@ -3,9 +3,11 @@
 Integration for GOG Galaxy 2.0.
 
 ## Features
+
 This plugin is currenly in early development stage.
 
-* Listing games from HumbleBundle library
+* Listing DRM free games from HumbleBundle library (those with downloads for Windows, MacOS or Linux)
+* Simple download
 
 ## Installation
 
