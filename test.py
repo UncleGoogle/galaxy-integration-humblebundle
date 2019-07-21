@@ -4,7 +4,7 @@ from pathlib import Path
 import asyncio
 
 
-CREDENTIALS_FILE = "credentials-other"
+CREDENTIALS_FILE = "credentials.data"
 
 
 if __name__ == "__main__":

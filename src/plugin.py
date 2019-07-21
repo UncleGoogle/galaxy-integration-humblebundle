@@ -1,4 +1,6 @@
 import sys
+import time
+import asyncio
 import os
 import json
 import logging
@@ -58,12 +60,20 @@ class HumbleBundlePlugin(Plugin):
 
         games = {}
         gamekeys = await self._api.get_gamekeys()
-        for gamekey in gamekeys:
-            details = await self._api.get_order_details(gamekey)
-            logging.info(f'Parsing details of order {gamekey}:\n{json.dumps(details, indent=4)}')
+        requests = [self._api.get_order_details(x) for x in gamekeys]
+
+        logging.info(f'Fetching info about {len(requests)} orders started...')
+        all_games_details = await asyncio.gather(*requests)
+        logging.info('Fetching info finished')
+
+        for details in all_games_details:
             for sub in details['subproducts']:
-                if is_game(sub):
-                    games[sub['machine_name']] = HumbleGame(sub)
+                try:
+                    if is_game(sub):
+                        games[sub['machine_name']] = HumbleGame(sub)
+                except Exception as e:
+                    logging.error(f'Error while parsing subproduct {sub}: {repr(e)}')
+                    continue
 
         self._games = games
         return [g.in_galaxy_format() for g in games.values()]
