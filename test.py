@@ -3,16 +3,20 @@ import os
 from pathlib import Path
 import asyncio
 
+
+CREDENTIALS_FILE = "credentials.data"
+
+
 if __name__ == "__main__":
 
     async def run_server_connection(reader, writer):
 
         credentials = ""
-        path = Path("credentials.data")
+        path = Path(CREDENTIALS_FILE)
         if not path.exists():
             path.touch()
 
-        with open("credentials.data", "r") as f:
+        with open(CREDENTIALS_FILE, "r") as f:
             data = f.read()
             if data:
                 credentials = json.loads(data)
@@ -37,15 +41,16 @@ if __name__ == "__main__":
         tokens = json.loads(tokens.decode())
         try:
             if 'method' in tokens and tokens['method'] == 'store_credentials':
-                with open('credentials.data', 'w') as f:
+                print(f'overwriting {CREDENTIALS_FILE}')
+                with open(CREDENTIALS_FILE, 'w') as f:
                     f.write(json.dumps(tokens['params']))
 
                 print("tokens", tokens)
                 ret = await reader.readline()
                 print("ret", ret)
         except Exception as e:
-            print(f'{str(e)}: Removing credentials')
-            os.remove('credentials.data')
+            print(f'{str(e)}.\n Probably you need refresh it?')
+
 
         print("owned")
         writer.write(b'{"jsonrpc": "2.0", "id": "3", "method": "import_owned_games"}\n')
@@ -59,8 +64,8 @@ if __name__ == "__main__":
         # ret = await reader.readline()
         # print("ret", ret)
 
-        print("install_game")
-        writer.write(b'{"jsonrpc": "2.0", "method": "install_game", "params":{"game_id": "samorost2"}}\n')
+        # print("install_game")
+        # writer.write(b'{"jsonrpc": "2.0", "method": "install_game", "params":{"game_id": "samorost2"}}\n')
 
         # print("launch_game")
         # writer.write(b'{"jsonrpc": "2.0", "method": "launch_game", "params":{"game_id": "samorost2"}}\n')
