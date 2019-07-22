@@ -27,7 +27,11 @@ class AuthorizedHumbleAPI:
         with handle_exception():
             if 'params' not in kwargs:
                 kwargs['params'] = self._DEFAULT_PARAMS
-            return await self._session.request(*args, **kwargs)
+            try:
+                return await self._session.request(*args, **kwargs)
+            except Exception as e:
+                logging.error(repr(e))
+                raise
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]

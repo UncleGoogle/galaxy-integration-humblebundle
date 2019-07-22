@@ -78,6 +78,9 @@ class HumbleBundlePlugin(Plugin):
         self._games = games
         return [g.in_galaxy_format() for g in games.values()]
 
+    async def get_local_games(self):
+        return []
+
     async def install_game(self, game_id):
         game = self._games.get(game_id)
         if game is None:
