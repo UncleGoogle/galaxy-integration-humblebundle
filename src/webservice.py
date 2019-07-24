@@ -78,7 +78,7 @@ class AuthorizedHumbleAPI:
     async def get_trove_details(self):
         troves = []
         chunks = 10  # hardcoded for now, as don't know if empty array output is ensured/stable
-        for index in chunks:
+        for index in range(chunks):
             chunk_details = await self._get_trove_details(index)
             if type(chunk_details) != list:
                 logging.debug(f'chunk_details: {chunk_details}')
