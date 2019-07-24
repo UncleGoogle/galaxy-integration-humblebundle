@@ -20,6 +20,9 @@ class HP(enum.Enum):
             return self.value == other
         return super().__eq__(other)
 
+    def __hash__(self):
+        return hash(self.value)
+
 
 GAME_PLATFORMS = [HP.WINDOWS, HP.MAC, HP.LINUX]
 DLC_PLATFORMS = [HP.AUDIO, HP.EBOOK]  # TODO push those with base game

@@ -14,7 +14,7 @@ from galaxy.api.errors import InvalidCredentials
 
 from version import __version__
 from webservice import AuthorizedHumbleAPI
-from humblegame import HumbleGame, HumbleDownloader
+from humblegame import HumbleDownloader, TroveGame, Subproduct
 from consts import PlatformNotSupported, GAME_PLATFORMS
 
 
@@ -54,29 +54,35 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_owned_games(self):
 
-        def is_game(sub):
-            default = False
-            return next(filter(lambda x: x['platform'] in GAME_PLATFORMS, sub['downloads']), default)
-
-        games = {}
         gamekeys = await self._api.get_gamekeys()
-        requests = [self._api.get_order_details(x) for x in gamekeys]
+        orders = [self._api.get_order_details(x) for x in gamekeys]
 
-        logging.info(f'Fetching info about {len(requests)} orders started...')
-        all_games_details = await asyncio.gather(*requests)
+        logging.info(f'Fetching info about {len(orders)} orders started...')
+        all_games_details = await asyncio.gather(*orders)
         logging.info('Fetching info finished')
+
+        logging.info(f'Fetching trove info started...')
+        troves = await self._api.get_trove_details()
+        logging.info('Fetching info finished')
+        logging.info(troves)
+
+        products = []
+        for trove in troves:
+            products.append(TroveGame(trove))
 
         for details in all_games_details:
             for sub in details['subproducts']:
-                try:
-                    if is_game(sub):
-                        games[sub['machine_name']] = HumbleGame(sub)
-                except Exception as e:
-                    logging.error(f'Error while parsing subproduct {sub}: {repr(e)}')
-                    continue
+                prod = Subproduct(sub)
+                if not set(prod.downloads).isdisjoint(set(GAME_PLATFORMS)):
+                    # at least one download is for supported OS
+                    products.append(prod)
 
-        self._games = games
-        return [g.in_galaxy_format() for g in games.values()]
+        self._games = {
+            product.machine_name: product
+            for product in products
+        }
+
+        return [g.in_galaxy_format() for g in self._games.values()]
 
     async def get_local_games(self):
         return []

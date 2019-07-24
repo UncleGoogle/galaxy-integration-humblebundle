@@ -5,12 +5,14 @@ import base64
 import logging
 
 from galaxy.http import create_client_session, handle_exception
+from galaxy.api.errors import UnknownBackendResponse
 
 
 class AuthorizedHumbleAPI:
     _PROCESS_LOGIN = "https://www.humblebundle.com/processlogin"
     _ORDER_LIST_URL = "https://www.humblebundle.com/api/v1/user/order"
     _ORDER_URL = "https://www.humblebundle.com/api/v1/order/{}"
+    _TROVE_CHUNK_URL = 'https://www.humblebundle.com/api/v1/trove/chunk?index={}'
     _DEFAULT_PARAMS = {"ajax": "true"}
     _DEFAULT_HEADERS = {
         "Accept": "application/json",
@@ -19,6 +21,7 @@ class AuthorizedHumbleAPI:
         "X-Requested-By": "hb_android_app",
         "User-Agent": "Apache-HttpClient/UNAVAILABLE (java 1.4)"
     }
+
     def __init__(self):
         self._simpleauth_sess = None
         self._session = create_client_session(headers=self._DEFAULT_HEADERS)
@@ -68,7 +71,22 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._ORDER_URL.format(gamekey))
         return await res.json()
 
+    async def _get_trove_details(self, chunk_index):
+        res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
+        return await res.json()
 
-
-
-
+    async def get_trove_details(self):
+        troves = []
+        chunks = 10  # hardcoded for now, as don't know if empty array output is ensured/stable
+        for index in chunks:
+            chunk_details = await self._get_trove_details(index)
+            if type(chunk_details) != list:
+                logging.debug(f'chunk_details: {chunk_details}')
+                raise UnknownBackendResponse()
+            elif len(chunk_details) == 0:
+                logging.debug('No more pages')
+                break
+            troves += chunk_details
+        else:
+            logging.warning(f'Index limit ({chunks}) for trove games reached!')
+        return troves

@@ -1,14 +1,73 @@
-from typing import Dict
+import abc
+import copy
+from typing import Dict, Optional, List
+from dataclasses import dataclass
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
 from consts import CURRENT_SYSTEM, PlatformNotSupported
 
 
-class HumbleGame:
-    def __init__(self, data):
-        for k, v in data.items():
-            setattr(self, k, v)
+class DownloadStruct(abc.ABC):
+    """
+    url: Dict[str, str]         # {'bittorent': str, 'web': str}
+    file_size: str
+    md5: str
+    name: str
+    uploaded_at: Optional[str]  # ex.: 2019-07-10T21:48:11.976780
+    """
+    def __init__(self, data: dict):
+        self.__data = data
+        self.url = data['url']
+
+    @property
+    def web(self):
+        return self.url['web']
+
+    @property
+    def bittorrent(self):
+        return self.url['bittorent']
+
+    @abc.abstractmethod
+    def human_size(self):
+        pass
+
+
+class TroveDownload(DownloadStruct):
+    """ Additional fields:
+    sha1: str
+    timestamp: int          # ?
+    machine_name: str
+    size: str
+    """
+    def human_size(self):
+        return self.__data['size']
+
+
+class SubproductDownload(DownloadStruct):
+    """ Additional fields:
+    human_size: str
+    """
+    def human_size(self):
+        return self.__data['human_size']
+
+
+
+class HumbleGame(abc.ABC):
+    def __init__(self, data: dict):
+        self._data = data
+
+    @abc.abstractmethod
+    def downloads(self):
+        pass
+
+    @abc.abstractproperty
+    def human_name(self):
+        pass
+
+    @property
+    def machine_name(self):
+        return self._data['machine_name']
 
     def in_galaxy_format(self):
         licence = LicenseInfo(LicenseType.SinglePurchase)
@@ -19,7 +78,27 @@ class HumbleGame:
         return str(self)
 
     def __str__(self):
-        return f"HumbleGame({self.human_name}, {self.downloads})"
+        return f"HumbleGame ({self.__class__.__name__}): ({self.human_name}, {self.downloads})"
+
+
+class TroveGame(HumbleGame):
+    @property
+    def downloads(self) -> Dict[str, TroveDownload]:
+        return {k: TroveDownload(v) for k, v in self._data['downloads']}
+
+    @property
+    def human_name(self):
+        return self._data['human-name']
+
+
+class Subproduct(HumbleGame):
+    @property
+    def downloads(self) -> Dict[str, List[SubproductDownload]]:
+        return {dw['platform']: [SubproductDownload(x) for x in dw['download_struct']] for dw in self._data['downloads']}
+
+    @property
+    def human_name(self):
+        return self._data['human_name']
 
 
 class HumbleDownloader:
