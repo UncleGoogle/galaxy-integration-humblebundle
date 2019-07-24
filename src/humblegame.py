@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
-from consts import CURRENT_SYSTEM, PlatformNotSupported
+from consts import TP_PLATFORM
 
 
 class DownloadStruct(abc.ABC):
@@ -17,7 +17,7 @@ class DownloadStruct(abc.ABC):
     uploaded_at: Optional[str]  # ex.: 2019-07-10T21:48:11.976780
     """
     def __init__(self, data: dict):
-        self.__data = data
+        self._data = data
         self.url = data['url']
 
     @property
@@ -26,7 +26,7 @@ class DownloadStruct(abc.ABC):
 
     @property
     def bittorrent(self):
-        return self.url['bittorent']
+        return self.url['bittorrent']
 
     @abc.abstractmethod
     def human_size(self):
@@ -40,17 +40,22 @@ class TroveDownload(DownloadStruct):
     machine_name: str
     size: str
     """
+    @property
     def human_size(self):
-        return self.__data['size']
+        return self._data['size']
+
+    @property
+    def machine_name(self):
+        return self._data['machine_name']
 
 
 class SubproductDownload(DownloadStruct):
     """ Additional fields:
     human_size: str
     """
+    @property
     def human_size(self):
-        return self.__data['human_size']
-
+        return self._data['human_size']
 
 
 class HumbleGame(abc.ABC):
@@ -83,8 +88,8 @@ class HumbleGame(abc.ABC):
 
 class TroveGame(HumbleGame):
     @property
-    def downloads(self) -> Dict[str, TroveDownload]:
-        return {k: TroveDownload(v) for k, v in self._data['downloads']}
+    def downloads(self) -> Dict[TP_PLATFORM, TroveDownload]:
+        return {k: TroveDownload(v) for k, v in self._data['downloads'].items()}
 
     @property
     def human_name(self):
@@ -93,34 +98,14 @@ class TroveGame(HumbleGame):
 
 class Subproduct(HumbleGame):
     @property
-    def downloads(self) -> Dict[str, List[SubproductDownload]]:
+    def downloads(self) -> Dict[TP_PLATFORM, List[SubproductDownload]]:
         return {dw['platform']: [SubproductDownload(x) for x in dw['download_struct']] for dw in self._data['downloads']}
 
     @property
     def human_name(self):
         return self._data['human_name']
 
+    @property
+    def name(self):
+        return self._data['name']
 
-class HumbleDownloader:
-    """Prepares downloads for specific conditionals"""
-    def __init__(self, target_platrofm=CURRENT_SYSTEM, target_bitness=None, use_torrent=False):
-        self.platform = target_platrofm
-        self.bitness = target_bitness
-
-    def find_best_url(self, downloads: dict) -> Dict[str, str]:
-        system_downloads = list(filter(lambda x: x['platform'] == self.platform, downloads))
-
-        if len(system_downloads) == 1:
-            download_struct = system_downloads[0]['download_struct']
-        elif len(system_downloads) == 0:
-            platforms = [dw.platform for dw in downloads]
-            raise PlatformNotSupported(f'{self.human_name} has only downloads for {platforms}')
-        elif len(system_downloads) > 1:
-            raise NotImplementedError('More system level conditionals required')
-
-        download_items = list(filter(lambda x: x['name'] == 'Download', download_struct))
-
-        if len(download_items) == 1:
-            return download_items[0]['url']
-        else:
-            raise NotImplementedError(f'Found downloads: {len(download_items)}. All: {downloads}')

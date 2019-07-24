@@ -13,9 +13,10 @@ from galaxy.api.types import Authentication, NextStep
 from galaxy.api.errors import InvalidCredentials
 
 from version import __version__
+from consts import GAME_PLATFORMS
 from webservice import AuthorizedHumbleAPI
-from humblegame import HumbleDownloader, TroveGame, Subproduct
-from consts import PlatformNotSupported, GAME_PLATFORMS
+from humblegame import TroveGame, Subproduct
+from humbledownloader import HumbleDownloadResolver
 
 
 AUTH_PARAMS = {
@@ -34,7 +35,7 @@ class HumbleBundlePlugin(Plugin):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
         self._games = {}
-        self._downloader = HumbleDownloader()
+        self._download_resolver = HumbleDownloadResolver()
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -53,7 +54,6 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
-
         gamekeys = await self._api.get_gamekeys()
         orders = [self._api.get_order_details(x) for x in gamekeys]
 
@@ -64,7 +64,6 @@ class HumbleBundlePlugin(Plugin):
         logging.info(f'Fetching trove info started...')
         troves = await self._api.get_trove_details()
         logging.info('Fetching info finished')
-        logging.info(troves)
 
         products = []
         for trove in troves:
@@ -73,7 +72,7 @@ class HumbleBundlePlugin(Plugin):
         for details in all_games_details:
             for sub in details['subproducts']:
                 prod = Subproduct(sub)
-                if not set(prod.downloads).isdisjoint(set(GAME_PLATFORMS)):
+                if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
                     # at least one download is for supported OS
                     products.append(prod)
 
@@ -89,16 +88,21 @@ class HumbleBundlePlugin(Plugin):
 
     async def install_game(self, game_id):
         game = self._games.get(game_id)
+        game = self._games.get('140_trove')
         if game is None:
-            logging.error(f'Install game: game {game_id} not found')
-            return
+            raise RuntimeError(f'Install game: game {game_id} not found')
 
         try:
-            url = self._downloader.find_best_url(game.downloads)
+            chosen_download = self._download_resolver(game)
         except Exception as e:
             logging.exception(e)
+            raise
+
+        if isinstance(game, TroveGame):
+            url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
+            webbrowser.open(url['signed_url'])
         else:
-            webbrowser.open(url['web'])
+            webbrowser.open(web_url)
 
     # async def launch_game(self, game_id):
     #     pass
