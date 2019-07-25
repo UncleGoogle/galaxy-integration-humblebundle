@@ -61,13 +61,14 @@ class HumbleBundlePlugin(Plugin):
         all_games_details = await asyncio.gather(*orders)
         logging.info('Fetching info finished')
 
-        logging.info(f'Fetching trove info started...')
-        troves = await self._api.get_trove_details()
-        logging.info('Fetching info finished')
-
         products = []
-        for trove in troves:
-            products.append(TroveGame(trove))
+
+        if await self._api.is_trove_subscribed():
+            logging.info(f'Fetching trove info started...')
+            troves = await self._api.get_trove_details()
+            logging.info('Fetching info finished')
+            for trove in troves:
+                products.append(TroveGame(trove))
 
         for details in all_games_details:
             for sub in details['subproducts']:

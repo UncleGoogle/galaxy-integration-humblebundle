@@ -17,6 +17,7 @@ class AuthorizedHumbleAPI:
     _ORDER_LIST_URL = "api/v1/user/order"
     _ORDER_URL = "/api/v1/order/{}"
 
+    _TROVE_SUBSCRIBER = 'monthly/subscriber'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
     _TROVE_DOWNLOAD_SIGN_URL = 'api/v1/user/download/sign'
     _TROVE_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
@@ -83,6 +84,20 @@ class AuthorizedHumbleAPI:
     async def _get_trove_details(self, chunk_index):
         res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
+
+    async def is_trove_subscribed(self) -> bool:
+        """Based on assumption that `monthly/subscriber` page is redirect to `monthly`
+        Warning: status is still 200 if user is logged in
+        TODO: what if subscription has expired?
+        """
+        res = await self._request('get', self._TROVE_SUBSCRIBER, allow_redirects=False)
+        if res.status == 200:
+            return True
+        elif res.status == 302:
+            return False
+        else:
+            logging.info(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status_code}')
+            return False
 
     async def get_trove_details(self):
         troves = []
