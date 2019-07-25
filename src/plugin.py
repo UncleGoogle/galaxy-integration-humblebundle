@@ -89,7 +89,6 @@ class HumbleBundlePlugin(Plugin):
 
     async def install_game(self, game_id):
         game = self._games.get(game_id)
-        game = self._games.get('140_trove')
         if game is None:
             raise RuntimeError(f'Install game: game {game_id} not found')
 
@@ -103,7 +102,7 @@ class HumbleBundlePlugin(Plugin):
             url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
             webbrowser.open(url['signed_url'])
         else:
-            webbrowser.open(web_url)
+            webbrowser.open(chosen_download.web)
 
     # async def launch_game(self, game_id):
     #     pass
