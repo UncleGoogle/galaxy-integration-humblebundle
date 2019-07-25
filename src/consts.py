@@ -1,5 +1,6 @@
 import enum
 import sys
+import typing
 
 
 class PlatformNotSupported(Exception):
@@ -20,8 +21,11 @@ class HP(enum.Enum):
             return self.value == other
         return super().__eq__(other)
 
+    def __hash__(self):
+        return hash(self.value)
 
-GAME_PLATFORMS = [HP.WINDOWS, HP.MAC, HP.LINUX]
+
+GAME_PLATFORMS = set([HP.WINDOWS, HP.MAC, HP.LINUX])
 DLC_PLATFORMS = [HP.AUDIO, HP.EBOOK]  # TODO push those with base game
 
 if sys.platform == 'win32':
@@ -30,3 +34,6 @@ elif sys.platform == 'darwin':
     CURRENT_SYSTEM = HP.MAC
 else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
+
+# typing aliases
+TP_PLATFORM = typing.Union[HP, str]

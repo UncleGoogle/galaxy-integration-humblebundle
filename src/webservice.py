@@ -1,16 +1,27 @@
 from http.cookies import SimpleCookie
+from typing import Tuple
 import aiohttp
 import json
 import base64
 import logging
 
 from galaxy.http import create_client_session, handle_exception
+from galaxy.api.errors import UnknownBackendResponse, UnknownError
+
+from humblegame import TroveDownload
 
 
 class AuthorizedHumbleAPI:
-    _PROCESS_LOGIN = "https://www.humblebundle.com/processlogin"
-    _ORDER_LIST_URL = "https://www.humblebundle.com/api/v1/user/order"
-    _ORDER_URL = "https://www.humblebundle.com/api/v1/order/{}"
+    _AUTHORITY = "https://www.humblebundle.com/"
+    _PROCESS_LOGIN = "processlogin"
+    _ORDER_LIST_URL = "api/v1/user/order"
+    _ORDER_URL = "/api/v1/order/{}"
+
+    _TROVE_SUBSCRIBER = 'monthly/subscriber'
+    _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
+    _TROVE_DOWNLOAD_SIGN_URL = 'api/v1/user/download/sign'
+    _TROVE_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
+
     _DEFAULT_PARAMS = {"ajax": "true"}
     _DEFAULT_HEADERS = {
         "Accept": "application/json",
@@ -19,15 +30,21 @@ class AuthorizedHumbleAPI:
         "X-Requested-By": "hb_android_app",
         "User-Agent": "Apache-HttpClient/UNAVAILABLE (java 1.4)"
     }
+
     def __init__(self):
         self._simpleauth_sess = None
         self._session = create_client_session(headers=self._DEFAULT_HEADERS)
 
-    async def _request(self, *args, **kwargs):
+    async def _request(self, method, path, *args, **kwargs):
+        url = self._AUTHORITY + path
+        if 'params' not in kwargs:
+            kwargs['params'] = self._DEFAULT_PARAMS
         with handle_exception():
-            if 'params' not in kwargs:
-                kwargs['params'] = self._DEFAULT_PARAMS
-            return await self._session.request(*args, **kwargs)
+            try:
+                return await self._session.request(method, url, *args, **kwargs)
+            except Exception as e:
+                logging.error(repr(e))
+                raise
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]
@@ -64,7 +81,62 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._ORDER_URL.format(gamekey))
         return await res.json()
 
+    async def _get_trove_details(self, chunk_index):
+        res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
+        return await res.json()
 
+    async def is_trove_subscribed(self) -> bool:
+        """Based on assumption that `monthly/subscriber` page is redirect to `monthly`
+        Warning: status is still 200 if user is logged in
+        TODO: what if subscription has expired?
+        """
+        res = await self._request('get', self._TROVE_SUBSCRIBER, allow_redirects=False)
+        if res.status == 200:
+            return True
+        elif res.status == 302:
+            return False
+        else:
+            logging.info(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status_code}')
+            return False
 
+    async def get_trove_details(self):
+        troves = []
+        chunks = 10  # hardcoded for now, as don't know if empty array output is ensured/stable
+        for index in range(chunks):
+            chunk_details = await self._get_trove_details(index)
+            if type(chunk_details) != list:
+                logging.debug(f'chunk_details: {chunk_details}')
+                raise UnknownBackendResponse()
+            elif len(chunk_details) == 0:
+                logging.debug('No more pages')
+                break
+            troves += chunk_details
+        else:
+            logging.warning(f'Index limit ({chunks}) for trove games reached!')
+        return troves
 
+    async def _get_trove_signed_url(self, download: TroveDownload):
+        res = await self._request('post', self._TROVE_DOWNLOAD_SIGN_URL, params={
+            'machine_name': download.machine_name,
+            'filename': download.web
+        })
+        return await res.json()
 
+    async def _reedem_trove_download(self, download: TroveDownload, product_machine_name: str):
+        """Unknown purpose - humble http client do this after post for signed_url
+        Response should be text with {'success': True} if everything is OK
+        """
+        res = await self._request('post', self._TROVE_REDEEM_DOWNLOAD, params={
+            'download': download.machine_name,
+            'download_page': "false",  # TODO check what it does
+            'product': product_machine_name
+        })
+        content = await res.read()
+        if content != b"{'success': True}":
+            logging.error(f'unexpected response while reedem trove download: {content}')
+            raise UnknownError()
+
+    async def get_trove_sign_url(self, download: TroveDownload, product_machine_name: str):
+        urls = await self._get_trove_signed_url(download)
+        await self._reedem_trove_download(download, product_machine_name)
+        return urls

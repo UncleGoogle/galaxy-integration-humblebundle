@@ -6,8 +6,9 @@ Integration for GOG Galaxy 2.0.
 
 This plugin is currenly in early development stage.
 
-* Listing DRM free games from HumbleBundle library (those with downloads for Windows, MacOS or Linux)
-* Simple download
+* Library: Listing DRM free games from HumbleBundle library (those with downloads for Windows, MacOS or Linux)
+* Library: Humble Trove support
+* Install: Simple download via webbrowser
 
 ## Installation
 
@@ -21,5 +22,10 @@ or build from source code (python3.6 or higher required):
 2. `cd galaxy-integration-humblebundle`
 3. `python tasks.py install`
 4. `python tasks.py dist`
+
+
+## See also
+- https://github.com/gogcom/galaxy-integrations-python-api
+- https://github.com/MayeulC/hb-downloader
 
 [1]: https://github.com/UncleGoogle/galaxy-integration-humblebundle/releases

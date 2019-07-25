@@ -13,9 +13,10 @@ from galaxy.api.types import Authentication, NextStep
 from galaxy.api.errors import InvalidCredentials
 
 from version import __version__
+from consts import GAME_PLATFORMS
 from webservice import AuthorizedHumbleAPI
-from humblegame import HumbleGame, HumbleDownloader
-from consts import PlatformNotSupported, GAME_PLATFORMS
+from humblegame import TroveGame, Subproduct
+from humbledownloader import HumbleDownloadResolver
 
 
 AUTH_PARAMS = {
@@ -34,7 +35,7 @@ class HumbleBundlePlugin(Plugin):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
         self._games = {}
-        self._downloader = HumbleDownloader()
+        self._download_resolver = HumbleDownloadResolver()
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -53,43 +54,55 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
-
-        def is_game(sub):
-            default = False
-            return next(filter(lambda x: x['platform'] in GAME_PLATFORMS, sub['downloads']), default)
-
-        games = {}
         gamekeys = await self._api.get_gamekeys()
-        requests = [self._api.get_order_details(x) for x in gamekeys]
+        orders = [self._api.get_order_details(x) for x in gamekeys]
 
-        logging.info(f'Fetching info about {len(requests)} orders started...')
-        all_games_details = await asyncio.gather(*requests)
+        logging.info(f'Fetching info about {len(orders)} orders started...')
+        all_games_details = await asyncio.gather(*orders)
         logging.info('Fetching info finished')
+
+        products = []
+
+        if await self._api.is_trove_subscribed():
+            logging.info(f'Fetching trove info started...')
+            troves = await self._api.get_trove_details()
+            logging.info('Fetching info finished')
+            for trove in troves:
+                products.append(TroveGame(trove))
 
         for details in all_games_details:
             for sub in details['subproducts']:
-                try:
-                    if is_game(sub):
-                        games[sub['machine_name']] = HumbleGame(sub)
-                except Exception as e:
-                    logging.error(f'Error while parsing subproduct {sub}: {repr(e)}')
-                    continue
+                prod = Subproduct(sub)
+                if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
+                    # at least one download is for supported OS
+                    products.append(prod)
 
-        self._games = games
-        return [g.in_galaxy_format() for g in games.values()]
+        self._games = {
+            product.machine_name: product
+            for product in products
+        }
+
+        return [g.in_galaxy_format() for g in self._games.values()]
+
+    async def get_local_games(self):
+        return []
 
     async def install_game(self, game_id):
         game = self._games.get(game_id)
         if game is None:
-            logging.error(f'Install game: game {game_id} not found')
-            return
+            raise RuntimeError(f'Install game: game {game_id} not found')
 
         try:
-            url = self._downloader.find_best_url(game.downloads)
+            chosen_download = self._download_resolver(game)
         except Exception as e:
             logging.exception(e)
+            raise
+
+        if isinstance(game, TroveGame):
+            url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
+            webbrowser.open(url['signed_url'])
         else:
-            webbrowser.open(url['web'])
+            webbrowser.open(chosen_download.web)
 
     # async def launch_game(self, game_id):
     #     pass
