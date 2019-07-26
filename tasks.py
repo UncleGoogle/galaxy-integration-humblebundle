@@ -93,7 +93,6 @@ def test():
 
 
 def release():
-    # TODO: increment version; add git tag; publish on github
     zip_name = f'humblebundle_{__version__}'
     wd = Path(__file__).parent
     tmp_build_dir = wd / zip_name
@@ -106,6 +105,13 @@ def release():
     build(str(tmp_build_dir))
     shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=tmp_build_dir)
     shutil.rmtree(tmp_build_dir)
+
+
+    tag = 'v' + __version__
+    print('creating and pushing to origin tag: ', tag)
+    subprocess.run(['git', 'tag', tag])
+    subprocess.run(['git', 'push', 'origin', tag])
+    # TODO: publish on github
 
 
 def main():
