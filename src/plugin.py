@@ -7,6 +7,8 @@ import logging
 import re
 import webbrowser
 
+import sentry_sdk
+
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep
@@ -18,6 +20,11 @@ from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
 
+
+sentry_sdk.init(
+    "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
+    release=f"galaxy-integration-humblebundle@{__version__}"
+)
 
 AUTH_PARAMS = {
     "window_title": "Login to HumbleBundle",
