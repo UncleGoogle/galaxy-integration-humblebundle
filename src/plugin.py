@@ -15,10 +15,11 @@ from galaxy.api.types import Authentication, NextStep
 from galaxy.api.errors import InvalidCredentials
 
 from version import __version__
-from consts import GAME_PLATFORMS
+from consts import GAME_PLATFORMS, CURRENT_SYSTEM, HP
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
+from local import WindowsRegistryClient
 
 
 sentry_sdk.init(
@@ -41,8 +42,10 @@ class HumbleBundlePlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
-        self._games = {}
         self._download_resolver = HumbleDownloadResolver()
+        self._app_finder = WindowsRegistryClient() if CURRENT_SYSTEM == HP.WINDOWS else None
+        self._owned_games = {}
+        self._local_games = {}
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -84,18 +87,26 @@ class HumbleBundlePlugin(Plugin):
                     # at least one download is for supported OS
                     products.append(prod)
 
-        self._games = {
+        self._owned_games = {
             product.machine_name: product
             for product in products
         }
 
-        return [g.in_galaxy_format() for g in self._games.values()]
+        return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def get_local_games(self):
-        return []
+        if not self._app_finder:
+            return []
+
+        self._local_games.clear()
+        for game in self._owned_games.values():
+            if self._app_finder.is_app_installed(game.human_name):
+                self._local_games[game.machine_name] = game
+
+        return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def install_game(self, game_id):
-        game = self._games.get(game_id)
+        game = self._owned_games.get(game_id)
         if game is None:
             raise RuntimeError(f'Install game: game {game_id} not found')
 
@@ -112,12 +123,13 @@ class HumbleBundlePlugin(Plugin):
             webbrowser.open(chosen_download.web)
 
     # async def launch_game(self, game_id):
-    #     pass
+        
 
     # async def uninstall_game(self, game_id):
-    #     pass
-
-
+    #     game = self._local_games[game_id]
+    #     if game is None:
+    #         logging.error('game not found')
+        
     def shutdown(self):
         self._api._session.close()
 

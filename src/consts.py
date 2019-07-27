@@ -35,7 +35,6 @@ elif sys.platform == 'darwin':
 else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
 
-WINDOWS_UNINSTALL_LOCATION = "SOFTWARE\\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
 
 # typing aliases
 TP_PLATFORM = typing.Union[HP, str]
