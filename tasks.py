@@ -12,7 +12,7 @@ from glob import glob
 from invoke import task
 
 from src.version import __version__
-from config import REQUIREMENTS, GALAXY_PATH, DIST_PLUGIN
+from config import REQUIREMENTS, REQUIREMENTS_DEV, GALAXY_PATH, DIST_PLUGIN
 
 gapi = Path(__file__) / '..' / 'galaxy-integrations-python-api' / 'src'
 sys.path.append(str(gapi.resolve()))
@@ -20,8 +20,11 @@ import galaxy.tools
 
 
 @task
-def install(c):
-    c.run("pip install -r " + REQUIREMENTS)
+def install(c, dev=False):
+    if dev:
+        c.run("pip install -r " + REQUIREMENTS_DEV)
+    else:
+        c.run("pip install -r " + REQUIREMENTS)
 
 
 @task

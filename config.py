@@ -3,6 +3,7 @@ import os
 
 
 REQUIREMENTS = os.path.join('requirements', 'app.txt')
+REQUIREMENTS_DEV = os.path.join('requirements', 'dev.txt')
 
 if sys.platform == 'win32':
     GALAXY_PATH = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe'

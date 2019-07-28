@@ -75,14 +75,22 @@ class HumbleBundlePlugin(Plugin):
             troves = await self._api.get_trove_details()
             logging.info('Fetching info finished')
             for trove in troves:
-                products.append(TroveGame(trove))
+                try:
+                    products.append(TroveGame(trove))
+                except Exception as e:
+                    sentry_sdk.capture_exception(e)
+                    continue
 
         for details in all_games_details:
             for sub in details['subproducts']:
-                prod = Subproduct(sub)
-                if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
-                    # at least one download is for supported OS
-                    products.append(prod)
+                try:
+                    prod = Subproduct(sub)
+                    if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
+                        # at least one download is for supported OS
+                        products.append(prod)
+                except Exception as e:
+                    sentry_sdk.capture_exception(e)
+                    continue
 
         self._games = {
             product.machine_name: product
