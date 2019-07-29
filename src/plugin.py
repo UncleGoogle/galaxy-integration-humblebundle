@@ -66,9 +66,9 @@ class HumbleBundlePlugin(Plugin):
         gamekeys = await self._api.get_gamekeys()
         orders = [self._api.get_order_details(x) for x in gamekeys]
 
-        logging.info(f'Fetching info about {len(orders)} orders started...')
+        start = time.time()
         all_games_details = await asyncio.gather(*orders)
-        logging.info('Fetching info finished')
+        sentry_sdk.capture_message(f'Fetching info about {len(orders)} lasts: {time.time() - start}', level="info")
 
         products = []
 
@@ -80,6 +80,7 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     products.append(TroveGame(trove))
                 except Exception as e:
+                    logging.warning(str(e), extra=trove)
                     with sentry_sdk.configure_scope() as scope:
                         scope.set_extra("trove", trove)
                         sentry_sdk.capture_exception(e)
@@ -93,6 +94,7 @@ class HumbleBundlePlugin(Plugin):
                         # at least one download is for supported OS
                         products.append(prod)
                 except Exception as e:
+                    logging.warning(str(e), extra=details)
                     with sentry_sdk.configure_scope() as scope:
                         scope.set_extra("product_details", details)
                         sentry_sdk.capture_exception(e)

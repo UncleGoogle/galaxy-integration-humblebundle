@@ -1,7 +1,8 @@
 import os.path
+import pathlib
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List
 from consts import CURRENT_SYSTEM, HP
 
 if CURRENT_SYSTEM == HP.WINDOWS:
@@ -35,8 +36,17 @@ class WindowsRegistryClient:
         Keys names nad their display_name attribute are taken into account
         """
         for display_name, uk in self.__uninstall_keys.items():
-            if name in [display_name, uk.key_name]:
+            if display_name.lower().startswith(name) \
+                or name == uk.key_name \
+                or name == pathlib.PurePath.name:
                 return uk
+    
+    def which_apps_installed(self, app_names: List[str]) -> List[str]:
+        installed = []
+        for name in app_names:
+            if self.is_app_installed(name):
+                installed.append(name)
+        return installed
 
     @property
     def uninstall_keys(self):
@@ -79,4 +89,3 @@ class WindowsRegistryClient:
             if optional:
                 return None
             raise
-
