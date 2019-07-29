@@ -20,8 +20,8 @@ or build from source code (python3.6 or higher required):
 
 1. `git clone --recursive https://github.com/UncleGoogle/galaxy-integration-humblebundle.git`
 2. `cd galaxy-integration-humblebundle`
-3. `python tasks.py install`
-4. `python tasks.py dist`
+3. `pip install invoke`
+4. `inv dist`
 
 
 ## See also

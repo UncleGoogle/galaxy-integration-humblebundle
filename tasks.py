@@ -9,24 +9,26 @@ from pathlib import Path
 from distutils.dir_util import copy_tree
 from glob import glob
 
+from invoke import task
+
 from src.version import __version__
-from config import REQUIREMENTS, GALAXY_PATH, DIST_PLUGIN
+from config import REQUIREMENTS, REQUIREMENTS_DEV, GALAXY_PATH, DIST_PLUGIN
 
 gapi = Path(__file__) / '..' / 'galaxy-integrations-python-api' / 'src'
 sys.path.append(str(gapi.resolve()))
 import galaxy.tools
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("command", choices=["install", "build", "dist", "test", "copy", "release"])
-parser.add_argument("-o", "--output", help="build destination")
+@task
+def install(c, dev=False):
+    if dev:
+        c.run("pip install -r " + REQUIREMENTS_DEV)
+    else:
+        c.run("pip install -r " + REQUIREMENTS)
 
 
-def install():
-    subprocess.run(["pip", "install", "-r", REQUIREMENTS])
-
-
-def build(output=DIST_PLUGIN):
+@task
+def build(c, output=DIST_PLUGIN):
     print('removing', output)
     if os.path.exists(output):
         shutil.rmtree(output)
@@ -65,7 +67,8 @@ def build(output=DIST_PLUGIN):
         json.dump(manifest, file_, indent=4)
 
 
-def dist(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
+@task
+def dist(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     for proc in psutil.process_iter(attrs=['exe'], ad_value=''):
         if proc.info['exe'] == galaxy_path:
             print(f'Galaxy at {galaxy_path} is running!. Terminating...')
@@ -76,23 +79,27 @@ def dist(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     else:
         print('Galaxy instance not found.')
 
-    build(output)
+    c.run(f'inv build -o {output}')
 
     print(f'Reopening Galaxy from {galaxy_path}')
     subprocess.run([galaxy_path])
 
 
-def copy(output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
+@task
+def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     print('copying source code ...')
     for file_ in glob("src/*.py"):
         shutil.copy(file_, output)
 
 
-def test():
-    subprocess.run(["pytest"])
+@task
+def test(c):
+    c.run("pytest")
 
 
-def release():
+@task
+def release(c):
+    # TODO: increment version;
     zip_name = f'humblebundle_{__version__}'
     wd = Path(__file__).parent
     tmp_build_dir = wd / zip_name
@@ -102,36 +109,12 @@ def release():
         if input(f'{str(arch)} already exists. Proceed? y/n') !='y':
             return
 
-    build(str(tmp_build_dir))
+    c.run(f"inv build -o {str(tmp_build_dir)}")
     shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=tmp_build_dir)
     shutil.rmtree(tmp_build_dir)
 
-
-    tag = 'v' + __version__
-    print('creating and pushing to origin tag: ', tag)
-    subprocess.run(['git', 'tag', tag])
-    subprocess.run(['git', 'push', 'origin', tag])
     # TODO: publish on github
-
-
-def main():
-    args = parser.parse_args()
-    output = args.output if args.output else DIST_PLUGIN
-    if args.command == 'install':
-        install()
-    elif args.command == 'build':
-        build(output)
-    elif args.command == 'dist':
-        dist(output)
-    elif args.command == 'copy':
-        copy(output)
-    elif args.command == 'test':
-        test()
-    elif args.command == 'release':
-        release()
-    else:
-        print(f'command {args.command} not exits')
-
-
-if __name__ == "__main__":
-    main()
+    # tag = 'v' + __version__
+    # print('creating and pushing to origin tag: ', tag)
+    # c.run(f'git tag {tag}')
+    # c.run(f'git push origin {tag}')
