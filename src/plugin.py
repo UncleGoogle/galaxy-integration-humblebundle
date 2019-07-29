@@ -56,7 +56,6 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_name)
 
     async def pass_login_credentials(self, step, credentials, cookies):
-        logging.debug(json.dumps(cookies, indent=2))
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
 
         user_id, user_name = await self._api.authenticate(auth_cookie)
@@ -81,7 +80,9 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     products.append(TroveGame(trove))
                 except Exception as e:
-                    sentry_sdk.capture_exception(e)
+                    with sentry_sdk.configure_scope() as scope:
+                        scope.set_extra("trove", trove)
+                        sentry_sdk.capture_exception(e)
                     continue
 
         for details in all_games_details:
@@ -92,7 +93,9 @@ class HumbleBundlePlugin(Plugin):
                         # at least one download is for supported OS
                         products.append(prod)
                 except Exception as e:
-                    sentry_sdk.capture_exception(e)
+                    with sentry_sdk.configure_scope() as scope:
+                        scope.set_extra("product_details", details)
+                        sentry_sdk.capture_exception(e)
                     continue
 
         self._owned_games = {
