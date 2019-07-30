@@ -47,6 +47,9 @@ def build(c, output=DIST_PLUGIN):
     print('copying source code ...')
     for file_ in glob("src/*.py"):
         shutil.copy(file_, output)
+    os.mkdir(Path(output) / 'local')
+    for file_ in glob("src/local/*.py"):
+        shutil.copy(file_, str(Path(output) / 'local'))
 
     print('copying galaxy api ...')
     copy_tree("galaxy-integrations-python-api/src", output)

@@ -19,13 +19,21 @@ from consts import GAME_PLATFORMS, CURRENT_SYSTEM, HP
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
-from local import WindowsRegistryClient
+from local import AppFinder, LocalHumbleGame
 
 
 sentry_sdk.init(
     "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
     release=f"galaxy-integration-humblebundle@{__version__}"
 )
+
+
+def report_problem(error, extra, level=logging.ERROR):
+    logging.log(level, str(error), extra=extra)
+    with sentry_sdk.configure_scope() as scope:
+        scope.set_extra("extra_context", extra)
+        sentry_sdk.capture_exception(error)
+
 
 AUTH_PARAMS = {
     "window_title": "Login to HumbleBundle",
@@ -38,12 +46,11 @@ AUTH_PARAMS = {
 
 
 class HumbleBundlePlugin(Plugin):
-
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
-        self._app_finder = WindowsRegistryClient() if CURRENT_SYSTEM == HP.WINDOWS else None
+        self._app_finder = AppFinder()
         self._owned_games = {}
         self._local_games = {}
 
@@ -80,10 +87,7 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     products.append(TroveGame(trove))
                 except Exception as e:
-                    logging.warning(str(e), extra=trove)
-                    with sentry_sdk.configure_scope() as scope:
-                        scope.set_extra("trove", trove)
-                        sentry_sdk.capture_exception(e)
+                    report_problem(e, trove, level=logging.WARNING)
                     continue
 
         for details in all_games_details:
@@ -94,10 +98,7 @@ class HumbleBundlePlugin(Plugin):
                         # at least one download is for supported OS
                         products.append(prod)
                 except Exception as e:
-                    logging.warning(str(e), extra=details)
-                    with sentry_sdk.configure_scope() as scope:
-                        scope.set_extra("product_details", details)
-                        sentry_sdk.capture_exception(e)
+                    report_problem(e, details, log=logging.WARNING)
                     continue
 
         self._owned_games = {
@@ -106,17 +107,6 @@ class HumbleBundlePlugin(Plugin):
         }
 
         return [g.in_galaxy_format() for g in self._owned_games.values()]
-
-    async def get_local_games(self):
-        if not self._app_finder:
-            return []
-
-        self._local_games.clear()
-        for game in self._owned_games.values():
-            if self._app_finder.is_app_installed(game.human_name):
-                self._local_games[game.machine_name] = game
-
-        return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def install_game(self, game_id):
         game = self._owned_games.get(game_id)
@@ -135,16 +125,45 @@ class HumbleBundlePlugin(Plugin):
         else:
             webbrowser.open(chosen_download.web)
 
-    # async def launch_game(self, game_id):
-        
+    async def get_local_games(self):
+        if not self._app_finder or not self._owned_games:
+            return []
+        else:
+            self._app_finder.refresh()
+
+        self._local_games.clear()
+        for game in self._owned_games.values():
+            try:
+                location = self._app_finder.get_install_location(game.human_name)
+                if location is None:
+                    continue
+                logging.info(f'Installed game {game.human_name} found at location [{location}]')
+                self._local_games[game.machine_name] = LocalHumbleGame(
+                    game.machine_name,
+                    location
+                )
+            except Exception as e:
+                report_problem(e, {"game": game})
+                continue
+
+        return [g.in_galaxy_format() for g in self._local_games.values()]
+
+    async def launch_game(self, game_id):
+        try:
+            game = self._local_games[game_id]
+        except KeyError as e:
+            report_problem(e, {'local_games': self._local_games, 'installed_apps': self._app_finder.installed_apps})
+
+        game.run()
+
 
     # async def uninstall_game(self, game_id):
     #     game = self._local_games[game_id]
     #     if game is None:
     #         logging.error('game not found')
-        
+
     def shutdown(self):
-        self._api._session.close()
+        asyncio.create_task(self._api._session.close())
 
 def main():
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)

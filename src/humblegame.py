@@ -87,7 +87,7 @@ class HumbleGame(abc.ABC):
         return str(self)
 
     def __str__(self):
-        return f"HumbleGame ({self.__class__.__name__}): ({self.human_name}, {self.downloads})"
+        return f"<{self.__class__.__name__}> {self.human_name}, downloads: {self.downloads})"
 
 
 class TroveGame(HumbleGame):
