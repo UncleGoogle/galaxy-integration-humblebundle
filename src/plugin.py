@@ -9,7 +9,7 @@ import sentry_sdk
 
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
-from galaxy.api.types import Authentication, NextStep
+from galaxy.api.types import Authentication, NextStep, LocalGame
 
 from version import __version__
 from consts import GAME_PLATFORMS
@@ -34,6 +34,11 @@ def report_problem(error, extra, level=logging.ERROR):
         sentry_sdk.capture_exception(error)
 
 
+def report_info(msg):
+    logging.info(msg)
+    sentry_sdk.capture_message(msg)
+
+
 AUTH_PARAMS = {
     "window_title": "Login to HumbleBundle",
     "window_width": 560,
@@ -52,6 +57,10 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._owned_games = {}
         self._local_games = {}
+
+        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
+        self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
+        self._cached_game_states = {}
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -105,8 +114,6 @@ class HumbleBundlePlugin(Plugin):
             for product in products
         }
 
-        asyncio.create_task(self._notify_about_local_games())
-
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def install_game(self, game_id):
@@ -126,17 +133,6 @@ class HumbleBundlePlugin(Plugin):
         else:
             webbrowser.open(chosen_download.web)
 
-    async def _notify_about_local_games(self):
-        """
-        Workaround for Galaxy import logic, (first asks for local games, then for owned)
-        Just add manually every local game.
-        """
-        logging.info('Searching for local games')
-        await self.get_local_games()
-        for game in self._local_games.values():
-            logging.info(f'adding local game {game}')
-            self.add_game(game.in_galaxy_format())
-
     async def get_local_games(self):
         if not self._app_finder or not self._owned_games:
             return []
@@ -147,24 +143,15 @@ class HumbleBundlePlugin(Plugin):
             report_problem(e)
             return []
 
-        self._local_games.clear()
-        for ogame in self._owned_games.values():
+        for og in self._owned_games.values():
             try:
-                exe = self._app_finder.find_executable(ogame.human_name)
+                exe = self._app_finder.find_executable(og.human_name)
                 if exe is None:
                     continue
-                logging.info(f'Installed game {ogame.human_name} found. Executable: [{exe}]')
-
-                local_game = self._local_games.get(ogame.machine_name)
-                if local_game:
-                    if exe == local_game.executable:
-                        logging.debug(f'No update for game {local_game}')
-                        continue
-                    logging.info(f'Updating game executable from {local_game.executable} to {exe}')
-                self._local_games[ogame.machine_name] = LocalHumbleGame(ogame.machine_name, exe)
-
+                logging.info(f'Installed game {og.human_name} found. Executable: [{exe}]')
+                self._local_games[og.machine_name] = LocalHumbleGame(og.machine_name, exe)
             except Exception as e:
-                report_problem(e, {"game": ogame})
+                report_problem(e, {"game": og})
                 continue
 
         return [g.in_galaxy_format() for g in self._local_games.values()]
@@ -177,13 +164,38 @@ class HumbleBundlePlugin(Plugin):
         else:
             game.run()
 
+    async def _check_installed(self):
+        """Searches for installed games and updates self._local_games"""
+        await self.get_local_games()
+        await asyncio.sleep(7)
+
+    async def _check_statuses(self):
+        """Check satuses of already found installed (local) games.
+        Detects events when game is:
+        - launched (via Galaxy for now)
+        - stopped
+        - uninstalled
+        """
+        freezed_locals = list(self._local_games.values())
+        for game in freezed_locals:
+            state = game.state
+            if state == self._cached_game_states.get(game.id):
+                continue
+            self.update_local_game_status(LocalGame(game.id, state))
+            self._cached_games_statuses[game.id] = state
+        await asyncio.sleep(1)
+
+    def tick(self):
+        if self._check_statuses_task.done():
+            self._check_statuses_task = asyncio.create_task(self._check_statuses())
+
+        if self._check_installed_task.done():
+            self._check_installed_task = asyncio.create_task(self._check_installed())
+
+
     def shutdown(self):
         asyncio.create_task(self._api._session.close())
 
-    def tick(self):
-        # update running and uninstalled statuses (new installations not supported yet)
-        for local in self._local_games.values():
-            self.update_local_game_status(local.in_galaxy_format())
 
 def main():
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)

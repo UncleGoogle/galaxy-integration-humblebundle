@@ -1,4 +1,3 @@
-import os.path
 import dataclasses
 import subprocess
 import pathlib
@@ -14,6 +13,10 @@ class LocalHumbleGame:
     executable: pathlib.Path
     process: Optional[psutil.Process] = None
     uninstall_cmd: Optional[str] = None
+
+    @property
+    def id(self):
+        return self.machine_name
 
     @property
     def is_installed(self):
@@ -38,5 +41,5 @@ class LocalHumbleGame:
         return LocalGame(self.machine_name, self.state)
 
     def run(self):
-        proc = subprocess.Popen(['explorer', r'/select,', os.path.normpath(self.location)])
+        proc = subprocess.Popen(str(self.executable))
         self.process = psutil.Process(proc.pid)

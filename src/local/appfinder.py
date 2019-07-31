@@ -42,7 +42,7 @@ class WindowsRegistryClient:
                     install_location = self.__get_value(subkey, 'InstallLocation', optional=True),
                 )
             except FileNotFoundError:
-                print(f'key {name} do not have all required fields. Skip')
+                logging.debug(f'key {name} do not have all required fields. Skip')
                 continue
             else:
                 self.__uninstall_keys.append(ukey)
@@ -54,10 +54,7 @@ class WindowsRegistryClient:
                 for i in range(subkeys):
                     subkey_name = winreg.EnumKey(key, i)
                     with winreg.OpenKey(key, subkey_name) as subkey:
-                        try:
-                            yield (subkey_name, subkey)
-                        except FileNotFoundError:
-                            continue
+                        yield (subkey_name, subkey)
 
     def __get_value(self, subkey, prop, optional=False):
         try:
@@ -83,6 +80,9 @@ class WindowsAppFinder:
     def get_install_location(self, human_name: str) -> str:
         for uk in self.installed_apps:
             if self.matches(human_name, uk):
+                if uk.install_location is None:
+                    logging.warning(f'No install location for key {uk}')
+                    return
                 if os.path.exists(uk.install_location):
                     return uk.install_location
 
