@@ -38,18 +38,9 @@ class PathFinder(object):
             return executables[0]
 
         execs = {PurePath(k).stem: k for k in executables}
-        cutoff = 1
-        cutoff_diff = 0.1
-        best_match = None
+        no_cutoff = 0
 
-        while cutoff > 0.1:
-            res = difflib.get_close_matches(pattern, execs.keys(), cutoff=cutoff)
-            if len(res) == 0:
-                break
-            else:
-                best_match = res[0]
-                if len(res) == 1:
-                    break
-            cutoff -= cutoff_diff
-
-        return execs[best_match]
+        matches = difflib.get_close_matches(pattern, execs.keys(), cutoff=no_cutoff)
+        if len(matches) > 0:
+            # returns best match
+            return execs.get(matches[0])

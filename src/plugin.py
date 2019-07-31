@@ -19,10 +19,12 @@ from humbledownloader import HumbleDownloadResolver
 from local import AppFinder, LocalHumbleGame
 
 
-sentry_sdk.init(
-    "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
-    release=f"galaxy-integration-humblebundle@{__version__}"
-)
+enable_sentry = True
+if enable_sentry:
+    sentry_sdk.init(
+        "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
+        release=f"galaxy-integration-humblebundle@{__version__}"
+    )
 
 
 def report_problem(error, extra, level=logging.ERROR):
@@ -129,8 +131,10 @@ class HumbleBundlePlugin(Plugin):
         Workaround for Galaxy import logic, (first asks for local games, then for owned)
         Just add manually every local game.
         """
+        logging.info('Searching for local games')
         await self.get_local_games()
         for game in self._local_games.values():
+            logging.info(f'adding local game {game}')
             self.add_game(game.in_galaxy_format())
 
     async def get_local_games(self):

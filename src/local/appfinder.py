@@ -91,7 +91,7 @@ class WindowsAppFinder:
         if location is None:
             return
         executables = self._pathfinder.find_executables(location)
-        best_match = self._pathfinder.choose_best_executable(human_name, executables)
+        best_match = self._pathfinder.choose_main_executable(human_name, executables)
         if best_match is None:
             logging.warning(f'Main exe not found for {human_name}; reg location: {location}; executables: {executables}')
             return
