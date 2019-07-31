@@ -1,2 +1,2 @@
-from .appfinder import AppFinder, WindowsAppFinder  # noqa
-from .localgame import LocalHumbleGame  # noqa
+from local.appfinder import AppFinder, WindowsAppFinder  # noqa
+from local.localgame import LocalHumbleGame  # noqa

@@ -1,9 +1,12 @@
 import os.path
+import logging
 import pathlib
 
 from dataclasses import dataclass
 from typing import Optional
 from consts import CURRENT_SYSTEM, HP
+
+from local.pathfinder import PathFinder
 
 if CURRENT_SYSTEM == HP.WINDOWS:
     import winreg
@@ -68,19 +71,31 @@ class WindowsRegistryClient:
 class WindowsAppFinder:
     def __init__(self):
         self._reg = WindowsRegistryClient()
+        self._pathfinder = PathFinder(HP.WINDOWS)
 
     @property
     def installed_apps(self):
         return self._reg.uninstall_keys
 
-    def get_install_location(self, human_name: str) -> Optional[pathlib.Path]:
+    def is_app_installed(self, human_name: str) -> bool:
+        return bool(self.get_install_location(human_name))
+
+    def get_install_location(self, human_name: str) -> str:
         for uk in self.installed_apps:
             if self.matches(human_name, uk):
                 if os.path.exists(uk.install_location):
-                    return pathlib.Path(uk.install_location)
+                    return uk.install_location
 
-    def is_app_installed(self, human_name: str) -> bool:
-        return bool(self.get_install_location(human_name))
+    def find_executable(self, human_name: str) -> Optional[pathlib.Path]:
+        location = self.get_install_location(human_name)
+        if location is None:
+            return
+        executables = self._pathfinder.find_executables(location)
+        best_match = self._pathfinder.choose_best_executable(human_name, executables)
+        if best_match is None:
+            logging.warning(f'Main exe not found for {human_name}; reg location: {location}; executables: {executables}')
+            return
+        return pathlib.Path(best_match)
 
     @staticmethod
     def matches(human_name: str, uk: UninstallKey):

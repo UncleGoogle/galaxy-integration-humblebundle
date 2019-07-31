@@ -103,6 +103,8 @@ class HumbleBundlePlugin(Plugin):
             for product in products
         }
 
+        asyncio.create_task(self._notify_about_local_games())
+
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def install_game(self, game_id):
@@ -122,25 +124,43 @@ class HumbleBundlePlugin(Plugin):
         else:
             webbrowser.open(chosen_download.web)
 
+    async def _notify_about_local_games(self):
+        """
+        Workaround for Galaxy import logic, (first asks for local games, then for owned)
+        Just add manually every local game.
+        """
+        await self.get_local_games()
+        for game in self._local_games.values():
+            self.add_game(game.in_galaxy_format())
+
     async def get_local_games(self):
         if not self._app_finder or not self._owned_games:
             return []
-        else:
+
+        try:
             self._app_finder.refresh()
+        except Exception as e:
+            report_problem(e)
+            return []
 
         self._local_games.clear()
-        for game in self._owned_games.values():
+        for ogame in self._owned_games.values():
             try:
-                location = self._app_finder.get_install_location(game.human_name)
-                if location is None:
+                exe = self._app_finder.find_executable(ogame.human_name)
+                if exe is None:
                     continue
-                logging.info(f'Installed game {game.human_name} found at location [{location}]')
-                self._local_games[game.machine_name] = LocalHumbleGame(
-                    game.machine_name,
-                    location
-                )
+                logging.info(f'Installed game {ogame.human_name} found. Executable: [{exe}]')
+
+                local_game = self._local_games.get(ogame.machine_name)
+                if local_game:
+                    if exe == local_game.executable:
+                        logging.debug(f'No update for game {local_game}')
+                        continue
+                    logging.info(f'Updating game executable from {local_game.executable} to {exe}')
+                self._local_games[ogame.machine_name] = LocalHumbleGame(ogame.machine_name, exe)
+
             except Exception as e:
-                report_problem(e, {"game": game})
+                report_problem(e, {"game": ogame})
                 continue
 
         return [g.in_galaxy_format() for g in self._local_games.values()]
@@ -150,17 +170,16 @@ class HumbleBundlePlugin(Plugin):
             game = self._local_games[game_id]
         except KeyError as e:
             report_problem(e, {'local_games': self._local_games, 'installed_apps': self._app_finder.installed_apps})
-
-        game.run()
-
-
-    # async def uninstall_game(self, game_id):
-    #     game = self._local_games[game_id]
-    #     if game is None:
-    #         logging.error('game not found')
+        else:
+            game.run()
 
     def shutdown(self):
         asyncio.create_task(self._api._session.close())
+
+    def tick(self):
+        # update running and uninstalled statuses (new installations not supported yet)
+        for local in self._local_games.values():
+            self.update_local_game_status(local.in_galaxy_format())
 
 def main():
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)

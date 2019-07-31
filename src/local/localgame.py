@@ -1,3 +1,4 @@
+import os.path
 import dataclasses
 import subprocess
 import pathlib
@@ -10,14 +11,13 @@ from galaxy.api.types import LocalGameState, LocalGame
 @dataclasses.dataclass
 class LocalHumbleGame:
     machine_name: str
-    location: Optional[pathlib.Path]
+    executable: pathlib.Path
     process: Optional[psutil.Process] = None
     uninstall_cmd: Optional[str] = None
-    # exe: Optional[pathlib.Path]
 
     @property
     def is_installed(self):
-        return self.location.exists()
+        return self.executable.exists()
 
     @property
     def is_running(self):
@@ -38,5 +38,5 @@ class LocalHumbleGame:
         return LocalGame(self.machine_name, self.state)
 
     def run(self):
-        import os.path
-        subprocess.run(['explorer', r'/select,', os.path.normpath(self.location)])
+        proc = subprocess.Popen(['explorer', r'/select,', os.path.normpath(self.location)])
+        self.process = psutil.Process(proc.pid)
