@@ -24,6 +24,7 @@ class HP(enum.Enum):
     def __hash__(self):
         return hash(self.value)
 
+Platform = typing.NewType('Platform', typing.Union[HP, str])
 
 GAME_PLATFORMS = set([HP.WINDOWS, HP.MAC, HP.LINUX])
 DLC_PLATFORMS = [HP.AUDIO, HP.EBOOK]  # TODO push those with base game
@@ -36,5 +37,3 @@ else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
 
 
-# typing aliases
-TP_PLATFORM = typing.Union[HP, str]

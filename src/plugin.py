@@ -1,8 +1,6 @@
 import sys
 import time
 import asyncio
-import os
-import json
 import logging
 import re
 import webbrowser
@@ -12,10 +10,9 @@ import sentry_sdk
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep
-from galaxy.api.errors import InvalidCredentials
 
 from version import __version__
-from consts import GAME_PLATFORMS, CURRENT_SYSTEM, HP
+from consts import GAME_PLATFORMS
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver

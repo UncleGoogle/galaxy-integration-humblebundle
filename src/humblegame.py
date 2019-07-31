@@ -1,11 +1,9 @@
 import abc
-import copy
-from typing import Dict, Optional, List
-from dataclasses import dataclass
+from typing import Dict, List
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
-from consts import TP_PLATFORM
+from consts import Platform
 
 
 class DownloadStruct(abc.ABC):
@@ -92,7 +90,7 @@ class HumbleGame(abc.ABC):
 
 class TroveGame(HumbleGame):
     @property
-    def downloads(self) -> Dict[TP_PLATFORM, TroveDownload]:
+    def downloads(self) -> Dict[Platform, TroveDownload]:
         return {k: TroveDownload(v) for k, v in self._data['downloads'].items()}
 
     @property
@@ -107,7 +105,7 @@ class TroveGame(HumbleGame):
 
 class Subproduct(HumbleGame):
     @property
-    def downloads(self) -> Dict[TP_PLATFORM, List[SubproductDownload]]:
+    def downloads(self) -> Dict[Platform, List[SubproductDownload]]:
         return {dw['platform']: [SubproductDownload(x) for x in dw['download_struct']] for dw in self._data['downloads']}
 
     @property

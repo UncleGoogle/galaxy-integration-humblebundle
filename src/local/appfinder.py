@@ -2,7 +2,7 @@ import os.path
 import pathlib
 
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional
 from consts import CURRENT_SYSTEM, HP
 
 if CURRENT_SYSTEM == HP.WINDOWS:

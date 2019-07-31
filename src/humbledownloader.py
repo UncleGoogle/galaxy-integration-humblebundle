@@ -1,7 +1,5 @@
-from typing import Dict
-
-from humblegame import DownloadStruct, HumbleGame, TroveGame, Subproduct, SubproductDownload, TroveDownload, DownloadStruct
-from consts import CURRENT_SYSTEM, PlatformNotSupported, TP_PLATFORM
+from humblegame import DownloadStruct, HumbleGame, TroveGame, Subproduct, SubproductDownload, TroveDownload
+from consts import CURRENT_SYSTEM, PlatformNotSupported
 
 
 class HumbleDownloadResolver:
@@ -19,26 +17,26 @@ class HumbleDownloadResolver:
     def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:
         try:
             return game.downloads[self.platform]
-        except KeyError as e:
-            self.__platform_not_supporter_handler()
+        except KeyError:
+            self.__platform_not_supporter_handler(game)
 
     def _find_best_subproduct_download(self, game: Subproduct) -> SubproductDownload:
         try:
             system_downloads = game.downloads[self.platform]
         except KeyError:
-            self.__platform_not_supporter_handler()
+            self.__platform_not_supporter_handler(game)
 
         assert len(system_downloads) > 0
 
         if len(system_downloads) == 1:
             return system_downloads[0]
         else:
-            download_items = list(filter(lambda x: x.name == 'Download', download_struct))
+            download_items = list(filter(lambda x: x.name == 'Download', system_downloads))
 
         if len(download_items) == 1:
             return download_items[0]
         else:
-            raise NotImplementedError(f'Found downloads: {len(download_items)}. All: {downloads}')
+            raise NotImplementedError(f'Found downloads: {len(download_items)}. All: {system_downloads}')
 
     def __platform_not_supporter_handler(self, game):
         raise PlatformNotSupported(f'{self.human_name} has only downloads for [{game.downloads.keys()}]')

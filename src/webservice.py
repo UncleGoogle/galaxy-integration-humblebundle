@@ -1,6 +1,4 @@
 from http.cookies import SimpleCookie
-from typing import Tuple
-import aiohttp
 import json
 import base64
 import logging
