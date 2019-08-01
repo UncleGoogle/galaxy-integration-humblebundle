@@ -107,13 +107,13 @@ def release(c):
     wd = Path(__file__).parent
     tmp_build_dir = wd / zip_name
 
-    arch = wd / zip_name
+    arch = wd / (zip_name + '.zip')
     if arch.exists():
         if input(f'{str(arch)} already exists. Proceed? y/n') !='y':
             return
 
     c.run(f"inv build -o {str(tmp_build_dir)}")
-    shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=tmp_build_dir)
+    shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=zip_name)
     shutil.rmtree(tmp_build_dir)
 
     # TODO: publish on github
