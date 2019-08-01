@@ -182,7 +182,7 @@ class HumbleBundlePlugin(Plugin):
             if state == self._cached_game_states.get(game.id):
                 continue
             self.update_local_game_status(LocalGame(game.id, state))
-            self._cached_games_statuses[game.id] = state
+            self._cached_game_states[game.id] = state
         await asyncio.sleep(1)
 
     def tick(self):

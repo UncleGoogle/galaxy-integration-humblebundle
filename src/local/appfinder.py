@@ -1,11 +1,11 @@
-import os.path
+import re
+import platform
 import logging
 import pathlib
-
 from dataclasses import dataclass
 from typing import Optional
-from consts import CURRENT_SYSTEM, HP
 
+from consts import CURRENT_SYSTEM, HP
 from local.pathfinder import PathFinder
 
 if CURRENT_SYSTEM == HP.WINDOWS:
@@ -16,45 +16,30 @@ if CURRENT_SYSTEM == HP.WINDOWS:
 class UninstallKey:
     key_name: str
     display_name: str
-    uninstall_cmd: str
-    install_location: Optional[str]
+    uninstall_string: str
+    install_location: Optional[str] = None
+    display_icon: Optional[str] = None
+    quiet_uninstall_string: Optional[str] = None
 
 
 class WindowsRegistryClient:
-    UNINSTALL_LOCATION = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-    LOOKUP_REGISTRY_HIVES = [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]
+    _UNINSTALL_LOCATION = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+    _LOOKUP_REGISTRY_HIVES = [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]
 
     def __init__(self):
         self.__uninstall_keys = []
+        if self._is_os_64bit():
+            self._ARCH_KEYS = [winreg.KEY_WOW64_32KEY, winreg.KEY_WOW64_64KEY]
+        else:
+            self._ARCH_KEYS = [0]
 
     @property
     def uninstall_keys(self):
         return self.__uninstall_keys
 
-    def refresh(self):
-        self.__uninstall_keys.clear()
-        for name, subkey in self._iterate_uninstall_keys():
-            try:
-                ukey = UninstallKey(
-                    key_name = name,
-                    uninstall_cmd = self.__get_value(subkey, 'UninstallString'),
-                    display_name = self.__get_value(subkey, 'DisplayName'),
-                    install_location = self.__get_value(subkey, 'InstallLocation', optional=True),
-                )
-            except FileNotFoundError:
-                logging.debug(f'key {name} do not have all required fields. Skip')
-                continue
-            else:
-                self.__uninstall_keys.append(ukey)
-
-    def _iterate_uninstall_keys(self):
-        for hive in self.LOOKUP_REGISTRY_HIVES:
-            with winreg.OpenKey(hive, self.UNINSTALL_LOCATION) as key:
-                subkeys = winreg.QueryInfoKey(key)[0]
-                for i in range(subkeys):
-                    subkey_name = winreg.EnumKey(key, i)
-                    with winreg.OpenKey(key, subkey_name) as subkey:
-                        yield (subkey_name, subkey)
+    @staticmethod
+    def _is_os_64bit():
+        return platform.machine().endswith('64')
 
     def __get_value(self, subkey, prop, optional=False):
         try:
@@ -64,47 +49,51 @@ class WindowsRegistryClient:
                 return None
             raise
 
+    def __parse_uninstall_key(self, name, subkey):
+        return UninstallKey(
+            key_name = name,
+            display_name = self.__get_value(subkey, 'DisplayName'),
+            uninstall_string = self.__get_value(subkey, 'UninstallString'),
+            quiet_uninstall_string = self.__get_value(subkey, 'QuietUninstallString', optional=True),
+            display_icon = self.__get_value(subkey, 'DisplayIcon', optional=True),
+            install_location = self.__get_value(subkey, 'InstallLocation', optional=True),
+        )
+
+    def _iterate_uninstall_keys(self):
+        for view_key in self._ARCH_KEYS:
+            for hive in self._LOOKUP_REGISTRY_HIVES:
+                with winreg.OpenKey(hive, self._UNINSTALL_LOCATION, 0, winreg.KEY_READ | view_key) as key:
+                    subkeys = winreg.QueryInfoKey(key)[0]
+                    for i in range(subkeys):
+                        subkey_name = winreg.EnumKey(key, i)
+                        with winreg.OpenKey(key, subkey_name) as subkey:
+                            yield (subkey_name, subkey)
+
+    def refresh(self):
+        self.__uninstall_keys.clear()
+        for name, subkey in self._iterate_uninstall_keys():
+            try:
+                ukey = self.__parse_uninstall_key(name, subkey)
+            except FileNotFoundError:
+                # logging.debug(f'key {name} do not have all required fields. Skip')
+                continue
+            else:
+                self.__uninstall_keys.append(ukey)
+
 
 class WindowsAppFinder:
     def __init__(self):
         self._reg = WindowsRegistryClient()
         self._pathfinder = PathFinder(HP.WINDOWS)
 
-    @property
-    def installed_apps(self):
-        return self._reg.uninstall_keys
-
-    def is_app_installed(self, human_name: str) -> bool:
-        return bool(self.get_install_location(human_name))
-
-    def get_install_location(self, human_name: str) -> str:
-        for uk in self.installed_apps:
-            if self.matches(human_name, uk):
-                if uk.install_location is None:
-                    logging.warning(f'No install location for key {uk}')
-                    return
-                if os.path.exists(uk.install_location):
-                    return uk.install_location
-
-    def find_executable(self, human_name: str) -> Optional[pathlib.Path]:
-        location = self.get_install_location(human_name)
-        if location is None:
-            return
-        executables = self._pathfinder.find_executables(location)
-        best_match = self._pathfinder.choose_main_executable(human_name, executables)
-        if best_match is None:
-            logging.warning(f'Main exe not found for {human_name}; reg location: {location}; executables: {executables}')
-            return
-        return pathlib.Path(best_match)
-
     @staticmethod
-    def matches(human_name: str, uk: UninstallKey):
+    def __matches(human_name: str, uk: UninstallKey) -> bool:
         def escaped_matches(a, b):
             def escape(x):
                 return x.replace(':', '').lower()
             return escape(a) == escape(b)
 
-        if human_name  == uk.display_name \
+        if human_name == uk.display_name \
             or escaped_matches(human_name, uk.display_name) \
             or uk.key_name.startswith(human_name):
             return True
@@ -112,6 +101,68 @@ class WindowsAppFinder:
             path = pathlib.PurePath(uk.install_location).name
             return escaped_matches(human_name, path)
         return
+
+    @staticmethod
+    def _get_path_from_install_location(sz_val: Optional[str]) -> Optional[pathlib.Path]:
+        if not sz_val:
+            return
+        path = sz_val.replace('"', '')
+        return pathlib.Path(path)
+
+    @staticmethod
+    def _get_path_from_display_icon(sz_val: Optional[str]) -> Optional[pathlib.Path]:
+        if not sz_val:
+            return
+        path = sz_val.split(',', 1)[0].replace('"', '')
+        return pathlib.Path(path)
+
+    @staticmethod
+    def _get_path_from_uninstall_string(sz_val: str) -> Optional[pathlib.Path]:
+        if not sz_val:
+            return
+        if sz_val.startswith("MsiExec.exe"):  # no support for now
+            return
+        if '"' not in sz_val:
+            return pathlib.Path(sz_val)
+        m = re.match(r'"(.+?)"', sz_val)
+        if m:
+            return pathlib.Path(m.group(1))
+
+    def _match_uninstall_key(self, human_name: str) -> UninstallKey:
+        for uk in self._reg.uninstall_keys:
+            if self.__matches(human_name, uk):
+                return uk
+
+    def is_app_installed(self, human_name: str) -> bool:
+        return bool(self.find_executable(human_name))
+
+    def find_executable(self, human_name: str) -> Optional[pathlib.Path]:
+        """ Returns most probable game executable of given game name or None if not found.
+        """
+        uk = self._match_uninstall_key(human_name)
+        if not uk:
+            return
+
+        # sometimes display_icon link to main executable
+        upath = self._get_path_from_uninstall_string(uk.uninstall_string)
+        ipath = self._get_path_from_display_icon(uk.display_icon)
+        if ipath and ipath.suffix == '.exe':
+            if ipath != upath and 'unins' not in str(ipath):  # exclude uninstaller!
+                return ipath
+
+        # get install_location if present; if not, check for uninstall or display_icon parents
+        ilpath = self._get_path_from_install_location(uk.install_location)
+        location = ilpath or upath.parent or ipath.parent
+
+        # find all executables and get best maching (exclude uninstall_path)
+        if location and location.exists():
+            executables = set(self._pathfinder.find_executables(location)) - {upath}
+            best_match = self._pathfinder.choose_main_executable(human_name, executables)
+            if best_match is None:
+                logging.warning(f'Main exe not found for {human_name}; \
+                    loc: {uk.install_location}; up: {upath}; ip: {ipath}; execs: {executables}')
+                return
+            return pathlib.Path(best_match)
 
     def refresh(self):
         self._reg.refresh()
