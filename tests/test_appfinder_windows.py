@@ -41,7 +41,7 @@ def annas_quest():
 
 @pytest.fixture
 def uk_torchlight2():
-    """In this real example, there is no installLocation and displayIcon links to launcher executable
+    """In this real example, there is no installLocation and displayIcon links to launcher executable.
     """
     return UninstallKey(
         key_name = "{049FF5E4-EB02-4c42-8DB0-226E2F7A9E53}",
@@ -67,7 +67,7 @@ def test_match_basic_display_name(annas_quest, patch_wrc):
         assert annas_quest['uk'] == finder._match_uninstall_key(human_name)
 
 
-def test_match_with_folder_name(annas_quest, patch_wrc):
+def test_match_with_folder_name(patch_wrc):
     human_name = "The Windosill"
     install_location = 'C:\\Games\\The Windosill\\'
     subkeys = [
@@ -83,7 +83,7 @@ def test_match_with_folder_name(annas_quest, patch_wrc):
         assert install_location == finder._match_uninstall_key(human_name).install_location
 
 
-def test_match_colon_in_name(annas_quest, patch_wrc):
+def test_match_colon_in_name(patch_wrc):
     human_name = "Orks: final cutdown"
     install_location = "C:\\Games\\Orks Final Cutdown"
     subkeys = [
@@ -97,6 +97,21 @@ def test_match_colon_in_name(annas_quest, patch_wrc):
         finder = WindowsAppFinder()
         finder.refresh()
         assert install_location == finder._match_uninstall_key(human_name).install_location
+
+
+def test_no_match(annas_quest, patch_wrc):
+    human_name = "Orks: final cutdown"
+    subkeys = [
+        ("orkgame_is1", {
+            "DisplayName": "Ork game",
+            "InstallLocation": "C:\\OrkGame\\",
+            "UninstallString": "C:\\OrkGame\\uninstall.exe",
+        })
+    ]
+    with patch_wrc(subkeys):
+        finder = WindowsAppFinder()
+        finder.refresh()
+        assert None == finder._match_uninstall_key(human_name)
 
 
 def test_get_display_icon_path():

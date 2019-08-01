@@ -19,7 +19,7 @@ from humbledownloader import HumbleDownloadResolver
 from local import AppFinder, LocalHumbleGame
 
 
-enable_sentry = True
+enable_sentry = False
 if enable_sentry:
     sentry_sdk.init(
         "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
@@ -183,7 +183,7 @@ class HumbleBundlePlugin(Plugin):
                 continue
             self.update_local_game_status(LocalGame(game.id, state))
             self._cached_game_states[game.id] = state
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.5)
 
     def tick(self):
         if self._check_statuses_task.done():

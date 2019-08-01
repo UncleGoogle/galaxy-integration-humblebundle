@@ -75,7 +75,7 @@ class WindowsRegistryClient:
             try:
                 ukey = self.__parse_uninstall_key(name, subkey)
             except FileNotFoundError:
-                # logging.debug(f'key {name} do not have all required fields. Skip')
+                logging.debug(f'key {name} do not have all required fields. Skip')
                 continue
             else:
                 self.__uninstall_keys.append(ukey)
@@ -88,19 +88,25 @@ class WindowsAppFinder:
 
     @staticmethod
     def __matches(human_name: str, uk: UninstallKey) -> bool:
+        def escape(x):
+            return x.replace(':', '').lower()
         def escaped_matches(a, b):
-            def escape(x):
-                return x.replace(':', '').lower()
             return escape(a) == escape(b)
+        def norm(x):
+            # quickfix for Torchlight II ect., until better solution will be provide
+            return x.replace(" III", " 3").replace(" II", " 2")
 
         if human_name == uk.display_name \
             or escaped_matches(human_name, uk.display_name) \
-            or uk.key_name.startswith(human_name):
+            or uk.key_name.startswith(human_name) \
+            or escape(human_name) in uk.uninstall_string:
             return True
-        elif uk.install_location is not None:
+        if uk.install_location is not None:
             path = pathlib.PurePath(uk.install_location).name
-            return escaped_matches(human_name, path)
-        return
+            if escaped_matches(human_name, path):
+                return True
+
+        return escaped_matches(norm(human_name), norm(uk.display_name))
 
     @staticmethod
     def _get_path_from_install_location(sz_val: Optional[str]) -> Optional[pathlib.Path]:
@@ -151,8 +157,10 @@ class WindowsAppFinder:
                 return ipath
 
         # get install_location if present; if not, check for uninstall or display_icon parents
-        ilpath = self._get_path_from_install_location(uk.install_location)
-        location = ilpath or upath.parent or ipath.parent
+        ildir = self._get_path_from_install_location(uk.install_location)
+        udir = upath.parent if upath else None
+        idir = ipath.parent if ipath else None
+        location = ildir or udir or idir
 
         # find all executables and get best maching (exclude uninstall_path)
         if location and location.exists():
