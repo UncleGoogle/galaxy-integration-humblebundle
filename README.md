@@ -7,7 +7,7 @@ Integration for GOG Galaxy 2.0.
 * Library: listing DRM free games from HumbleBundle library (those with downloads for Windows, MacOS or Linux)
 * Library: Humble Trove support
 * Install: simple download via webbrowser
-* Launch: only Windows games installed via __installer__ are detected
+* Launch: autodetect installed games (only visible in `Control Panel\Programs\Programs and Features`)
 * Launch: track running games (only if launched via Galaxy)
 
 ## Installation
@@ -25,8 +25,8 @@ or build from source code (requires `python3.6` or higher):
 
 ## Known Issues
 
-- cannot detect game as installed if it has proper installer. Sadly, many HB games are self-running
-- no launch support for macOS yet
+- no detection for games installed via default WindowsInstaller (`Msi` uninstaller)
+- no launch support for macOS
 
 ## See also
 - https://github.com/gogcom/galaxy-integrations-python-api
