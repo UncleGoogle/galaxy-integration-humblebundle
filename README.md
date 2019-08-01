@@ -25,7 +25,7 @@ or build from source code (requires `python3.6` or higher):
 
 ## Known Issues
 
-- no detection for games installed via default WindowsInstaller (`Msi` uninstaller)
+- no detection for games installed via default Windows installer (comming soon)
 - no launch support for macOS
 
 ## See also
