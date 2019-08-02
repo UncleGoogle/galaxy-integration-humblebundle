@@ -3,7 +3,7 @@ import pathlib
 from unittest.mock import patch
 from contextlib import contextmanager
 
-from local.appfinder import WindowsRegistryClient, UninstallKey, WindowsAppFinder
+from local._winappfinder import WindowsRegistryClient, UninstallKey, WindowsAppFinder
 
 
 @pytest.fixture

@@ -11,8 +11,8 @@ from galaxy.api.types import LocalGameState, LocalGame
 class LocalHumbleGame:
     machine_name: str
     executable: pathlib.Path
-    process: Optional[psutil.Process] = None
     uninstall_cmd: Optional[str] = None
+    process: Optional[psutil.Process] = None
 
     @property
     def id(self):
@@ -43,3 +43,6 @@ class LocalHumbleGame:
     def run(self):
         proc = subprocess.Popen(str(self.executable))
         self.process = psutil.Process(proc.pid)
+
+    def uninstall(self):
+        subprocess.Popen(self.uninstall_cmd)

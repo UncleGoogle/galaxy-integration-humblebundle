@@ -103,7 +103,7 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     prod = Subproduct(sub)
                     if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
-                        # at least one download is for supported OS
+                        # at least one download exists for supported OS
                         products.append(prod)
                 except Exception as e:
                     report_problem(e, details, log=logging.WARNING)
@@ -137,19 +137,21 @@ class HumbleBundlePlugin(Plugin):
         if not self._app_finder or not self._owned_games:
             return []
 
+        start = time.time()
         try:
             self._app_finder.refresh()
         except Exception as e:
             report_problem(e)
             return []
+        finally:
+            logging.debug(f'Refreshing App Finder took {time.time()-start}s')
 
         for og in self._owned_games.values():
             try:
-                exe = self._app_finder.find_executable(og.human_name)
-                if exe is None:
-                    continue
-                logging.info(f'Installed game {og.human_name} found. Executable: [{exe}]')
-                self._local_games[og.machine_name] = LocalHumbleGame(og.machine_name, exe)
+                local_game = self._app_finder.find_local_game(og.machine_name, og.human_name)
+                if local_game is not None:
+                    logging.info(f'Installed game {og.human_name} found: [{local_game}]')
+                    self._local_games[og.machine_name] = local_game
             except Exception as e:
                 report_problem(e, {"game": og})
                 continue
@@ -160,9 +162,17 @@ class HumbleBundlePlugin(Plugin):
         try:
             game = self._local_games[game_id]
         except KeyError as e:
-            report_problem(e, {'local_games': self._local_games, 'installed_apps': self._app_finder.installed_apps})
+            report_problem(e, {'local_games': self._local_games})
         else:
             game.run()
+
+    async def uninstall_game(self, game_id):
+        try:
+            game = self._local_games[game_id]
+        except KeyError as e:
+            report_problem(e, {'local_games': self._local_games})
+        else:
+            game.uninstall()
 
     async def _check_installed(self):
         """Searches for installed games and updates self._local_games"""

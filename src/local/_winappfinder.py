@@ -4,12 +4,11 @@ import logging
 import pathlib
 from dataclasses import dataclass
 from typing import Optional
+import winreg
 
-from consts import CURRENT_SYSTEM, HP
+from consts import HP
 from local.pathfinder import PathFinder
-
-if CURRENT_SYSTEM == HP.WINDOWS:
-    import winreg
+from local.localgame import LocalHumbleGame
 
 
 @dataclass(frozen=True)
@@ -75,7 +74,7 @@ class WindowsRegistryClient:
             try:
                 ukey = self.__parse_uninstall_key(name, subkey)
             except FileNotFoundError:
-                logging.debug(f'key {name} do not have all required fields. Skip')
+                # logging.debug(f'key {name} do not have all required fields. Skip')
                 continue
             else:
                 self.__uninstall_keys.append(ukey)
@@ -93,7 +92,7 @@ class WindowsAppFinder:
         def escaped_matches(a, b):
             return escape(a) == escape(b)
         def norm(x):
-            # quickfix for Torchlight II ect., until better solution will be provide
+            # quickfix for Torchlight II ect., until better solution will be provided
             return x.replace(" III", " 3").replace(" II", " 2")
 
         if human_name == uk.display_name \
@@ -139,16 +138,9 @@ class WindowsAppFinder:
             if self.__matches(human_name, uk):
                 return uk
 
-    def is_app_installed(self, human_name: str) -> bool:
-        return bool(self.find_executable(human_name))
-
-    def find_executable(self, human_name: str) -> Optional[pathlib.Path]:
-        """ Returns most probable game executable of given game name or None if not found.
+    def find_executable(self, human_name: str, uk: UninstallKey) -> Optional[pathlib.Path]:
+        """ Returns most probable app executable of given uk or None if not found.
         """
-        uk = self._match_uninstall_key(human_name)
-        if not uk:
-            return
-
         # sometimes display_icon link to main executable
         upath = self._get_path_from_uninstall_string(uk.uninstall_string)
         ipath = self._get_path_from_display_icon(uk.display_icon)
@@ -172,13 +164,17 @@ class WindowsAppFinder:
                 return
             return pathlib.Path(best_match)
 
+    def find_local_game(self, machine_name: str, human_name: str) -> Optional[LocalHumbleGame]:
+        uk = self._match_uninstall_key(human_name)
+        if uk is not None:
+            exe = self.find_executable(human_name, uk)
+            if exe is not None:
+                return LocalHumbleGame(machine_name, exe, uk.uninstall_string)
+            logging.warning(f"Uninstall key found, but cannot find game location for [{human_name}]")
+
+    def is_app_installed(self, human_name: str) -> bool:
+        return bool(self.find_local_game(human_name))
+
     def refresh(self):
         self._reg.refresh()
 
-
-if CURRENT_SYSTEM == HP.WINDOWS:
-    AppFinder = WindowsAppFinder
-elif CURRENT_SYSTEM == HP.MAC:
-    AppFinder = None
-else:
-    raise RuntimeError(f'Unsupported system: {CURRENT_SYSTEM}')
