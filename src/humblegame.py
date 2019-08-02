@@ -19,6 +19,10 @@ class DownloadStruct(abc.ABC):
         self.url = data['url']
 
     @property
+    def name(self):
+        return self.url['name']
+
+    @property
     def web(self):
         return self.url['web']
 
@@ -77,9 +81,8 @@ class HumbleGame(abc.ABC):
         return self._data['machine_name']
 
     def in_galaxy_format(self):
-        licence = LicenseInfo(LicenseType.SinglePurchase)
         dlcs = []  # not supported for now
-        return Game(self.machine_name, self.human_name, dlcs, licence)
+        return Game(self.machine_name, self.human_name, dlcs, self.licence)
 
     def __repr__(self):
         return str(self)
@@ -96,7 +99,7 @@ class TroveGame(HumbleGame):
     @property
     def license(self) -> LicenseInfo:
         """There is currently not 'subscription' type license"""
-        LicenseInfo(LicenseType.OtherUserLicense)
+        return LicenseInfo(LicenseType.OtherUserLicense)
 
     @property
     def human_name(self):
@@ -111,7 +114,7 @@ class Subproduct(HumbleGame):
     @property
     def license(self) -> LicenseInfo:
         """There is currently not 'subscription' type license"""
-        LicenseInfo(LicenseType.SinglePurchase)
+        return LicenseInfo(LicenseType.SinglePurchase)
 
     @property
     def human_name(self):

@@ -16,7 +16,7 @@ from consts import GAME_PLATFORMS
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
-from local import AppFinder, LocalHumbleGame
+from local import AppFinder
 
 
 enable_sentry = False

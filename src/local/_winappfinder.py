@@ -16,9 +16,37 @@ class UninstallKey:
     key_name: str
     display_name: str
     uninstall_string: str
-    install_location: Optional[str] = None
-    display_icon: Optional[str] = None
+    _install_location: Optional[str] = None
+    _display_icon: Optional[str] = None
     quiet_uninstall_string: Optional[str] = None
+
+    @property
+    def install_location(self) -> Optional[pathlib.Path]:
+        if not self._install_location:
+            return None
+        path = self._install_location.replace('"', '')
+        return pathlib.Path(path)
+
+    @property
+    def display_icon(self) -> Optional[pathlib.Path]:
+        if not self._display_icon:
+            return None
+        path = self._display_icon.split(',', 1)[0].replace('"', '')
+        return pathlib.Path(path)
+
+    @property
+    def uninstall_string_path(self) -> Optional[pathlib.Path]:
+        uspath = self.uninstall_string
+        if not uspath:
+            return None
+        if uspath.startswith("MsiExec.exe"):
+            return None
+        if '"' not in uspath:
+            return pathlib.Path(uspath)
+        m = re.match(r'"(.+?)"', uspath)
+        if m:
+            return pathlib.Path(m.group(1))
+        return None
 
 
 class WindowsRegistryClient:
@@ -54,8 +82,8 @@ class WindowsRegistryClient:
             display_name = self.__get_value(subkey, 'DisplayName'),
             uninstall_string = self.__get_value(subkey, 'UninstallString'),
             quiet_uninstall_string = self.__get_value(subkey, 'QuietUninstallString', optional=True),
-            display_icon = self.__get_value(subkey, 'DisplayIcon', optional=True),
-            install_location = self.__get_value(subkey, 'InstallLocation', optional=True),
+            _display_icon = self.__get_value(subkey, 'DisplayIcon', optional=True),
+            _install_location = self.__get_value(subkey, 'InstallLocation', optional=True),
         )
 
     def _iterate_uninstall_keys(self):
@@ -92,67 +120,43 @@ class WindowsAppFinder:
         def escaped_matches(a, b):
             return escape(a) == escape(b)
         def norm(x):
-            # quickfix for Torchlight II ect., until better solution will be provided
             return x.replace(" III", " 3").replace(" II", " 2")
 
         if human_name == uk.display_name \
             or escaped_matches(human_name, uk.display_name) \
-            or uk.key_name.startswith(human_name) \
-            or escape(human_name) in uk.uninstall_string:
+            or uk.key_name.startswith(human_name):
             return True
         if uk.install_location is not None:
             path = pathlib.PurePath(uk.install_location).name
             if escaped_matches(human_name, path):
                 return True
-
+        upath = uk.uninstall_string_path
+        if upath and escape(human_name) in str(upath):
+            return True
+        # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
 
-    @staticmethod
-    def _get_path_from_install_location(sz_val: Optional[str]) -> Optional[pathlib.Path]:
-        if not sz_val:
-            return
-        path = sz_val.replace('"', '')
-        return pathlib.Path(path)
-
-    @staticmethod
-    def _get_path_from_display_icon(sz_val: Optional[str]) -> Optional[pathlib.Path]:
-        if not sz_val:
-            return
-        path = sz_val.split(',', 1)[0].replace('"', '')
-        return pathlib.Path(path)
-
-    @staticmethod
-    def _get_path_from_uninstall_string(sz_val: str) -> Optional[pathlib.Path]:
-        if not sz_val:
-            return
-        if sz_val.startswith("MsiExec.exe"):  # no support for now
-            return
-        if '"' not in sz_val:
-            return pathlib.Path(sz_val)
-        m = re.match(r'"(.+?)"', sz_val)
-        if m:
-            return pathlib.Path(m.group(1))
-
-    def _match_uninstall_key(self, human_name: str) -> UninstallKey:
+    def _match_uninstall_key(self, human_name: str) -> Optional[UninstallKey]:
         for uk in self._reg.uninstall_keys:
             if self.__matches(human_name, uk):
                 return uk
+        return None
 
     def find_executable(self, human_name: str, uk: UninstallKey) -> Optional[pathlib.Path]:
         """ Returns most probable app executable of given uk or None if not found.
         """
         # sometimes display_icon link to main executable
-        upath = self._get_path_from_uninstall_string(uk.uninstall_string)
-        ipath = self._get_path_from_display_icon(uk.display_icon)
+        upath = uk.uninstall_string_path
+        ipath = uk.display_icon
         if ipath and ipath.suffix == '.exe':
-            if ipath != upath and 'unins' not in str(ipath):  # exclude uninstaller!
+            if ipath != upath and 'unins' not in str(ipath):  # exclude uninstaller
                 return ipath
+        return None
 
         # get install_location if present; if not, check for uninstall or display_icon parents
-        ildir = self._get_path_from_install_location(uk.install_location)
         udir = upath.parent if upath else None
         idir = ipath.parent if ipath else None
-        location = ildir or udir or idir
+        location = uk.install_location or udir or idir
 
         # find all executables and get best maching (exclude uninstall_path)
         if location and location.exists():
@@ -161,8 +165,9 @@ class WindowsAppFinder:
             if best_match is None:
                 logging.warning(f'Main exe not found for {human_name}; \
                     loc: {uk.install_location}; up: {upath}; ip: {ipath}; execs: {executables}')
-                return
+                return None
             return pathlib.Path(best_match)
+        return None
 
     def find_local_game(self, machine_name: str, human_name: str) -> Optional[LocalHumbleGame]:
         uk = self._match_uninstall_key(human_name)
@@ -170,10 +175,8 @@ class WindowsAppFinder:
             exe = self.find_executable(human_name, uk)
             if exe is not None:
                 return LocalHumbleGame(machine_name, exe, uk.uninstall_string)
-            logging.warning(f"Uninstall key found, but cannot find game location for [{human_name}]")
-
-    def is_app_installed(self, human_name: str) -> bool:
-        return bool(self.find_local_game(human_name))
+            logging.warning(f"Uninstall key matched, but cannot find game location for [{human_name}]; uk: {uk}")
+        return None
 
     def refresh(self):
         self._reg.refresh()

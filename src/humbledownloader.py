@@ -13,6 +13,8 @@ class HumbleDownloadResolver:
             return self._find_best_trove_download(game)
         elif isinstance(game, Subproduct):
             return self._find_best_subproduct_download(game)
+        else:
+            raise AssertionError('Unsupported game type')
 
     def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:
         try:

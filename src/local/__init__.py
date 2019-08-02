@@ -1,6 +1,4 @@
 from consts import CURRENT_SYSTEM, HP
-from .localgame import LocalHumbleGame  # noqa
-from .pathfinder import PathFinder
 
 
 if CURRENT_SYSTEM == HP.WINDOWS:

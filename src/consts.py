@@ -35,4 +35,4 @@ else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
 
 # typing aliases
-Platform = typing.NewType('Platform', typing.Union[HP, str])
+Platform = typing.Union[HP, str]

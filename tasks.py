@@ -96,8 +96,19 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c):
+def test(c, mypy=True):
     c.run("pytest")
+    if mypy:
+        c.run(
+            "mypy \
+            src\local \
+            src\plugin.py \
+            src\consts.py \
+            src\humblegame.py \
+            src\humbledownloader.py \
+            src\webservice.py \
+            --follow-imports silent"
+        )
 
 
 @task
