@@ -82,7 +82,7 @@ class HumbleGame(abc.ABC):
 
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
-        return Game(self.machine_name, self.human_name, dlcs, self.licence)
+        return Game(self.machine_name, self.human_name, dlcs, self.license)
 
     def __repr__(self):
         return str(self)

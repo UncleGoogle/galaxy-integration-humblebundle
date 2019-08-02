@@ -150,11 +150,12 @@ class HumbleBundlePlugin(Plugin):
             try:
                 local_game = self._app_finder.find_local_game(og.machine_name, og.human_name)
                 if local_game is not None:
-                    logging.info(f'Installed game {og.human_name} found: [{local_game}]')
                     self._local_games[og.machine_name] = local_game
             except Exception as e:
                 report_problem(e, {"game": og})
                 continue
+
+        logging.debug(f'Searching for owned games took {time.time()-start}s')
 
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
@@ -174,11 +175,6 @@ class HumbleBundlePlugin(Plugin):
         else:
             game.uninstall()
 
-    async def _check_installed(self):
-        """Searches for installed games and updates self._local_games"""
-        await self.get_local_games()
-        await asyncio.sleep(7)
-
     async def _check_statuses(self):
         """Check satuses of already found installed (local) games.
         Detects events when game is:
@@ -194,6 +190,11 @@ class HumbleBundlePlugin(Plugin):
             self.update_local_game_status(LocalGame(game.id, state))
             self._cached_game_states[game.id] = state
         await asyncio.sleep(0.5)
+
+    async def _check_installed(self):
+        """Searches for installed games and updates self._local_games"""
+        await self.get_local_games()
+        await asyncio.sleep(7)
 
     def tick(self):
         if self._check_statuses_task.done():
