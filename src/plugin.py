@@ -27,7 +27,7 @@ if enable_sentry:
     )
 
 
-def report_problem(error, extra, level=logging.ERROR):
+def report_problem(error, extra=None, level=logging.ERROR):
     logging.log(level, str(error), extra=extra)
     with sentry_sdk.configure_scope() as scope:
         scope.set_extra("extra_context", extra)
@@ -106,7 +106,7 @@ class HumbleBundlePlugin(Plugin):
                         # at least one download exists for supported OS
                         products.append(prod)
                 except Exception as e:
-                    report_problem(e, details, log=logging.WARNING)
+                    report_problem(e, details, level=logging.WARNING)
                     continue
 
         self._owned_games = {
@@ -141,20 +141,13 @@ class HumbleBundlePlugin(Plugin):
         try:
             self._app_finder.refresh()
         except Exception as e:
-            report_problem(e)
+            report_problem(e, None)
             return []
         finally:
             logging.debug(f'Refreshing App Finder took {time.time()-start}s')
 
-        for og in self._owned_games.values():
-            try:
-                local_game = self._app_finder.find_local_game(og.machine_name, og.human_name)
-                if local_game is not None:
-                    logging.info(f'Installed game {og.human_name} found: [{local_game}]')
-                    self._local_games[og.machine_name] = local_game
-            except Exception as e:
-                report_problem(e, {"game": og})
-                continue
+        local_games = self._app_finder.find_local_games(list(self._owned_games.values()))
+        self._local_games = {game.machine_name: game for game in local_games}
 
         return [g.in_galaxy_format() for g in self._local_games.values()]
 

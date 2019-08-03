@@ -3,7 +3,7 @@ import platform
 import logging
 import pathlib
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, List, Set, Any
 import winreg
 
 from consts import HP
@@ -16,9 +16,9 @@ class UninstallKey:
     key_name: str
     display_name: str
     uninstall_string: str
+    quiet_uninstall_string: Optional[str] = None
     _install_location: Optional[str] = None
     _display_icon: Optional[str] = None
-    quiet_uninstall_string: Optional[str] = None
 
     @property
     def install_location(self) -> Optional[pathlib.Path]:
@@ -54,7 +54,9 @@ class WindowsRegistryClient:
     _LOOKUP_REGISTRY_HIVES = [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]
 
     def __init__(self):
-        self.__uninstall_keys = []
+        self.__seen_cache: Set[str] = set()  # names of all uninstall keys seen so far
+        self.__uninstall_keys: Set[UninstallKey] = set()
+
         if self._is_os_64bit():
             self._ARCH_KEYS = [winreg.KEY_WOW64_32KEY, winreg.KEY_WOW64_64KEY]
         else:
@@ -86,26 +88,29 @@ class WindowsRegistryClient:
             _install_location = self.__get_value(subkey, 'InstallLocation', optional=True),
         )
 
-    def _iterate_uninstall_keys(self):
-        for view_key in self._ARCH_KEYS:
+    def _iterate_new_uninstall_keys(self):
+        for arch_key in self._ARCH_KEYS:
             for hive in self._LOOKUP_REGISTRY_HIVES:
-                with winreg.OpenKey(hive, self._UNINSTALL_LOCATION, 0, winreg.KEY_READ | view_key) as key:
+                with winreg.OpenKey(hive, self._UNINSTALL_LOCATION, 0, winreg.KEY_READ | arch_key) as key:
                     subkeys = winreg.QueryInfoKey(key)[0]
                     for i in range(subkeys):
                         subkey_name = winreg.EnumKey(key, i)
+                        # TODO what if subkey_name is not unique accross arch or hives(?)
+                        if subkey_name in self.__seen_cache:
+                            continue
                         with winreg.OpenKey(key, subkey_name) as subkey:
                             yield (subkey_name, subkey)
 
     def refresh(self):
-        self.__uninstall_keys.clear()
-        for name, subkey in self._iterate_uninstall_keys():
+        for name, subkey in self._iterate_new_uninstall_keys():
             try:
                 ukey = self.__parse_uninstall_key(name, subkey)
             except FileNotFoundError:
-                # logging.debug(f'key {name} do not have all required fields. Skip')
                 continue
             else:
-                self.__uninstall_keys.append(ukey)
+                self.__uninstall_keys.add(ukey)
+            finally:
+                self.__seen_cache.add(subkey)
 
 
 class WindowsAppFinder:
@@ -131,16 +136,10 @@ class WindowsAppFinder:
             if escaped_matches(human_name, path):
                 return True
         upath = uk.uninstall_string_path
-        if upath and escape(human_name) in str(upath):
+        if upath and escape(human_name) in [escape(u) for u in upath.parts[1:]]:
             return True
         # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
-
-    def _match_uninstall_key(self, human_name: str) -> Optional[UninstallKey]:
-        for uk in self._reg.uninstall_keys:
-            if self.__matches(human_name, uk):
-                return uk
-        return None
 
     def find_executable(self, human_name: str, uk: UninstallKey) -> Optional[pathlib.Path]:
         """ Returns most probable app executable of given uk or None if not found.
@@ -151,7 +150,6 @@ class WindowsAppFinder:
         if ipath and ipath.suffix == '.exe':
             if ipath != upath and 'unins' not in str(ipath):  # exclude uninstaller
                 return ipath
-        return None
 
         # get install_location if present; if not, check for uninstall or display_icon parents
         udir = upath.parent if upath else None
@@ -169,14 +167,24 @@ class WindowsAppFinder:
             return pathlib.Path(best_match)
         return None
 
-    def find_local_game(self, machine_name: str, human_name: str) -> Optional[LocalHumbleGame]:
-        uk = self._match_uninstall_key(human_name)
-        if uk is not None:
-            exe = self.find_executable(human_name, uk)
-            if exe is not None:
-                return LocalHumbleGame(machine_name, exe, uk.uninstall_string)
-            logging.warning(f"Uninstall key matched, but cannot find game location for [{human_name}]; uk: {uk}")
-        return None
+    def find_local_games(self, owned_games: List[Any]) -> List[LocalHumbleGame]:
+        local_games = []
+        while self._reg.uninstall_keys:
+            uk = self._reg.uninstall_keys.pop()
+            try:
+                for og in owned_games:
+                    if self.__matches(og.human_name, uk):
+                        exe = self.find_executable(og.human_name, uk)
+                        if exe is not None:
+                            local_games.append(LocalHumbleGame(og.machine_name, exe, uk.uninstall_string))
+                            owned_games.remove(og)
+                            break
+                        logging.warning(f"Uninstall key matched, but cannot find \
+                            game exe for [{og.human_name}]; uk: {uk}")
+            except Exception:
+                self._reg.uninstall_keys.add(uk)
+        return local_games
+
 
     def refresh(self):
         self._reg.refresh()
