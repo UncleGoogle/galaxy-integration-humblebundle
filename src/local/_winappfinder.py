@@ -131,7 +131,7 @@ class WindowsAppFinder:
             if escaped_matches(human_name, path):
                 return True
         upath = uk.uninstall_string_path
-        if upath and escape(human_name) in escape(str(upath)):
+        if upath and escape(human_name) in [escape(i) for i in upath.parts][1:]:
             return True
         # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
