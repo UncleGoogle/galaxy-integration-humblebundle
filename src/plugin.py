@@ -146,7 +146,7 @@ class HumbleBundlePlugin(Plugin):
         finally:
             logging.debug(f'Refreshing App Finder took {time.time()-start}s')
 
-        local_games = self._app_finder.find_local_games(list(self._owned_games.values()))
+        local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
         self._local_games.update({game.machine_name: game for game in local_games})
 
         logging.debug(f'Searching for owned games took {time.time()-start}s')
