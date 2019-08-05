@@ -1,9 +1,10 @@
 import pytest
 import pathlib
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 from contextlib import contextmanager
 
 from local._winappfinder import WindowsRegistryClient, UninstallKey, WindowsAppFinder
+from humblegame import TroveGame
 
 
 @pytest.fixture
@@ -15,7 +16,7 @@ def patch_wrc():
                 return subkey.get(prop)
             return subkey[prop]
 
-        with patch.object(WindowsRegistryClient, "_iterate_uninstall_keys") as subkey_gen, \
+        with patch.object(WindowsRegistryClient, "_iterate_new_uninstall_keys") as subkey_gen, \
              patch.object(WindowsRegistryClient, "_WindowsRegistryClient__get_value") as get_val:
             subkey_gen.return_value = iter(subkeys)
             get_val.side_effect = mock_get_val
@@ -24,19 +25,23 @@ def patch_wrc():
 
 
 @pytest.fixture
-def annas_quest():
-    mock_subkey = ("Anna's Quest_is1", {
-        "DisplayName": "Anna's Quest",
-        "InstallLocation": "D:\\Games\\Anna's Quest\\",
-        "UninstallString": "\"D:\\Games\\Anna's Quest\\unins000.exe\""
-    })
-    uninstall_key = UninstallKey(
+def uk_annas_quest():
+    return UninstallKey(
         key_name="Anna's Quest_is1",
         display_name="Anna's Quest",
         uninstall_string="\"D:\\Games\\Anna's Quest\\unins000.exe\"",
         _install_location="D:\\Games\\Anna's Quest\\",
     )
-    return {"mock": mock_subkey, "uk": uninstall_key}
+
+
+@pytest.fixture
+def uk_windosill():
+    return UninstallKey(
+        key_name="Windosill_is1",
+        display_name= "Windosill version 1.61",
+        uninstall_string="\"C:\\Games\\The Windosill\\uninstall.exe\"",
+        _install_location="C:\\Games\\The Windosill\\"
+    )
 
 
 @pytest.fixture
@@ -86,84 +91,86 @@ def test_uk_uninstall_string_path_msi():
     assert None == uk.uninstall_string_path
 
 
-# --------- WindowsAppFinder -----------
+# --------- WinRegClient ---------------
 
-def test_match_basic_display_name(annas_quest, patch_wrc):
+def test_refresh_uks(uk_annas_quest, uk_windosill, patch_wrc):
     human_name = "Anna's Quest"
     subkeys = [
-        annas_quest['mock']
+        ("Anna's Quest_is1", {
+        "DisplayName": "Anna's Quest",
+        "InstallLocation": "D:\\Games\\Anna's Quest\\",
+        "UninstallString": "\"D:\\Games\\Anna's Quest\\unins000.exe\""
+        }),
+        (uk_windosill.key_name, {
+            "DisplayName": uk_windosill.display_name,
+            "InstallLocation": uk_windosill._install_location,
+            "UninstallString": uk_windosill.uninstall_string
+        })
     ]
-    expected = [
-        annas_quest['uk']
-    ]
+    expected = set([uk_annas_quest, uk_windosill])
     with patch_wrc(subkeys):
         finder = WindowsAppFinder()
         finder.refresh()
         assert finder._reg.uninstall_keys == expected
-        assert annas_quest['uk'] == finder._match_uninstall_key(human_name)
 
+# --------- WindowsAppFinder -----------
 
-def test_match_with_folder_name(patch_wrc):
+def test_match_by_key_name():
+    uk = UninstallKey('Limbo', '', uninstall_string='')
+    human_name = 'LIMBO'
+    assert True == WindowsAppFinder._matches(human_name, uk)
+
+def test_match_with_folder_name():
     human_name = "The Windosill"
     install_location = 'C:\\Games\\The Windosill\\'
-    subkeys = [
-        ("Windosill_is1", {
-            "DisplayName": "Windosill version 1.61",
-            "InstallLocation": install_location,
-            "UninstallString": "\"C:\\Games\\The Windosill\\uninstall.exe\"",
-        })
-    ]
-    with patch_wrc(subkeys):
-        finder = WindowsAppFinder()
-        finder.refresh()
-        assert install_location == finder._match_uninstall_key(human_name)._install_location
+    uk = UninstallKey(
+        key_name="Windosill_is1",
+        display_name="Windosill version 1.61",
+        uninstall_string="\"C:\\Games\\The Windosill\\uninstall.exe\"",
+        _install_location=install_location,
+    )
+    assert True == WindowsAppFinder._matches(human_name, uk)
 
 
-def test_match_colon_in_name(patch_wrc):
+def test_match_colon_in_name():
     human_name = "Orks: final cutdown"
     install_location = "C:\\Games\\Orks Final Cutdown"
-    subkeys = [
-        ("Windosill_is1", {
-            "DisplayName": "Orks Final Cutdown",
-            "InstallLocation": install_location,
-            "UninstallString": "",
-        })
-    ]
-    with patch_wrc(subkeys):
-        finder = WindowsAppFinder()
-        finder.refresh()
-        assert install_location == finder._match_uninstall_key(human_name)._install_location
+    uk = UninstallKey(
+        key_name="mock",
+        display_name="Orks Final Cutdown",
+        uninstall_string="mock",
+        _install_location=install_location,
+    )
+    assert True == WindowsAppFinder._matches(human_name, uk)
 
 
-def test_no_match(annas_quest, patch_wrc):
+def test_no_match():
     human_name = "Orks: final cutdown"
-    subkeys = [
-        ("orkgame_is1", {
-            "DisplayName": "Ork game",
-            "InstallLocation": "C:\\OrkGame\\",
-            "UninstallString": "C:\\OrkGame\\uninstall.exe",
-        })
-    ]
-    with patch_wrc(subkeys):
-        finder = WindowsAppFinder()
-        finder.refresh()
-        assert None == finder._match_uninstall_key(human_name)
+    uk = UninstallKey(
+        'keyname',
+        'displayname',
+        'uninstall_str',
+        _install_location='somewhere\\else',
+    )
+    assert False == WindowsAppFinder._matches(human_name, uk)
 
 
-def test_find_game_display_icon(uk_torchlight2):
+# ------------ find local games
+
+def test_find_games_display_icon(uk_torchlight2):
     """Find exe based on DisplayIcon subkey"""
     human_name, machine_name = "Torchlight 2", "torchlight2"
+    owned_games = [TroveGame({'human-name': human_name, 'machine_name': machine_name})]
     finder = WindowsAppFinder()
-    location = pathlib.PurePath(uk_torchlight2.display_icon).parent
-    expected = pathlib.Path(uk_torchlight2.display_icon)
+    expected_exe = uk_torchlight2.display_icon
     with patch.object(finder._reg, '_WindowsRegistryClient__uninstall_keys', [uk_torchlight2]):
         with patch('pathlib.Path.exists', lambda path: location in path.parents):
-            assert expected == finder.find_local_game(machine_name, human_name).executable
+            assert expected_exe == finder.find_local_games(owned_games)[0].executable
 
 
 def test_find_game_display_uninstall():
     """Find exe based on DisplayIcon subkey but not if it is uninstaller"""
-    human_name = "Agame"
+    human_name, machine_name = "Agame", 'agame'
     uninstall = "C:\\agame\\uninstall.exe"
     uk_game = UninstallKey(
         key_name=human_name,
@@ -171,7 +178,7 @@ def test_find_game_display_uninstall():
         uninstall_string=uninstall,
         _display_icon=uninstall
     )
+    owned_games = [TroveGame({'human-name': human_name, 'machine_name': machine_name})]
     finder = WindowsAppFinder()
-    with patch.object(finder._reg, '_WindowsRegistryClient__uninstall_keys', [uk_game]):
-        # not existing path
-        assert None == finder.find_local_game(human_name, human_name)
+    with patch.object(finder._reg, '_WindowsRegistryClient__uninstall_keys', set([uk_game])):
+        assert [] == finder.find_local_games(owned_games)

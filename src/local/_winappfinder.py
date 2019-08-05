@@ -128,7 +128,7 @@ class WindowsAppFinder:
         self._pathfinder = PathFinder(HP.WINDOWS)
 
     @staticmethod
-    def __matches(human_name: str, uk: UninstallKey) -> bool:
+    def _matches(human_name: str, uk: UninstallKey) -> bool:
         def escape(x):
             return x.replace(':', '').lower()
         def escaped_matches(a, b):
@@ -138,7 +138,7 @@ class WindowsAppFinder:
 
         if human_name == uk.display_name \
             or escaped_matches(human_name, uk.display_name) \
-            or uk.key_name.startswith(human_name):
+            or uk.key_name.lower().startswith(human_name.lower()):
             return True
         if uk.install_location is not None:
             path = pathlib.PurePath(uk.install_location).name
@@ -182,7 +182,7 @@ class WindowsAppFinder:
             uk = self._reg.uninstall_keys.pop()
             try:
                 for og in owned_games:
-                    if self.__matches(og.human_name, uk):
+                    if self._matches(og.human_name, uk):
                         exe = self._find_executable(og.human_name, uk)
                         if exe is not None:
                             local_games.append(LocalHumbleGame(og.machine_name, exe, uk.uninstall_string))
@@ -192,6 +192,7 @@ class WindowsAppFinder:
                             game exe for [{og.human_name}]; uk: {uk}")
             except Exception:
                 self._reg.uninstall_keys.add(uk)
+                raise
         return local_games
 
 
