@@ -78,6 +78,12 @@ def test_choose_exact_match():
     res = PathFinder.choose_main_executable(app_name, executables)
     assert res == 'the game.exe'
 
+def test_choose_icase():
+    app_name = "LIMBO"
+    executables = ['limbo.exe', 'other.exe', 'unst000.exe', 'LIM-editor.exe']
+    res = PathFinder.choose_main_executable(app_name, executables)
+    assert res == 'limbo.exe'
+
 def test_choose_2exe():
     app_name = "Anna's Quest"
     executables = ['anna.exe', 'uninst.exe']

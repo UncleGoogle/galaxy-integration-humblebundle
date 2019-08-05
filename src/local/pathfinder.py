@@ -37,10 +37,10 @@ class PathFinder(object):
         if len(executables) == 1:
             return executables[0]
 
-        execs = {PurePath(k).stem: k for k in executables}
+        execs = {PurePath(k).stem.lower(): k for k in executables}
         no_cutoff = 0
 
-        matches = difflib.get_close_matches(pattern, execs.keys(), cutoff=no_cutoff)
+        matches = difflib.get_close_matches(pattern.lower(), execs.keys(), cutoff=no_cutoff)
         if len(matches) > 0:
             # returns best match
             return execs.get(matches[0])
