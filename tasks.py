@@ -47,6 +47,9 @@ def build(c, output=DIST_PLUGIN):
     print('copying source code ...')
     for file_ in glob("src/*.py"):
         shutil.copy(file_, output)
+    os.mkdir(Path(output) / 'local')
+    for file_ in glob("src/local/*.py"):
+        shutil.copy(file_, str(Path(output) / 'local'))
 
     print('copying galaxy api ...')
     copy_tree("galaxy-integrations-python-api/src", output)
@@ -93,8 +96,19 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c):
+def test(c, mypy=True):
     c.run("pytest")
+    if mypy:
+        c.run(
+            "mypy \
+            src\local \
+            src\plugin.py \
+            src\consts.py \
+            src\humblegame.py \
+            src\humbledownloader.py \
+            src\webservice.py \
+            --follow-imports silent"
+        )
 
 
 @task
@@ -104,13 +118,13 @@ def release(c):
     wd = Path(__file__).parent
     tmp_build_dir = wd / zip_name
 
-    arch = wd / zip_name
+    arch = wd / (zip_name + '.zip')
     if arch.exists():
         if input(f'{str(arch)} already exists. Proceed? y/n') !='y':
             return
 
     c.run(f"inv build -o {str(tmp_build_dir)}")
-    shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=tmp_build_dir)
+    shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=zip_name)
     shutil.rmtree(tmp_build_dir)
 
     # TODO: publish on github

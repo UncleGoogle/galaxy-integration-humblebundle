@@ -4,11 +4,11 @@ Integration for GOG Galaxy 2.0.
 
 ## Features
 
-This plugin is currenly in early development stage.
-
-* Library: Listing DRM free games from HumbleBundle library (those with downloads for Windows, MacOS or Linux)
+* Library: listing DRM free games from HumbleBundle library (those with downloads for Windows, MacOS or Linux)
 * Library: Humble Trove support
-* Install: Simple download via webbrowser
+* Install: simple download via webbrowser
+* Launch: autodetection of installed games (only visible in `Control Panel\Programs\Programs and Features`)
+* Launch: running games tracking (only if launched via Galaxy)
 
 ## Installation
 
@@ -16,13 +16,16 @@ Unpack `humblebundle_v{}.zip` asset from latest [release][1] to:
 - (WINDOWS) `%localappdata%\GOG.com\Galaxy\plugins\installed`
 - (MACOS) `~/Library/Application Support/GOG.com/Galaxy/plugins/installed`
 
-or build from source code (python3.6 or higher required):
+or build from source code (requires `python3.6` or higher):
 
 1. `git clone --recursive https://github.com/UncleGoogle/galaxy-integration-humblebundle.git`
 2. `cd galaxy-integration-humblebundle`
 3. `pip install invoke`
 4. `inv dist`
 
+## Known Issues
+
+- no launch support for macOS
 
 ## See also
 - https://github.com/gogcom/galaxy-integrations-python-api

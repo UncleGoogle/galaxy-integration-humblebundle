@@ -1,11 +1,9 @@
 import abc
-import copy
-from typing import Dict, Optional, List
-from dataclasses import dataclass
+from typing import Dict, List
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
-from consts import TP_PLATFORM
+from consts import Platform
 
 
 class DownloadStruct(abc.ABC):
@@ -19,6 +17,10 @@ class DownloadStruct(abc.ABC):
     def __init__(self, data: dict):
         self._data = data
         self.url = data['url']
+
+    @property
+    def name(self):
+        return self.url['name']
 
     @property
     def web(self):
@@ -79,26 +81,25 @@ class HumbleGame(abc.ABC):
         return self._data['machine_name']
 
     def in_galaxy_format(self):
-        licence = LicenseInfo(LicenseType.SinglePurchase)
         dlcs = []  # not supported for now
-        return Game(self.machine_name, self.human_name, dlcs, licence)
+        return Game(self.machine_name, self.human_name, dlcs, self.license)
 
     def __repr__(self):
         return str(self)
 
     def __str__(self):
-        return f"HumbleGame ({self.__class__.__name__}): ({self.human_name}, {self.downloads})"
+        return f"<{self.__class__.__name__}> {self.human_name}, downloads: {self.downloads})"
 
 
 class TroveGame(HumbleGame):
     @property
-    def downloads(self) -> Dict[TP_PLATFORM, TroveDownload]:
+    def downloads(self) -> Dict[Platform, TroveDownload]:
         return {k: TroveDownload(v) for k, v in self._data['downloads'].items()}
 
     @property
     def license(self) -> LicenseInfo:
         """There is currently not 'subscription' type license"""
-        LicenseInfo(LicenseType.OtherUserLicense)
+        return LicenseInfo(LicenseType.OtherUserLicense)
 
     @property
     def human_name(self):
@@ -107,13 +108,13 @@ class TroveGame(HumbleGame):
 
 class Subproduct(HumbleGame):
     @property
-    def downloads(self) -> Dict[TP_PLATFORM, List[SubproductDownload]]:
+    def downloads(self) -> Dict[Platform, List[SubproductDownload]]:
         return {dw['platform']: [SubproductDownload(x) for x in dw['download_struct']] for dw in self._data['downloads']}
 
     @property
     def license(self) -> LicenseInfo:
         """There is currently not 'subscription' type license"""
-        LicenseInfo(LicenseType.SinglePurchase)
+        return LicenseInfo(LicenseType.SinglePurchase)
 
     @property
     def human_name(self):

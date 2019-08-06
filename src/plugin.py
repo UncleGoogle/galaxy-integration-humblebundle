@@ -1,8 +1,6 @@
 import sys
 import time
 import asyncio
-import os
-import json
 import logging
 import re
 import webbrowser
@@ -11,20 +9,30 @@ import sentry_sdk
 
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
-from galaxy.api.types import Authentication, NextStep
-from galaxy.api.errors import InvalidCredentials
+from galaxy.api.types import Authentication, NextStep, LocalGame
 
 from version import __version__
 from consts import GAME_PLATFORMS
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
+from local import AppFinder
 
 
-sentry_sdk.init(
-    "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
-    release=f"galaxy-integration-humblebundle@{__version__}"
-)
+enable_sentry = False
+if enable_sentry:
+    sentry_sdk.init(
+        "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
+        release=f"galaxy-integration-humblebundle@{__version__}"
+    )
+
+
+def report_problem(error, extra=None, level=logging.ERROR):
+    logging.log(level, repr(error), extra=extra)
+    with sentry_sdk.configure_scope() as scope:
+        scope.set_extra("extra_context", extra)
+        sentry_sdk.capture_exception(error)
+
 
 AUTH_PARAMS = {
     "window_title": "Login to HumbleBundle",
@@ -37,12 +45,17 @@ AUTH_PARAMS = {
 
 
 class HumbleBundlePlugin(Plugin):
-
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
-        self._games = {}
         self._download_resolver = HumbleDownloadResolver()
+        self._app_finder = AppFinder()
+        self._owned_games = {}
+        self._local_games = {}
+
+        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
+        self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
+        self._cached_game_states = {}
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -53,7 +66,6 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_name)
 
     async def pass_login_credentials(self, step, credentials, cookies):
-        logging.debug(json.dumps(cookies, indent=2))
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
 
         user_id, user_name = await self._api.authenticate(auth_cookie)
@@ -64,9 +76,9 @@ class HumbleBundlePlugin(Plugin):
         gamekeys = await self._api.get_gamekeys()
         orders = [self._api.get_order_details(x) for x in gamekeys]
 
-        logging.info(f'Fetching info about {len(orders)} orders started...')
+        start = time.time()
         all_games_details = await asyncio.gather(*orders)
-        logging.info('Fetching info finished')
+        sentry_sdk.capture_message(f'Fetching info about {len(orders)} lasts: {time.time() - start}', level="info")
 
         products = []
 
@@ -78,7 +90,7 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     products.append(TroveGame(trove))
                 except Exception as e:
-                    sentry_sdk.capture_exception(e)
+                    report_problem(e, trove, level=logging.WARNING)
                     continue
 
         for details in all_games_details:
@@ -86,24 +98,21 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     prod = Subproduct(sub)
                     if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
-                        # at least one download is for supported OS
+                        # at least one download exists for supported OS
                         products.append(prod)
                 except Exception as e:
-                    sentry_sdk.capture_exception(e)
+                    report_problem(e, details, level=logging.WARNING)
                     continue
 
-        self._games = {
+        self._owned_games = {
             product.machine_name: product
             for product in products
         }
 
-        return [g.in_galaxy_format() for g in self._games.values()]
-
-    async def get_local_games(self):
-        return []
+        return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def install_game(self, game_id):
-        game = self._games.get(game_id)
+        game = self._owned_games.get(game_id)
         if game is None:
             raise RuntimeError(f'Install game: game {game_id} not found')
 
@@ -119,15 +128,72 @@ class HumbleBundlePlugin(Plugin):
         else:
             webbrowser.open(chosen_download.web)
 
-    # async def launch_game(self, game_id):
-    #     pass
+    async def get_local_games(self):
+        if not self._app_finder or not self._owned_games:
+            return []
 
-    # async def uninstall_game(self, game_id):
-    #     pass
+        start = time.time()
+        try:
+            self._app_finder.refresh()
+        except Exception as e:
+            report_problem(e, None)
+            return []
+
+        local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
+        self._local_games.update({game.machine_name: game for game in local_games})
+
+        logging.debug(f'Searching for owned games took {time.time()-start}s')
+
+        return [g.in_galaxy_format() for g in self._local_games.values()]
+
+    async def launch_game(self, game_id):
+        try:
+            game = self._local_games[game_id]
+        except KeyError as e:
+            report_problem(e, {'local_games': self._local_games})
+        else:
+            game.run()
+
+    async def uninstall_game(self, game_id):
+        try:
+            game = self._local_games[game_id]
+        except KeyError as e:
+            report_problem(e, {'local_games': self._local_games})
+        else:
+            game.uninstall()
+
+    async def _check_statuses(self):
+        """Check satuses of already found installed (local) games.
+        Detects events when game is:
+        - launched (via Galaxy for now)
+        - stopped
+        - uninstalled
+        """
+        freezed_locals = list(self._local_games.values())
+        for game in freezed_locals:
+            state = game.state
+            if state == self._cached_game_states.get(game.id):
+                continue
+            self.update_local_game_status(LocalGame(game.id, state))
+            self._cached_game_states[game.id] = state
+        await asyncio.sleep(0.5)
+
+    async def _check_installed(self):
+        """Searches for installed games and updates self._local_games"""
+        await self.get_local_games()
+        await asyncio.sleep(5)
+
+    def tick(self):
+        if self._check_statuses_task.done():
+            self._check_statuses_task = asyncio.create_task(self._check_statuses())
+
+        if self._check_installed_task.done():
+            self._check_installed_task = asyncio.create_task(self._check_installed())
 
 
     def shutdown(self):
-        self._api._session.close()
+        asyncio.create_task(self._api._session.close())
+
 
 def main():
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)
