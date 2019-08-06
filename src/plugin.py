@@ -28,7 +28,7 @@ if enable_sentry:
 
 
 def report_problem(error, extra=None, level=logging.ERROR):
-    logging.log(level, repr(error), extra=extra)
+    logging.log(level, repr(error))
     with sentry_sdk.configure_scope() as scope:
         scope.set_extra("extra_context", extra)
         sentry_sdk.capture_exception(error)
@@ -101,7 +101,8 @@ class HumbleBundlePlugin(Plugin):
                         # at least one download exists for supported OS
                         products.append(prod)
                 except Exception as e:
-                    report_problem(e, details, level=logging.WARNING)
+                    # commented out until common url lack error is resolved
+                    # report_problem(e, details, level=logging.WARNING)
                     continue
 
         self._owned_games = {
