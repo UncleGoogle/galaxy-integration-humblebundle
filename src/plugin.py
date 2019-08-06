@@ -101,8 +101,8 @@ class HumbleBundlePlugin(Plugin):
                         # at least one download exists for supported OS
                         products.append(prod)
                 except Exception as e:
-                    # commented out until common url lack error is resolved
-                    # report_problem(e, details, level=logging.WARNING)
+                    logging.warning(f"Error while parsing downloads {e}: {details}")
+                    # report_problem(e, details, level=logging.WARNING)  # too many url errors
                     continue
 
         self._owned_games = {
@@ -120,8 +120,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             chosen_download = self._download_resolver(game)
         except Exception as e:
-            logging.exception(e)
-            raise
+            report_problem(e, extra=game, level="error")
 
         if isinstance(game, TroveGame):
             url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
@@ -143,7 +142,7 @@ class HumbleBundlePlugin(Plugin):
         local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
         self._local_games.update({game.machine_name: game for game in local_games})
 
-        logging.debug(f'Searching for owned games took {time.time()-start}s')
+        logging.debug(f'Refreshing local games took {time.time()-start}s')
 
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
