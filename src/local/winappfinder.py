@@ -1,4 +1,5 @@
 import logging
+import re
 import asyncio
 import pathlib
 from typing import List, Optional
@@ -12,8 +13,18 @@ from local._reg_watcher import WindowsRegistryClient, UninstallKey
 
 class WindowsAppFinder:
     def __init__(self):
-        self._reg = WindowsRegistryClient()
+        self._reg = WindowsRegistryClient(ignore_filter=self.is_other_store_game)
         self._pathfinder = PathFinder(HP.WINDOWS)
+
+    @staticmethod
+    def is_other_store_game(key_name) -> bool:
+        """Exclude Steam and GOG games using uninstall key name.
+        In the future probably more DRM-free stores should be supported
+        """
+        match = re.match(r'\d{10}_is1', key_name)  # GOG.com
+        if match:
+            return True
+        return "Steam App" in key_name
 
     @staticmethod
     def _matches(human_name: str, uk: UninstallKey) -> bool:
@@ -28,12 +39,10 @@ class WindowsAppFinder:
             or escaped_matches(human_name, uk.display_name) \
             or uk.key_name.lower().startswith(human_name.lower()):
             return True
-        if uk.install_location is not None:
-            path = pathlib.PurePath(uk.install_location).name
-            if escaped_matches(human_name, path):
-                return True
-        upath = uk.uninstall_string_path
-        if upath and escape(human_name) in [escape(u) for u in upath.parts[1:]]:
+        location = uk.install_location_path \
+            or (upath.parent if upath else None) \
+            or (ipath.parent if ipath else None)
+        if location and escaped_matches(human_name, location.name):
             return True
         # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
@@ -43,17 +52,17 @@ class WindowsAppFinder:
         """
         # sometimes display_icon link to main executable
         upath = uk.uninstall_string_path
-        ipath = uk.display_icon
+        ipath = uk.display_icon_path
         if ipath and ipath.suffix == '.exe':
             if ipath != upath and 'unins' not in str(ipath):  # exclude uninstaller
                 return ipath
 
         # get install_location if present; if not, check for uninstall or display_icon parents
-        location = uk.install_location \
+        location = uk.install_location_path \
             or (upath.parent if upath else None) \
             or (ipath.parent if ipath else None)
 
-        # find all executables and get best maching (exclude uninstall_path)
+        # find all executables and get best machting (exclude uninstall_path)
         if location and location.exists():
             executables = set(self._pathfinder.find_executables(location)) - {str(upath)}
             best_match = self._pathfinder.choose_main_executable(human_name, executables)

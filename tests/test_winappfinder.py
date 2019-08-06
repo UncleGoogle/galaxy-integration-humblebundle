@@ -14,8 +14,8 @@ def uk_torchlight2():
         key_name = "{049FF5E4-EB02-4c42-8DB0-226E2F7A9E53}",
         display_name = "Torchlight 2",
         uninstall_string = R"C:\Users\Public\Games\Runic Games\Torchlight 2\uninstall.exe",
-        _install_location = None,
-        _display_icon = R"C:\Users\Public\Games\Runic Games\Torchlight 2\ModLauncher.exe",
+        install_location = None,
+        display_icon = R"C:\Users\Public\Games\Runic Games\Torchlight 2\ModLauncher.exe",
     )
 
 
@@ -32,7 +32,7 @@ def test_match_with_folder_name():
         key_name="Windosill_is1",
         display_name="Windosill version 1.61",
         uninstall_string="\"C:\\Games\\The Windosill\\uninstall.exe\"",
-        _install_location=install_location,
+        install_location=install_location,
     )
     assert True == WindowsAppFinder._matches(human_name, uk)
 
@@ -44,7 +44,7 @@ def test_match_colon_in_name():
         key_name="mock",
         display_name="Orks Final Cutdown",
         uninstall_string="mock",
-        _install_location=install_location,
+        install_location=install_location,
     )
     assert True == WindowsAppFinder._matches(human_name, uk)
 
@@ -55,7 +55,7 @@ def test_no_match():
         'keyname',
         'displayname',
         'uninstall_str',
-        _install_location='somewhere\\else',
+        install_location='somewhere\\else',
     )
     assert False == WindowsAppFinder._matches(human_name, uk)
 
@@ -82,7 +82,7 @@ async def test_find_game_display_uninstall():
         key_name=human_name,
         display_name=human_name,
         uninstall_string=uninstall,
-        _display_icon=uninstall
+        display_icon=uninstall
     )
     owned_games = [TroveGame({'human-name': human_name, 'machine_name': machine_name})]
     finder = WindowsAppFinder()

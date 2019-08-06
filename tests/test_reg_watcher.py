@@ -1,6 +1,6 @@
 import pytest
 import pathlib
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from contextlib import contextmanager
 
 from local.winappfinder import WindowsAppFinder
@@ -30,7 +30,7 @@ def uk_annas_quest():
         key_name="Anna's Quest_is1",
         display_name="Anna's Quest",
         uninstall_string="\"D:\\Games\\Anna's Quest\\unins000.exe\"",
-        _install_location="D:\\Games\\Anna's Quest\\",
+        install_location="D:\\Games\\Anna's Quest\\",
     )
 
 
@@ -40,7 +40,7 @@ def uk_windosill():
         key_name="Windosill_is1",
         display_name= "Windosill version 1.61",
         uninstall_string="\"C:\\Games\\The Windosill\\uninstall.exe\"",
-        _install_location="C:\\Games\\The Windosill\\"
+        install_location="C:\\Games\\The Windosill\\"
     )
 
 
@@ -49,7 +49,7 @@ def uk_windosill():
 def test_uk_display_icon_path():
     display_icons = ["\"C:\\abc\\s.ico\",0", "C:\\abc\\s.ico,1", "C:\\abc\\s.ico", "\"C:\\abc\\s.ico\""]
     for i in display_icons:
-        uk = UninstallKey('', '', '', _display_icon=i)
+        uk = UninstallKey('', '', '', display_icon=i)
         assert pathlib.Path("C:\\abc\\s.ico") == uk.display_icon
 
 
@@ -89,7 +89,7 @@ def test_refresh_uks(uk_annas_quest, uk_windosill, patch_wrc):
         }),
         (uk_windosill.key_name, {
             "DisplayName": uk_windosill.display_name,
-            "InstallLocation": uk_windosill._install_location,
+            "InstallLocation": uk_windosill.install_location,
             "UninstallString": uk_windosill.uninstall_string
         })
     ]
