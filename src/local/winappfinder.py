@@ -8,12 +8,12 @@ from consts import HP
 from humblegame import HumbleGame
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
-from local._reg_watcher import WindowsRegistryClient, UninstallKey
+from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
 class WindowsAppFinder:
     def __init__(self):
-        self._reg = WindowsRegistryClient(ignore_filter=self.is_other_store_game)
+        self._reg = WinRegUninstallWatcher(ignore_filter=self.is_other_store_game)
         self._pathfinder = PathFinder(HP.WINDOWS)
 
     @staticmethod
@@ -39,11 +39,15 @@ class WindowsAppFinder:
             or escaped_matches(human_name, uk.display_name) \
             or uk.key_name.lower().startswith(human_name.lower()):
             return True
-        location = uk.install_location_path \
-            or (upath.parent if upath else None) \
-            or (ipath.parent if ipath else None)
-        if location and escaped_matches(human_name, location.name):
-            return True
+
+        location = uk.install_location_path
+        if location:
+            return escaped_matches(human_name, location.name)
+        else:
+            location = uk.uninstall_string_path or uk.uninstall_string_path
+            if location:
+                return escaped_matches(human_name, location.parent.name)
+
         # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
 

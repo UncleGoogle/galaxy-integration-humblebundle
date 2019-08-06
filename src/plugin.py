@@ -34,11 +34,6 @@ def report_problem(error, extra=None, level=logging.ERROR):
         sentry_sdk.capture_exception(error)
 
 
-def report_info(msg):
-    logging.info(msg)
-    sentry_sdk.capture_message(msg)
-
-
 AUTH_PARAMS = {
     "window_title": "Login to HumbleBundle",
     "window_width": 560,
@@ -143,8 +138,6 @@ class HumbleBundlePlugin(Plugin):
         except Exception as e:
             report_problem(e, None)
             return []
-        finally:
-            logging.debug(f'Refreshing App Finder took {time.time()-start}s')
 
         local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
         self._local_games.update({game.machine_name: game for game in local_games})
@@ -188,7 +181,7 @@ class HumbleBundlePlugin(Plugin):
     async def _check_installed(self):
         """Searches for installed games and updates self._local_games"""
         await self.get_local_games()
-        await asyncio.sleep(7)
+        await asyncio.sleep(5)
 
     def tick(self):
         if self._check_statuses_task.done():

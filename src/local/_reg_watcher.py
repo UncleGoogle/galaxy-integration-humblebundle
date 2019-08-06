@@ -43,7 +43,7 @@ class UninstallKey:
         return None
 
 
-class WindowsRegistryClient:
+class WinRegUninstallWatcher:
     _UNINSTALL_LOCATION = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
     _LOOKUP_REGISTRY_HIVES = [winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE]
 

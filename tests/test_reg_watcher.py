@@ -1,10 +1,10 @@
 import pytest
 import pathlib
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 from contextlib import contextmanager
 
 from local.winappfinder import WindowsAppFinder
-from local._reg_watcher import WindowsRegistryClient, UninstallKey
+from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
 @pytest.fixture
@@ -16,8 +16,8 @@ def patch_wrc():
                 return subkey.get(prop)
             return subkey[prop]
 
-        with patch.object(WindowsRegistryClient, "_iterate_new_uninstall_keys") as subkey_gen, \
-             patch.object(WindowsRegistryClient, "_WindowsRegistryClient__get_value") as get_val:
+        with patch.object(WinRegUninstallWatcher, "_iterate_new_uninstall_keys") as subkey_gen, \
+             patch.object(WinRegUninstallWatcher, "_WinRegUninstallWatcher__get_value") as get_val:
             subkey_gen.return_value = iter(subkeys)
             get_val.side_effect = mock_get_val
             yield
@@ -50,7 +50,7 @@ def test_uk_display_icon_path():
     display_icons = ["\"C:\\abc\\s.ico\",0", "C:\\abc\\s.ico,1", "C:\\abc\\s.ico", "\"C:\\abc\\s.ico\""]
     for i in display_icons:
         uk = UninstallKey('', '', '', display_icon=i)
-        assert pathlib.Path("C:\\abc\\s.ico") == uk.display_icon
+        assert pathlib.Path("C:\\abc\\s.ico") == uk.display_icon_path
 
 
 def test_uk_uninstall_string_path():

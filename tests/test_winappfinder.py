@@ -69,8 +69,8 @@ async def test_find_games_display_icon(uk_torchlight2):
     owned_games = [TroveGame({'human-name': human_name, 'machine_name': machine_name})]
     finder = WindowsAppFinder()
     expected_exe = uk_torchlight2.display_icon
-    with patch.object(finder._reg, '_WindowsRegistryClient__uninstall_keys', [uk_torchlight2]):
-        assert expected_exe == (await finder.find_local_games(owned_games))[0].executable
+    with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', [uk_torchlight2]):
+        assert expected_exe == str((await finder.find_local_games(owned_games))[0].executable)
 
 
 @pytest.mark.asyncio
@@ -86,5 +86,5 @@ async def test_find_game_display_uninstall():
     )
     owned_games = [TroveGame({'human-name': human_name, 'machine_name': machine_name})]
     finder = WindowsAppFinder()
-    with patch.object(finder._reg, '_WindowsRegistryClient__uninstall_keys', set([uk_game])):
+    with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', set([uk_game])):
         assert [] == await finder.find_local_games(owned_games)
