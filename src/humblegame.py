@@ -20,7 +20,7 @@ class DownloadStruct(abc.ABC):
 
     @property
     def name(self):
-        return self.url['name']
+        return self._data['name']
 
     @property
     def web(self):
@@ -94,7 +94,10 @@ class HumbleGame(abc.ABC):
 class TroveGame(HumbleGame):
     @property
     def downloads(self) -> Dict[Platform, TroveDownload]:
-        return {k: TroveDownload(v) for k, v in self._data['downloads'].items()}
+        return {
+            k: TroveDownload(v)
+            for k, v in self._data['downloads'].items()
+        }
 
     @property
     def license(self) -> LicenseInfo:
@@ -109,7 +112,13 @@ class TroveGame(HumbleGame):
 class Subproduct(HumbleGame):
     @property
     def downloads(self) -> Dict[Platform, List[SubproductDownload]]:
-        return {dw['platform']: [SubproductDownload(x) for x in dw['download_struct']] for dw in self._data['downloads']}
+        return {
+            dw['platform']: [
+                SubproductDownload(x)
+                for x in dw['download_struct']
+            ]
+            for dw in self._data['downloads']
+        }
 
     @property
     def license(self) -> LicenseInfo:
@@ -119,8 +128,3 @@ class Subproduct(HumbleGame):
     @property
     def human_name(self):
         return self._data['human_name']
-
-    @property
-    def name(self):
-        return self._data['name']
-
