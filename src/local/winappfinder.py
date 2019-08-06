@@ -42,11 +42,13 @@ class WindowsAppFinder:
 
         location = uk.install_location_path
         if location:
-            return escaped_matches(human_name, location.name)
+            if escaped_matches(human_name, location.name):
+                return True
         else:
             location = uk.uninstall_string_path or uk.uninstall_string_path
             if location:
-                return escaped_matches(human_name, location.parent.name)
+                if escaped_matches(human_name, location.parent.name):
+                    return True
 
         # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
