@@ -11,5 +11,7 @@ if sys.platform == 'win32':
 elif sys.platform == 'darwin':
     GALAXY_PATH = "/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy"
     DIST_DIR = os.environ['HOME'] + r"/Library/Application\ Support/GOG.com/Galaxy/plugins/installed"
+else:
+    DIST_DIR = ''
 
 DIST_PLUGIN = os.path.join(DIST_DIR, 'humblebundle')
