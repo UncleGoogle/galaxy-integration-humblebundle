@@ -49,7 +49,7 @@ class HumbleBundlePlugin(Plugin):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
-        self._app_finder = AppFinder()
+        self._app_finder = AppFinder
         self._owned_games = {}
         self._local_games = {}
 
