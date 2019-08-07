@@ -121,6 +121,7 @@ class HumbleBundlePlugin(Plugin):
             chosen_download = self._download_resolver(game)
         except Exception as e:
             report_problem(e, extra=game, level="error")
+            logging.exception(e)
 
         if isinstance(game, TroveGame):
             url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
