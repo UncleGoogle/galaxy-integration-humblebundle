@@ -88,7 +88,9 @@ class WindowsAppFinder:
                     if self._matches(og.human_name, uk):
                         exe = self._find_executable(og.human_name, uk)
                         if exe is not None:
-                            local_games.append(LocalHumbleGame(og.machine_name, exe, uk.uninstall_string))
+                            game = LocalHumbleGame(og.machine_name, exe, uk.uninstall_string)
+                            logging.info(f'New local game found: {game}')
+                            local_games.append(game)
                             break
                         logging.warning(f"Uninstall key matched, but cannot find \
                             game exe for [{og.human_name}]; uk: {uk}")
