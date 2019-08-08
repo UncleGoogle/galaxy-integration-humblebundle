@@ -6,6 +6,10 @@ matrix:
       os: osx
       osx_image: xcode10.2  # Python 3.7.2 running on macOS 10.14.3
       language: shell       # 'language: python' is an error on Travis CI macOS
+      befeore_install:
+        - touch setup.cfg
+        - echo [install] > setup.cfg
+        - echo prefix= >> setup.cfg
       install:
         - python3 -m pip install -r requirements/dev.txt --user
         - python3 -m invoke install --dev -p python3
