@@ -7,7 +7,8 @@ matrix:
       osx_image: xcode10.2  # Python 3.7.2 running on macOS 10.14.3
       language: shell       # 'language: python' is an error on Travis CI macOS
       install:
-        - python3 -m pip install -r requirements/dev.txt
+        - python3 -m install invoke
+        - python3 -m pip install -r requirements/dev.txt --user
         - inv install --dev -p python3
         - inv build -o build -p python3
 
