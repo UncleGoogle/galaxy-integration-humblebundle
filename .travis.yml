@@ -6,4 +6,5 @@ install:
   - pip install -r requirements/dev.txt
 script:
   - inv install --dev
-  - inv test
+  - inv build -o build
+  - inv test -m build

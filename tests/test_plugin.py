@@ -4,7 +4,7 @@ import pathlib
 
 from consts import HP
 from local.localgame import LocalHumbleGame
-from humblegame import Subproduct, TroveGame
+from humblegame import Subproduct
 from humbledownloader import HumbleDownloadResolver
 
 

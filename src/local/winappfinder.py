@@ -45,7 +45,7 @@ class WindowsAppFinder:
             if escaped_matches(human_name, location.name):
                 return True
         else:
-            location = uk.uninstall_string_path or uk.uninstall_string_path
+            location = uk.uninstall_string_path or uk.display_icon_path
             if location:
                 if escaped_matches(human_name, location.parent.name):
                     return True

@@ -2,10 +2,9 @@ import pytest
 import pathlib
 import json
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from plugin import HumbleBundlePlugin
-from consts import HP
 
 
 @pytest.fixture

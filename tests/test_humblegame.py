@@ -1,7 +1,3 @@
-import pytest
-import pathlib
-import json
-
 from humblegame import Subproduct
 from consts import GAME_PLATFORMS, HP
 
