@@ -10,7 +10,6 @@ matrix:
         - touch setup.cfg  # workaround for homebrew issue with pip
         - echo [install] > setup.cfg
         - echo prefix= >> setup.cfg
-        - ls
         - python3 -m pip install -r requirements/dev.txt --user
         - python3 -m invoke install --dev -p python3
         - python3 -m invoke build -o build -p python3
