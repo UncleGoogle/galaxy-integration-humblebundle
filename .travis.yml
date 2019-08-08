@@ -8,3 +8,6 @@ script:
   - inv install --dev
   - inv build -o build
   - inv test -m build
+os:
+  - windows
+  - osx
