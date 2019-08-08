@@ -2,11 +2,12 @@ language: python
 matrix:
   include:
     - name: "Python 3.7.2 on macOS"
+      sudo: required
       os: osx
       osx_image: xcode10.2  # Python 3.7.2 running on macOS 10.14.3
       language: shell       # 'language: python' is an error on Travis CI macOS
       install:
-        - python3 -m pip install -r requirements/dev.txt --user
+        - python3 -m pip install -r requirements/dev.txt
         - inv install --dev -p python3
         - inv build -o build -p python3
 
