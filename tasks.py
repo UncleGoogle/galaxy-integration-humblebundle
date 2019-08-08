@@ -90,13 +90,13 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c, mypy_target=None):
-    c.run("pytest")
+def test(c, mypy_target=None, python='python'):
+    c.run(f"{python} -m pytest")
     if mypy_target:
         modules = ['local', 'plugin.py', 'consts.py', 'humblegame.py', 'humbledownloader.py', 'webservice.py']
         modules_full_path = [str(Path(mypy_target) / mod) for mod in modules]
         print(f'running mypy check for {str(Path(mypy_target))} directory')
-        c.run("mypy " + ' '.join(modules_full_path) + " --follow-imports silent")
+        c.run(f"{python} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
         print('done')
 
 
