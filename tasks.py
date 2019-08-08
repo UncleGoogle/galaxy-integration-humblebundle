@@ -14,10 +14,6 @@ from invoke import task
 from src.version import __version__
 from config import REQUIREMENTS, REQUIREMENTS_DEV, GALAXY_PATH, DIST_PLUGIN
 
-gapi = Path(__file__) / '..' / 'galaxy-integrations-python-api' / 'src'
-sys.path.append(str(gapi.resolve()))
-import galaxy.tools
-
 
 @task
 def install(c, dev=False, python="python"):
