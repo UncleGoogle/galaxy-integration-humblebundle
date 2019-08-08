@@ -10,6 +10,7 @@ matrix:
         - touch setup.cfg
         - echo [install] > setup.cfg
         - echo prefix= >> setup.cfg
+        - ls
       install:
         - python3 -m pip install -r requirements/dev.txt --user
         - python3 -m invoke install --dev -p python3
