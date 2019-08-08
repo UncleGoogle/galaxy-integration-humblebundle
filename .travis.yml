@@ -1,9 +1,9 @@
 language: python
 matrix:
   include:
-    - name: "Python 3.7.1 on Xenial Linux"
-      python: 3.7           # this works for Linux but is ignored on macOS or Windows
-      dist: xenial          # required for Python >= 3.7
+    # - name: "Python 3.7.1 on Xenial Linux"
+    #   python: 3.7           # this works for Linux but is ignored on macOS or Windows
+    #   dist: xenial          # required for Python >= 3.7
     - name: "Python 3.7.2 on macOS"
       os: osx
       osx_image: xcode10.2  # Python 3.7.2 running on macOS 10.14.3
@@ -16,8 +16,7 @@ matrix:
         - python -m pip install --upgrade pip
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
 install:
-  - python --version
-  - pip3 install -r requirements/dev.txt
+  - python -m pip install -r requirements/dev.txt
 script:
   - inv install --dev
   - inv build -o build

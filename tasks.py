@@ -22,9 +22,9 @@ import galaxy.tools
 @task
 def install(c, dev=False):
     if dev:
-        c.run("pip install -r " + REQUIREMENTS_DEV)
+        c.run("python -m pip install -r " + REQUIREMENTS_DEV)
     else:
-        c.run("pip install -r " + REQUIREMENTS)
+        c.run("python -m pip install -r " + REQUIREMENTS)
 
 
 @task
@@ -34,7 +34,7 @@ def build(c, output=DIST_PLUGIN):
         shutil.rmtree(output)
 
     args = [
-        "pip", "install",
+        "python", "-m", "pip", "install",
         "-r", REQUIREMENTS,
         "--target", output,
         # "--implementation", "cp",
