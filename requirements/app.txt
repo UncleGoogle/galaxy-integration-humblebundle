@@ -1,4 +1,4 @@
 # galaxy api dependencies
+aiohttp==3.5.4
+certifi==2019.3.9
 # plugin dependencies
-sentry-sdk==0.10.2
-psutil==5.6.3
