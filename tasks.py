@@ -20,11 +20,9 @@ import galaxy.tools
 
 
 @task
-def install(c, dev=False):
-    if dev:
-        c.run("python -m pip install -r " + REQUIREMENTS_DEV)
-    else:
-        c.run("python -m pip install -r " + REQUIREMENTS)
+def install(c, dev=False, python="python"):
+    req = REQUIREMENTS_DEV if dev else REQUIREMENTS
+    c.run(f"{python} -m pip install -r {req}")
 
 
 @task

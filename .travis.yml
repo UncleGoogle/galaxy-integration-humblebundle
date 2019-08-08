@@ -7,7 +7,7 @@ matrix:
       language: shell       # 'language: python' is an error on Travis CI macOS
       install:
         - python3 -m pip install -r requirements/dev.txt
-        - inv install --dev
+        - inv install --dev -p python3
         - inv build -o build -p python3
 
     - name: "Python 3.7.3 on Windows"
