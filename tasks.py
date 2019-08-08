@@ -90,8 +90,10 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c, mypy_target=None, python='python'):
-    c.run(f"{python} -m pytest")
+def test(c, mypy_target=None, python='python', windows=True):
+    c.run(f"{python} -m pytest tests/common")
+    if windows:
+        c.run(f"{python} -m pytest tests/windows")
     if mypy_target:
         modules = ['local', 'plugin.py', 'consts.py', 'humblegame.py', 'humbledownloader.py', 'webservice.py']
         modules_full_path = [str(Path(mypy_target) / mod) for mod in modules]
