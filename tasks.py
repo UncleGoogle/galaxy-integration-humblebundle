@@ -28,13 +28,13 @@ def install(c, dev=False):
 
 
 @task
-def build(c, output=DIST_PLUGIN):
+def build(c, output=DIST_PLUGIN, python="python"):
     print('removing', output)
     if os.path.exists(output):
         shutil.rmtree(output)
 
     args = [
-        "python", "-m", "pip", "install",
+        python, "-m", "pip", "install",
         "-r", REQUIREMENTS,
         "--target", output,
         # "--implementation", "cp",
