@@ -12,7 +12,7 @@ from consts import HP, CURRENT_SYSTEM
 def s1_dir_exe():
     return [
         ('StarCraft', ('editor',), ('Starcraft.exe',)),
-        ('StarCraft\\editor', (), ('logs.logs', 'editor.exe')),
+        (str(PureWindowsPath('StarCraft') / 'editor'), (), ('logs.logs', 'editor.exe')),
     ]
 
 
@@ -20,14 +20,14 @@ def s1_dir_exe():
 def s1_dir_no_exe():
     return [
         ('StarCraft', ('editor',), ('Starcraft',)),
-        ('StarCraft\\editor', (), ('logs.logs', 'editor')),
+        (str(PureWindowsPath('StarCraft') / 'editor'), (), ('logs.logs', 'editor')),
     ]
 
 @pytest.fixture()
 def s1_dir_exe_mac():
     return [
         ('StarCraft', ('editor',), ('Starcraft',)),
-        ('StarCraft/editor', (), ('logs.logs', 'editor')),
+        (str(PurePosixPath('StarCraft') / 'editor'), (), ('logs.logs', 'editor')),
     ]
 
 
