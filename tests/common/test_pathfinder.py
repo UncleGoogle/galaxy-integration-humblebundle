@@ -1,6 +1,6 @@
 import pytest
 from unittest import mock
-from pathlib import Path, PureWindowsPath
+from pathlib import Path, PureWindowsPath, PurePosixPath
 
 from local.pathfinder import PathFinder
 from consts import HP, CURRENT_SYSTEM
@@ -57,7 +57,7 @@ def test_find_exec_mac(mock_walk, s1_dir_exe_mac):
             return path in execs
         return mock_access
 
-    expected = ['StarCraft/Starcraft', 'StarCraft/editor/editor']
+    expected = [str(PurePosixPath('StarCraft') / 'Starcraft'), str(PurePosixPath('StarCraft') / 'editor' / 'editor')]
     with mock.patch('os.access', define_execs(expected)):
         mock_walk.return_value = s1_dir_exe_mac
         execs = PathFinder(HP.MAC).find_executables('some_mock_path')
