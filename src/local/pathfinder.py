@@ -4,7 +4,7 @@ https://github.com/FriendsOfGalaxy/galaxy-integration-battlenet/blob/master/src/
 """
 import os
 import difflib
-from pathlib import Path, PurePath
+from pathlib import PurePath, WindowsPath, PosixPath
 from typing import List, Optional, Union
 
 from consts import HP
@@ -15,7 +15,11 @@ class PathFinder(object):
         self.system = system
 
     def find_executables(self, path: Union[str, PurePath]) -> List[str]:
-        folder = Path(path)
+        if self.system == HP.WINDOWS:
+            folder = WindowsPath(path)
+        else:
+            folder = PosixPath(path)
+
         if not folder.exists():
             raise FileNotFoundError(f'Pathfinder: {path} does not exist')
         execs = []

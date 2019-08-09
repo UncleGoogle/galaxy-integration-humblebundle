@@ -1,9 +1,9 @@
 import pytest
 from unittest import mock
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from local.pathfinder import PathFinder
-from consts import HP
+from consts import HP, CURRENT_SYSTEM
 
 
 # ------------ find_executables -----------------
@@ -44,7 +44,7 @@ def test_find_exec_win_empty(mock_walk, s1_dir_no_exe):
 def test_find_exec_win(mock_walk, s1_dir_exe):
     mock_walk.return_value = s1_dir_exe
     execs = PathFinder(HP.WINDOWS).find_executables('some_mock_path')
-    assert execs == ['StarCraft\\Starcraft.exe', 'StarCraft\\editor\\editor.exe']
+    assert execs == [str(Path('StarCraft') / 'Starcraft.exe'), str(Path('StarCraft') / 'editor' / 'editor.exe')]
 
 
 @mock.patch('os.walk')
@@ -92,19 +92,31 @@ def test_choose_2exe():
 
 def test_choose_full_path():
     app_name = "Anna's Quest"
-    expected = 'C:\\Games\\AnnasQuest\\anna.exe'
-    executables = ['C:\\Games\\AnnasQuest\\uninst.exe', expected]
+    expected = PureWindowsPath('C:\\Games\\AnnasQuest\\anna.exe')
+    executables = [PureWindowsPath('C:\\Games\\AnnasQuest\\uninst.exe'), expected]
+
+    if CURRENT_SYSTEM == HP.WINDOWS:
+        executables = [str(x) for x in executables]
+    else:
+        executables = [str(x.as_posix()) for x in executables]
+
     res = PathFinder.choose_main_executable(app_name, executables)
-    assert res == expected
+    assert res == str(expected)
 
 def test_choose_legendary_heroes():
     app_name = "Fallen Enchantress: Legendary Heroes"
     executables = [
-        'C:\\Users\\me\\humblebundle\\DataZip.exe',
-        'C:\\Users\\me\\humblebundle\\DXAtlasWin.exe',
-        'C:\\Users\\me\\humblebundle\\LegendaryHeroes.exe',
-        'C:\\Users\\me\\humblebundle\\LH_prefs_setup.exe'
+        PureWindowsPath('C:\\Users\\me\\humblebundle\\DataZip.exe'),
+        PureWindowsPath('C:\\Users\\me\\humblebundle\\DXAtlasWin.exe'),
+        PureWindowsPath('C:\\Users\\me\\humblebundle\\LegendaryHeroes.exe'),
+        PureWindowsPath('C:\\Users\\me\\humblebundle\\LH_prefs_setup.exe')
     ]
+
+    if CURRENT_SYSTEM == HP.WINDOWS:
+        executables = [str(x) for x in executables]
+    else:
+        executables = [str(x.as_posix()) for x in executables]
+
     expected = executables[2]
     res = PathFinder.choose_main_executable(app_name, executables)
     assert res == expected
