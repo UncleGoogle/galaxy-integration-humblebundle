@@ -90,7 +90,7 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c, mypy_target=None, python='python', windows=True):
+def test(c, mypy_target=None, python='python', windows=False):
     c.run(f"{python} -m pytest tests/common")
     if windows:
         c.run(f"{python} -m pytest tests/windows")
