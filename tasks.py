@@ -14,27 +14,21 @@ from invoke import task
 from src.version import __version__
 from config import REQUIREMENTS, REQUIREMENTS_DEV, GALAXY_PATH, DIST_PLUGIN
 
-gapi = Path(__file__) / '..' / 'galaxy-integrations-python-api' / 'src'
-sys.path.append(str(gapi.resolve()))
-import galaxy.tools
+
+@task
+def install(c, dev=False, python="python"):
+    req = REQUIREMENTS_DEV if dev else REQUIREMENTS
+    c.run(f"{python} -m pip install -r {req}")
 
 
 @task
-def install(c, dev=False):
-    if dev:
-        c.run("pip install -r " + REQUIREMENTS_DEV)
-    else:
-        c.run("pip install -r " + REQUIREMENTS)
-
-
-@task
-def build(c, output=DIST_PLUGIN):
+def build(c, output=DIST_PLUGIN, python="python"):
     print('removing', output)
     if os.path.exists(output):
         shutil.rmtree(output)
 
     args = [
-        "pip", "install",
+        python, "-m", "pip", "install",
         "-r", REQUIREMENTS,
         "--target", output,
         # "--implementation", "cp",
@@ -96,19 +90,16 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c, mypy=True):
-    c.run("pytest")
-    if mypy:
-        c.run(
-            "mypy \
-            src\local \
-            src\plugin.py \
-            src\consts.py \
-            src\humblegame.py \
-            src\humbledownloader.py \
-            src\webservice.py \
-            --follow-imports silent"
-        )
+def test(c, mypy_target=None, python='python', windows=False):
+    c.run(f"{python} -m pytest tests/common")
+    if windows:
+        c.run(f"{python} -m pytest tests/windows")
+    if mypy_target:
+        modules = ['local', 'plugin.py', 'consts.py', 'humblegame.py', 'humbledownloader.py', 'webservice.py']
+        modules_full_path = [str(Path(mypy_target) / mod) for mod in modules]
+        print(f'running mypy check for {str(Path(mypy_target))} directory')
+        c.run(f"{python} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
+        print('done')
 
 
 @task
