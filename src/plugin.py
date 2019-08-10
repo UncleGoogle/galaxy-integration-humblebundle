@@ -12,11 +12,12 @@ from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
 
 from version import __version__
-from consts import GAME_PLATFORMS
+from consts import GAME_PLATFORMS, NON_GAME_BUNDLE_TYPES
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from local import AppFinder
+from model.product import Product
 
 
 enable_sentry = False
@@ -80,7 +81,7 @@ class HumbleBundlePlugin(Plugin):
         all_games_details = await asyncio.gather(*orders)
         sentry_sdk.capture_message(f'Fetching info about {len(orders)} lasts: {time.time() - start}', level="info")
 
-        products = []
+        games = []
 
         if await self._api.is_trove_subscribed():
             logging.info(f'Fetching trove info started...')
@@ -88,18 +89,20 @@ class HumbleBundlePlugin(Plugin):
             logging.info('Fetching info finished')
             for trove in troves:
                 try:
-                    products.append(TroveGame(trove))
+                    games.append(TroveGame(trove))
                 except Exception as e:
                     report_problem(e, trove, level=logging.WARNING)
                     continue
 
         for details in all_games_details:
+            if Product(details['product']).bundle_type in NON_GAME_BUNDLE_TYPES:
+                continue
             for sub in details['subproducts']:
                 try:
                     prod = Subproduct(sub)
                     if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
                         # at least one download exists for supported OS
-                        products.append(prod)
+                        games.append(prod)
                 except Exception as e:
                     logging.warning(f"Error while parsing downloads {e}: {details}")
                     # report_problem(e, details, level=logging.WARNING)  # too many url errors
@@ -107,7 +110,7 @@ class HumbleBundlePlugin(Plugin):
 
         self._owned_games = {
             product.machine_name: product
-            for product in products
+            for product in games
         }
 
         return [g.in_galaxy_format() for g in self._owned_games.values()]
