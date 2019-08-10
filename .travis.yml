@@ -1,0 +1,31 @@
+language: python
+matrix:
+  include:
+    - name: "Python 3.7.2 on macOS"
+      sudo: required
+      os: osx
+      osx_image: xcode10.2  # Python 3.7.2 running on macOS 10.14.3
+      language: shell       # 'language: python' is an error on Travis CI macOS
+      install:
+        - touch setup.cfg  # workaround for homebrew issue with pip
+        - echo [install] > setup.cfg
+        - echo prefix= >> setup.cfg
+        - python3 -m pip install -r requirements/dev.txt --user
+        - python3 -m invoke install --dev -p python3
+        - python3 -m invoke build -o build -p python3
+      script:
+        - python3 -m invoke test -m build -p python3
+
+    - name: "Python 3.7.3 on Windows"
+      os: windows           # Windows 10.0.17134 N/A Build 17134
+      language: shell       # 'language: python' is an error on Travis CI Windows
+      before_install:
+        - choco install python
+        - python -m pip install --upgrade pip
+      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+      install:
+        - python -m pip install -r requirements/dev.txt
+        - inv install --dev
+        - inv build -o build
+      script:
+        - inv test -m build --windows

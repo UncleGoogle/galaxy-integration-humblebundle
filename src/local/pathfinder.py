@@ -16,6 +16,7 @@ class PathFinder(object):
 
     def find_executables(self, path: Union[str, PurePath]) -> List[str]:
         folder = Path(path)
+
         if not folder.exists():
             raise FileNotFoundError(f'Pathfinder: {path} does not exist')
         execs = []
@@ -43,6 +44,6 @@ class PathFinder(object):
         matches = difflib.get_close_matches(pattern.lower(), execs.keys(), cutoff=no_cutoff)
         if len(matches) > 0:
             # returns best match
-            return execs.get(matches[0])
+            return execs.get(matches[0])  # type: ignore
         else:
             return None

@@ -1,12 +1,16 @@
 from humblegame import DownloadStruct, HumbleGame, TroveGame, Subproduct, SubproductDownload, TroveDownload
-from consts import CURRENT_SYSTEM, PlatformNotSupported
+from consts import CURRENT_SYSTEM, PlatformNotSupported, CURRENT_BITNESS
 
 
 class HumbleDownloadResolver:
     """Prepares downloads for specific conditionals"""
-    def __init__(self, target_platform=CURRENT_SYSTEM, target_bitness=None):
+    def __init__(self, target_platform=CURRENT_SYSTEM, target_bitness=CURRENT_BITNESS):
         self.platform = target_platform
         self.bitness = target_bitness
+
+        self._allowed_names = ['Download', '32-bit']
+        if target_bitness == 64:
+            self._allowed_names.append('64-bit')
 
     def __call__(self, game: HumbleGame) -> DownloadStruct:
         if isinstance(game, TroveGame):
@@ -16,7 +20,7 @@ class HumbleDownloadResolver:
         else:
             raise AssertionError('Unsupported game type')
 
-    def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:
+    def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:  # type: ignore
         try:
             return game.downloads[self.platform]
         except KeyError:
@@ -28,12 +32,7 @@ class HumbleDownloadResolver:
         except KeyError:
             self.__platform_not_supporter_handler(game)
 
-        assert len(system_downloads) > 0
-
-        if len(system_downloads) == 1:
-            return system_downloads[0]
-        else:
-            download_items = list(filter(lambda x: x.name == 'Download', system_downloads))
+        download_items = list(filter(lambda x: x.name in self._allowed_names, system_downloads))
 
         if len(download_items) == 1:
             return download_items[0]

@@ -5,6 +5,9 @@ import os
 REQUIREMENTS = os.path.join('requirements', 'app.txt')
 REQUIREMENTS_DEV = os.path.join('requirements', 'dev.txt')
 
+GALAXY_PATH = ''
+DIST_DIR = ''
+
 if sys.platform == 'win32':
     GALAXY_PATH = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe'
     DIST_DIR = os.environ['localappdata'] + '\\GOG.com\\Galaxy\\plugins\\installed'

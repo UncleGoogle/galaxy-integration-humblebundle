@@ -1,9 +1,9 @@
 import abc
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
-from consts import Platform
+from consts import Platform, HP
 
 
 class DownloadStruct(abc.ABC):
@@ -11,27 +11,31 @@ class DownloadStruct(abc.ABC):
     url: Dict[str, str]         # {'bittorent': str, 'web': str}
     file_size: str
     md5: str
-    name: str
+    name: str: Optional[str]  # asmjs downloads have no 'name'
     uploaded_at: Optional[str]  # ex.: 2019-07-10T21:48:11.976780
     """
     def __init__(self, data: dict):
         self._data = data
-        self.url = data['url']
+        self.url = data.get('url')
 
     @property
-    def name(self):
-        return self.url['name']
+    def name(self) -> Optional[str]:
+        return self._data.get('name')
 
     @property
-    def web(self):
+    def web(self) -> Optional[str]:
+        if self.url is None:
+            return None
         return self.url['web']
 
     @property
-    def bittorrent(self):
-        return self.url['bittorrent']
+    def bittorrent(self) -> Optional[str]:
+        if self.url is None:
+            return None
+        return self.url.get('bittorrent')
 
     @abc.abstractmethod
-    def human_size(self):
+    def human_size(self) -> str:
         pass
 
 
@@ -94,7 +98,10 @@ class HumbleGame(abc.ABC):
 class TroveGame(HumbleGame):
     @property
     def downloads(self) -> Dict[Platform, TroveDownload]:
-        return {k: TroveDownload(v) for k, v in self._data['downloads'].items()}
+        return {
+            k: TroveDownload(v)
+            for k, v in self._data['downloads'].items()
+        }
 
     @property
     def license(self) -> LicenseInfo:
@@ -109,7 +116,13 @@ class TroveGame(HumbleGame):
 class Subproduct(HumbleGame):
     @property
     def downloads(self) -> Dict[Platform, List[SubproductDownload]]:
-        return {dw['platform']: [SubproductDownload(x) for x in dw['download_struct']] for dw in self._data['downloads']}
+        return {
+            dw['platform']: [
+                SubproductDownload(x)
+                for x in dw['download_struct']
+            ]
+            for dw in self._data['downloads']
+        }
 
     @property
     def license(self) -> LicenseInfo:
@@ -119,8 +132,3 @@ class Subproduct(HumbleGame):
     @property
     def human_name(self):
         return self._data['human_name']
-
-    @property
-    def name(self):
-        return self._data['name']
-

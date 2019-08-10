@@ -1,4 +1,5 @@
 import enum
+import platform
 import sys
 import typing
 
@@ -15,6 +16,7 @@ class HP(enum.Enum):
     ANDROID = 'android'
     AUDIO = 'audio'
     EBOOK = 'ebook'
+    ASMJS = 'asmjs'
 
     def __eq__(self, other):
         if type(other) == str:
@@ -33,6 +35,11 @@ elif sys.platform == 'darwin':
     CURRENT_SYSTEM = HP.MAC
 else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
+
+if platform.machine().endswith('64'):
+    CURRENT_BITNESS = 64
+else:
+    CURRENT_BITNESS = 32
 
 # typing aliases
 Platform = typing.Union[HP, str]
