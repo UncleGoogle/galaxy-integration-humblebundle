@@ -3,7 +3,7 @@ import logging
 import shutil
 import toml
 import os
-from typing import Any
+from typing import Any, Dict
 
 
 class Settings:

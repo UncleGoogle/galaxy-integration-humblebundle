@@ -21,7 +21,7 @@ from humbledownloader import HumbleDownloadResolver
 from local import AppFinder
 
 
-enable_sentry = False
+enable_sentry = True
 if enable_sentry:
     sentry_sdk.init(
         "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
