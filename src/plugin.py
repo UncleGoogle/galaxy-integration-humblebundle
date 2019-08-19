@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 import asyncio
@@ -13,6 +14,7 @@ from galaxy.api.types import Authentication, NextStep, LocalGame
 
 from version import __version__
 from consts import GAME_PLATFORMS
+from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
@@ -47,15 +49,19 @@ AUTH_PARAMS = {
 class HumbleBundlePlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
+        self._settings = Settings(os.path.dirname(__file__))
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
         self._app_finder = AppFinder
+
         self._owned_games = {}
         self._local_games = {}
+        self._cached_game_states = {}
 
+        self._getting_owned_games = asyncio.Event()
+        self._check_owned_task = asyncio.create_task(asyncio.sleep(0))
         self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
         self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
-        self._cached_game_states = {}
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -72,7 +78,7 @@ class HumbleBundlePlugin(Plugin):
         self.store_credentials(auth_cookie)
         return Authentication(user_id, user_name)
 
-    async def get_owned_games(self):
+    async def _get_owned_games(self):
         gamekeys = await self._api.get_gamekeys()
         orders = [self._api.get_order_details(x) for x in gamekeys]
 
@@ -82,10 +88,8 @@ class HumbleBundlePlugin(Plugin):
 
         products = []
 
-        if await self._api.is_trove_subscribed():
-            logging.info(f'Fetching trove info started...')
+        if self._settings.library['show_trove_games'] and await self._api.had_trove_subscription():
             troves = await self._api.get_trove_details()
-            logging.info('Fetching info finished')
             for trove in troves:
                 try:
                     products.append(TroveGame(trove))
@@ -110,6 +114,10 @@ class HumbleBundlePlugin(Plugin):
             for product in products
         }
 
+    async def get_owned_games(self):
+        self._getting_owned_games.set()
+        await self._get_owned_games()
+        self._getting_owned_games.clear()
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def install_game(self, game_id):
@@ -163,6 +171,24 @@ class HumbleBundlePlugin(Plugin):
         else:
             game.uninstall()
 
+    async def _check_owned(self):
+        """ self.get_owned_games is called periodically by galaxy too rarely.
+        This method check for new orders more often and also when relevant option in config file was changed.
+        """
+        # TODO cache owned games and check if new orders are made to trigger refresh once per some time
+        old_library_settings = self._settings.library.copy()
+        self._settings.reload_config_if_changed()
+        if old_library_settings != self._settings.library:
+            logging.info(f'Config file library settings changed: {self._settings.library}. Reparsing owned games')
+            old_ids = self._owned_games.keys()
+            await self._get_owned_games()
+
+            for old_id in old_ids - self._owned_games.keys():
+                self.remove_game(old_id)
+            for new_id in self._owned_games.keys() - old_ids:
+                self.add_game(self._owned_games[new_id].in_galaxy_format())
+
+
     async def _check_statuses(self):
         """Check satuses of already found installed (local) games.
         Detects events when game is:
@@ -185,6 +211,9 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(5)
 
     def tick(self):
+        if self._check_owned_task.done() and not self._getting_owned_games.is_set():
+            self._check_owned_task = asyncio.create_task(self._check_owned())
+
         if self._check_statuses_task.done():
             self._check_statuses_task = asyncio.create_task(self._check_statuses())
 

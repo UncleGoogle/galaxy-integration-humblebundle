@@ -1,0 +1,12 @@
+version = 1
+
+[owned]
+# Monthly subscription games will be shown only if you were subscriber at least once.
+# Set to false do delete trove games from your GOG Galaxy library.
+show_trove_games = true
+
+# By default the plugin shows steam/origin keys as part of the library only if those keys aren't already revealed
+# https://support.humblebundle.com/hc/articles/204008710-How-To-Redeem-Steam-Keys
+# Note that revealing key doesn't mean that it is activated in YOUR steam/origin account
+# Set to true if you want to show games both with revealed and not revealed keys.
+show_revealed_key_games = false
