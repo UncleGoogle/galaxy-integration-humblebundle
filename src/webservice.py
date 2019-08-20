@@ -46,7 +46,7 @@ class AuthorizedHumbleAPI:
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]
-        logging.debug(f'user info cookie: {info}')
+        # logging.debug(f'user info cookie: {info}')
         info += '=='  # ensure full padding
         decoded = json.loads(base64.b64decode(info))
         return decoded['user_id']

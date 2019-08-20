@@ -21,7 +21,7 @@ from humbledownloader import HumbleDownloadResolver
 from local import AppFinder
 
 
-enable_sentry = True
+enable_sentry = False
 if enable_sentry:
     sentry_sdk.init(
         "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
@@ -49,7 +49,6 @@ AUTH_PARAMS = {
 class HumbleBundlePlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
-        self._settings = Settings(os.path.dirname(__file__))
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
         self._app_finder = AppFinder
@@ -62,6 +61,19 @@ class HumbleBundlePlugin(Plugin):
         self._check_owned_task = asyncio.create_task(asyncio.sleep(0))
         self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
         self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
+
+    def _save_cache(self, key: str, data: str):
+        self.persistent_cache[key] = data
+        self.push_cache()
+
+    def handshake_complete(self):
+        self._settings = Settings(
+            config_dir=os.path.dirname(__file__),
+            current_version=__version__,
+            cached_version=self.persistent_cache.get('version'),
+            cached_config=self.persistent_cache.get('config', ''),
+            save_cache_callback=self._save_cache
+        )
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
@@ -88,7 +100,7 @@ class HumbleBundlePlugin(Plugin):
 
         products = []
 
-        if self._settings.library['show_trove_games'] and await self._api.had_trove_subscription():
+        if 'trove' in self._settings.library and await self._api.had_trove_subscription():
             troves = await self._api.get_trove_details()
             for trove in troves:
                 try:

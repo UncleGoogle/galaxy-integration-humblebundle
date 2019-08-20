@@ -1,56 +1,53 @@
 import pathlib
 import logging
-import shutil
 import toml
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Callable
 
 
 class Settings:
-    def __init__(self, config_dir: str):
-        self.USER_CONFIG = pathlib.Path(config_dir) / 'config.toml'
-        self.TEMPLATE_CONFIG = pathlib.Path(config_dir) / 'config_template.toml'
+    def __init__(self, config_dir: str, current_version: str, cached_version: str,
+                 cached_config: str, save_cache_callback: Callable):
+        self._curr_ver = current_version
+        self._prev_ver = cached_version
+        self._save_cache = save_cache_callback
 
-        self.library: Dict[str, Any] = {}  # merged config content
-        self._config, self._user_config = {}, {}
+        self._config = {}
         self._last_modification_time = None
 
-        self._config = self.load_config_file(self.TEMPLATE_CONFIG)
-        self._load_user_config()
-        self._update_user_config()
+        self._local_config_file = pathlib.Path(config_dir) / 'config.toml'
+        self._cached_config = toml.loads(cached_config)
+
+        self.reload_local_config_if_changed()
 
     def _load_content(self):
-        self.library = self._config.get('owned', {})
+        self.library = self._config.get('library', ['drm-free', 'trove', 'keys'])
 
-    def _load_user_config(self):
-        if not self.USER_CONFIG.exists():
-            logging.info(f'User config does not exists, creating using {self.USER_CONFIG.name}')
-            try:
-                shutil.copyfile(self.TEMPLATE_CONFIG, self.USER_CONFIG)
-                self._user_config = {}
-            except Exception as e:
-                logging.error(e)
-        else:
-            self._user_config = self.load_config_file(self.USER_CONFIG)
-
-        self._last_modification_time = os.stat(self.USER_CONFIG).st_mtime
-        self._config.update(self._user_config)
-        self._load_content()
+    @staticmethod
+    def _load_config_file(config_path: pathlib.Path) -> Dict[str, Any]:
+        try:
+            with open(config_path, 'r') as f:
+                return toml.load(f)
+        except Exception as e:
+            logging.error(e)
+            return {}
 
     def _update_user_config(self):
         """Simple migrations"""
-        if self._config.keys() - self._user_config.keys():
-            logging.info(f'Recreating user config file with new entries')
-            with open(self.USER_CONFIG, 'w') as f:
-                toml.dump(self._config, f)
+        logging.info(f'Recreating user config file with new entries')
+        data = toml.dumps(self._config)
+        with open(self._local_config_file, 'r') as f:
+            comment = ''
+            for line in f.readline():
+                comment += line
+                if line == '# ===':
+                    break
+        with open(self._local_config_file, 'w') as f:
+            f.write(comment)
+            f.write(data)
 
-    @staticmethod
-    def load_config_file(config_path: pathlib.Path):
-        with open(config_path, 'r') as f:
-            return toml.load(f)
-
-    def reload_config_if_changed(self):
-        path = self.USER_CONFIG
+    def reload_local_config_if_changed(self):
+        path = self._local_config_file
         try:
             stat = os.stat(path)
         except FileNotFoundError:
@@ -58,6 +55,22 @@ class Settings:
         except Exception as e:
             logging.exception(f'Stating {path} has failed: {str(e)}')
         else:
-            if stat.st_mtime != self._last_modification_time:
-                self._last_modification_time = stat.st_mtime
-                self._load_user_config()
+            if stat.st_mtime == self._last_modification_time:
+                return
+
+        local_config = self._load_config_file(self._local_config_file)
+
+        if self._last_modification_time is None:  # first run
+            if self._prev_ver is None or self._curr_ver <= self._prev_ver:
+                self._config = {**self._cached_config, **local_config}
+            else: # prioritize cached config in case of plugin update
+                self._config = {**local_config, **self._cached_config}
+                self._sync_config('version', self._curr_ver)
+                if self._config.keys() - local_config.keys():
+                    self._update_user_config()
+        else:
+            self._config.update(local_config)
+
+        self._load_content()
+        self._last_modification_time = stat.st_mtime
+        self._sync_config('config', toml.dumps(self._config))
