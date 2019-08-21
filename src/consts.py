@@ -8,6 +8,19 @@ class PlatformNotSupported(Exception):
     pass
 
 
+class SOURCES(enum.Enum):
+    LIBRARY = 'library'
+    TROVE = 'trove'
+    KEYS = 'keys'
+
+    @classmethod
+    def match(cls, val):
+        for source in cls:
+            if source.value == val:
+                return source
+        raise TypeError(f'No such source value: {val}. Available: {[i.value for i in cls]}')
+
+
 class HP(enum.Enum):
     """HumbleBundle platform code name shown in subproducts>download section"""
     WINDOWS = 'windows'
