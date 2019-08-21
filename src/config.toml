@@ -1,4 +1,4 @@
-# Config file for humble bundle
+# Config file for HumbleBundle integration
 # All changes are loaded on the file save even if plugin is running in GOG Galaxy
 # Configuration is sync with Galaxy database storage so in case of plugin removal or update it will be propertly recreated.
 
