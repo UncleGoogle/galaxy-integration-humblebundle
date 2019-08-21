@@ -2,7 +2,7 @@ import pathlib
 import logging
 import toml
 import os
-from typing import Any, Dict, Callable
+from typing import Any, Dict, Callable, Mapping
 
 
 class Settings:
@@ -12,7 +12,7 @@ class Settings:
         self._prev_ver = cached_version
         self._save_cache = save_cache_callback
 
-        self._config = {}
+        self._config: Dict[str, Any] = {}
         self._last_modification_time = None
 
         self._local_config_file = pathlib.Path(config_dir) / 'config.toml'
@@ -24,7 +24,7 @@ class Settings:
         self.library = self._config.get('library', ['drm-free', 'trove', 'keys'])
 
     @staticmethod
-    def _load_config_file(config_path: pathlib.Path) -> Dict[str, Any]:
+    def _load_config_file(config_path: pathlib.Path) -> Mapping[str, Any]:
         try:
             with open(config_path, 'r') as f:
                 return toml.load(f)
