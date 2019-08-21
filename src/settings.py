@@ -2,7 +2,7 @@ import pathlib
 import logging
 import toml
 import os
-from typing import Any, Dict, Callable, Mapping
+from typing import Any, Dict, Callable, Mapping, List
 
 from consts import SOURCES
 
@@ -30,9 +30,12 @@ class Settings:
         self.reload_local_config_if_changed()
 
     def _load_content(self):
-        config_sources = self._config.get('sources', DEFAULT_CONFIG['sources']):
+        config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
         self._sources = [SOURCES.match(s) for s in config_sources]
 
+    @property
+    def sources(self) -> List[SOURCES]:
+        return self._sources
 
     @staticmethod
     def _load_config_file(config_path: pathlib.Path) -> Mapping[str, Any]:
