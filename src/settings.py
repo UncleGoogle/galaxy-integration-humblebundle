@@ -29,7 +29,7 @@ class Settings:
             with open(config_path, 'r') as f:
                 return toml.load(f)
         except Exception as e:
-            logging.error(e)
+            logging.error(repr(e))
             return {}
 
     def _update_user_config(self):
@@ -65,7 +65,7 @@ class Settings:
                 self._config = {**self._cached_config, **local_config}
             else: # prioritize cached config in case of plugin update
                 self._config = {**local_config, **self._cached_config}
-                self._sync_config('version', self._curr_ver)
+                self._save_cache('version', self._curr_ver)
                 if self._config.keys() - local_config.keys():
                     self._update_user_config()
         else:
@@ -73,4 +73,4 @@ class Settings:
 
         self._load_content()
         self._last_modification_time = stat.st_mtime
-        self._sync_config('config', toml.dumps(self._config))
+        self._save_cache('config', toml.dumps(self._config))

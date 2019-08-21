@@ -189,7 +189,7 @@ class HumbleBundlePlugin(Plugin):
         """
         # TODO cache owned games and check if new orders are made to trigger refresh once per some time
         old_library_settings = self._settings.library.copy()
-        self._settings.reload_config_if_changed()
+        self._settings.reload_local_config_if_changed()
         if old_library_settings != self._settings.library:
             logging.info(f'Config file library settings changed: {self._settings.library}. Reparsing owned games')
             old_ids = self._owned_games.keys()
