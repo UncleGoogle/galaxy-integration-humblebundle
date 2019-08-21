@@ -23,6 +23,11 @@ or build from source code (requires `python3.6` or higher):
 3. `pip install -r requirements/dev.txt`
 4. `inv dist`
 
+## Configuration
+See available options in configuration file:
+[config.toml](src/config.toml)
+
+
 ## Known Issues
 
 - no launch support for macOS

@@ -46,7 +46,7 @@ class AuthorizedHumbleAPI:
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]
-        logging.debug(f'user info cookie: {info}')
+        # logging.debug(f'user info cookie: {info}')
         info += '=='  # ensure full padding
         decoded = json.loads(base64.b64decode(info))
         return decoded['user_id']
@@ -83,10 +83,9 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
 
-    async def is_trove_subscribed(self) -> bool:
-        """Based on assumption that `monthly/subscriber` page is redirect to `monthly`
-        Warning: status is still 200 if user is logged in
-        TODO: what if subscription has expired?
+    async def had_trove_subscription(self) -> bool:
+        """Based on current behavior of `humblebundle.com/monthly/subscriber` that redirect to `monthly`
+        if subscription was never enabled for the user.
         """
         res = await self._request('get', self._TROVE_SUBSCRIBER, allow_redirects=False)
         if res.status == 200:

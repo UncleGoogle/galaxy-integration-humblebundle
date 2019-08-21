@@ -12,7 +12,22 @@ from glob import glob
 from invoke import task
 
 from src.version import __version__
-from config import REQUIREMENTS, REQUIREMENTS_DEV, GALAXY_PATH, DIST_PLUGIN
+
+
+REQUIREMENTS = os.path.join('requirements', 'app.txt')
+REQUIREMENTS_DEV = os.path.join('requirements', 'dev.txt')
+
+GALAXY_PATH = ''
+DIST_DIR = ''
+
+if sys.platform == 'win32':
+    GALAXY_PATH = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe'
+    DIST_DIR = os.environ['localappdata'] + '\\GOG.com\\Galaxy\\plugins\\installed'
+elif sys.platform == 'darwin':
+    GALAXY_PATH = "/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy"
+    DIST_DIR = os.environ['HOME'] + r"/Library/Application\ Support/GOG.com/Galaxy/plugins/installed"
+
+DIST_PLUGIN = os.path.join(DIST_DIR, 'humblebundle')
 
 
 @task
@@ -39,7 +54,7 @@ def build(c, output=DIST_PLUGIN, python="python"):
     subprocess.check_call(args)
 
     print('copying source code ...')
-    for file_ in glob("src/*.py"):
+    for file_ in glob("src/*.py") + glob("src/*.toml"):
         shutil.copy(file_, output)
     os.mkdir(Path(output) / 'local')
     for file_ in glob("src/local/*.py"):
@@ -91,11 +106,11 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 @task
 def test(c, mypy_target=None, python='python', windows=False):
-    c.run(f"{python} -m pytest tests/common")
+    c.run(f"{python} -m pytest tests/common src --flakes")
     if windows:
         c.run(f"{python} -m pytest tests/windows")
     if mypy_target:
-        modules = ['local', 'plugin.py', 'consts.py', 'humblegame.py', 'humbledownloader.py', 'webservice.py']
+        modules = ['local', 'plugin.py', 'consts.py', 'humblegame.py', 'humbledownloader.py', 'webservice.py', 'settings.py']
         modules_full_path = [str(Path(mypy_target) / mod) for mod in modules]
         print(f'running mypy check for {str(Path(mypy_target))} directory')
         c.run(f"{python} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
