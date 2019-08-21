@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
-from consts import Platform, HP
+from consts import Platform
 
 
 class DownloadStruct(abc.ABC):

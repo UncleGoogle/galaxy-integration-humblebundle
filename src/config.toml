@@ -1,0 +1,25 @@
+# Config file for HumbleBundle integration
+# All changes are loaded on the file save even if plugin is running in GOG Galaxy
+# Configuration is sync with Galaxy database storage so in case of plugin removal or update it will be propertly recreated.
+
+# `library` defines which games will be shown. Duplicates will be resolved according to the specified order.
+# Available options:
+    # drm-free: all downloadable games visible in https://www.humblebundle.com/home/library
+    # trove: Monthly subscription games. Will be shown only if you were subscriber at least once.
+    # keys: items that have only Steam/Origin/... keys to be redeem in foreign services; see: https://support.humblebundle.com/hc/articles/204008710-How-To-Redeem-Steam-Keys
+# Modify to add/remove different game types from your GOG Galaxy library or change priority order (first is most important)
+# Note: in case of duplicates between `trove` and `keys` and when your subscription has expired, "Install" will fallback to showing you a key
+
+# `show_revealed_key_games` defines if already revealed `keys` games should be shown.
+# Set to true if you want to show games both with revealed and not revealed keys.
+# Note: revealing key doesn't mean that it is activated (reedemed) in YOUR steam/origin account
+# If game key is reedemed on your steam/origin account it should be also visible in Steam/Origin Galaxy integration. Use it instead.
+# ===
+
+library = [
+    'drm-free',
+    'trove',
+    'keys'
+]
+
+show_revealed_key_games = false
