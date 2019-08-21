@@ -115,7 +115,9 @@ class HumbleBundlePlugin(Plugin):
                     continue
 
         for details in all_games_details:
-            if Product(details['product']).bundle_type in NON_GAME_BUNDLE_TYPES:
+            product = Product(details['product'])
+            if product.bundle_type in NON_GAME_BUNDLE_TYPES:
+                logging.debug(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
                 continue
             for sub in details['subproducts']:
                 try:
