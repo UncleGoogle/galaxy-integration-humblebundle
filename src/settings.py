@@ -27,7 +27,7 @@ class Settings:
         self._local_config_file = pathlib.Path(config_dir) / 'config.toml'
         self._cached_config = toml.loads(cached_config)
 
-        self.reload_local_config_if_changed()
+        self.reload_local_config_if_changed(first_run=True)
 
     def _load_content(self):
         config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
@@ -60,31 +60,32 @@ class Settings:
             f.write(comment)
             f.write(data)
 
-    def reload_local_config_if_changed(self):
+    def reload_local_config_if_changed(self, first_run=False):
         path = self._local_config_file
         try:
             stat = os.stat(path)
         except FileNotFoundError:
-            raise
+            logging.exception(f'{path} not found. Clearing current config to use defaults')
+            self._config.clear()
+            self._load_content()
         except Exception as e:
             logging.exception(f'Stating {path} has failed: {str(e)}')
+            return
         else:
-            if stat.st_mtime == self._last_modification_time:
-                return
+            if stat.st_mtime != self._last_modification_time:
+                self._last_modification_time = stat.st_mtime
+                local_config = self._load_config_file(self._local_config_file)
 
-        local_config = self._load_config_file(self._local_config_file)
+                if first_run:
+                    if self._prev_ver is None or self._curr_ver <= self._prev_ver:
+                        self._config = {**self._cached_config, **local_config}
+                    else:  # prioritize cached config in case of plugin update
+                        self._config = {**local_config, **self._cached_config}
+                        self._save_cache('version', self._curr_ver)
+                        if self._config.keys() - local_config.keys():
+                            self._update_user_config()
+                else:
+                    self._config.update(local_config)
 
-        if self._last_modification_time is None:  # first run
-            if self._prev_ver is None or self._curr_ver <= self._prev_ver:
-                self._config = {**self._cached_config, **local_config}
-            else: # prioritize cached config in case of plugin update
-                self._config = {**local_config, **self._cached_config}
-                self._save_cache('version', self._curr_ver)
-                if self._config.keys() - local_config.keys():
-                    self._update_user_config()
-        else:
-            self._config.update(local_config)
-
-        self._load_content()
-        self._last_modification_time = stat.st_mtime
-        self._save_cache('config', toml.dumps(self._config))
+                self._load_content()
+                self._save_cache('config', toml.dumps(self._config))
