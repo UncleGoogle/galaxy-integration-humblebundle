@@ -10,7 +10,7 @@ from consts import SOURCES
 # in case config entry is removed
 DEFAULT_CONFIG = {
     'sources': ['library', 'trove', 'keys'],
-    'show_revealed_key_games': False
+    'show_revealed_keys': False
 }
 
 
@@ -32,6 +32,7 @@ class Settings:
     def _load_content(self):
         config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
         self._sources = [SOURCES.match(s) for s in config_sources]
+        self._show_keys = self._config.get('show_revealed_keys', DEFAULT_CONFIG['show_revaled_keys'])
 
     @property
     def sources(self) -> List[SOURCES]:
