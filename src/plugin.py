@@ -6,6 +6,10 @@ import logging
 import re
 import webbrowser
 
+thirdparty = os.path.join(os.path.dirname(__file__), 'modules')
+if thirdparty not in sys.path:
+    sys.path.insert(0, thirdparty)
+
 import sentry_sdk
 
 from galaxy.api.plugin import Plugin, create_and_run_plugin
@@ -13,12 +17,13 @@ from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
 
 from version import __version__
-from consts import GAME_PLATFORMS
+from consts import GAME_PLATFORMS, NON_GAME_BUNDLE_TYPES, SOURCES
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from humblegame import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from local import AppFinder
+from model.product import Product
 
 
 enable_sentry = False
@@ -98,24 +103,28 @@ class HumbleBundlePlugin(Plugin):
         all_games_details = await asyncio.gather(*orders)
         sentry_sdk.capture_message(f'Fetching info about {len(orders)} lasts: {time.time() - start}', level="info")
 
-        products = []
+        games = []
 
-        if 'trove' in self._settings.library and await self._api.had_trove_subscription():
+        if SOURCES.TROVE in self._settings.sources and await self._api.had_trove_subscription():
             troves = await self._api.get_trove_details()
             for trove in troves:
                 try:
-                    products.append(TroveGame(trove))
+                    games.append(TroveGame(trove))
                 except Exception as e:
                     report_problem(e, trove, level=logging.WARNING)
                     continue
 
         for details in all_games_details:
+            product = Product(details['product'])
+            if product.bundle_type in NON_GAME_BUNDLE_TYPES:
+                logging.debug(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
+                continue
             for sub in details['subproducts']:
                 try:
                     prod = Subproduct(sub)
                     if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
                         # at least one download exists for supported OS
-                        products.append(prod)
+                        games.append(prod)
                 except Exception as e:
                     logging.warning(f"Error while parsing downloads {e}: {details}")
                     # report_problem(e, details, level=logging.WARNING)  # too many url errors
@@ -123,7 +132,7 @@ class HumbleBundlePlugin(Plugin):
 
         self._owned_games = {
             product.machine_name: product
-            for product in products
+            for product in games
         }
 
     async def get_owned_games(self):
@@ -188,10 +197,10 @@ class HumbleBundlePlugin(Plugin):
         This method check for new orders more often and also when relevant option in config file was changed.
         """
         # TODO cache owned games and check if new orders are made to trigger refresh once per some time
-        old_library_settings = self._settings.library.copy()
+        old_library_settings = self._settings.sources.copy()
         self._settings.reload_local_config_if_changed()
-        if old_library_settings != self._settings.library:
-            logging.info(f'Config file library settings changed: {self._settings.library}. Reparsing owned games')
+        if old_library_settings != self._settings.sources:
+            logging.info(f'Config file library settings changed: {self._settings.sources}. Reparsing owned games')
             old_ids = self._owned_games.keys()
             await self._get_owned_games()
 

@@ -1,4 +1,3 @@
-import argparse
 import sys
 import psutil
 import json
@@ -28,6 +27,7 @@ elif sys.platform == 'darwin':
     DIST_DIR = os.environ['HOME'] + r"/Library/Application\ Support/GOG.com/Galaxy/plugins/installed"
 
 DIST_PLUGIN = os.path.join(DIST_DIR, 'humblebundle')
+THIRD_PARTY_RELATIVE_DEST = 'modules'
 
 
 @task
@@ -38,14 +38,20 @@ def install(c, dev=False, python="python"):
 
 @task
 def build(c, output=DIST_PLUGIN, python="python"):
+    output = Path(output).resolve()
+
     print('removing', output)
     if os.path.exists(output):
         shutil.rmtree(output)
 
+    print('copying source code to ', str(output))
+    shutil.copytree('src', output, ignore=shutil.ignore_patterns(
+        '__pycache__', '.mypy_cache', 'galaxy'))
+
     args = [
         python, "-m", "pip", "install",
         "-r", REQUIREMENTS,
-        "--target", output,
+        "--target", str(output / THIRD_PARTY_RELATIVE_DEST),
         # "--implementation", "cp",
         # "--python-version", "37",
         # "--no-deps"
@@ -53,15 +59,8 @@ def build(c, output=DIST_PLUGIN, python="python"):
     print(f'running `{" ".join(args)}`')
     subprocess.check_call(args)
 
-    print('copying source code ...')
-    for file_ in glob("src/*.py") + glob("src/*.toml"):
-        shutil.copy(file_, output)
-    os.mkdir(Path(output) / 'local')
-    for file_ in glob("src/local/*.py"):
-        shutil.copy(file_, str(Path(output) / 'local'))
-
     print('copying galaxy api ...')
-    copy_tree("galaxy-integrations-python-api/src", output)
+    copy_tree("galaxy-integrations-python-api/src", str(output))
 
     print('creating manifest ...')
     manifest = {
@@ -75,7 +74,7 @@ def build(c, output=DIST_PLUGIN, python="python"):
         "url": "https://github.com/UncleGoogle/galaxy-integration-humblebundle/",
         "script": "plugin.py"
     }
-    with open(os.path.join(output, "manifest.json"), "w") as file_:
+    with open(output / "manifest.json", "w") as file_:
         json.dump(manifest, file_, indent=4)
 
 

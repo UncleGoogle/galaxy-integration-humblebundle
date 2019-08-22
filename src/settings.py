@@ -2,7 +2,16 @@ import pathlib
 import logging
 import toml
 import os
-from typing import Any, Dict, Callable, Mapping
+from typing import Any, Dict, Callable, Mapping, List
+
+from consts import SOURCES
+
+
+# in case config entry is removed
+DEFAULT_CONFIG = {
+    'sources': ['library', 'trove', 'keys'],
+    'show_revealed_key_games': False
+}
 
 
 class Settings:
@@ -21,7 +30,12 @@ class Settings:
         self.reload_local_config_if_changed()
 
     def _load_content(self):
-        self.library = self._config.get('library', ['drm-free', 'trove', 'keys'])
+        config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
+        self._sources = [SOURCES.match(s) for s in config_sources]
+
+    @property
+    def sources(self) -> List[SOURCES]:
+        return self._sources
 
     @staticmethod
     def _load_config_file(config_path: pathlib.Path) -> Mapping[str, Any]:
@@ -29,7 +43,7 @@ class Settings:
             with open(config_path, 'r') as f:
                 return toml.load(f)
         except Exception as e:
-            logging.error(repr(e))
+            logging.error('Parsing config file has failed. Default values will be used. Details:' + repr(e))
             return {}
 
     def _update_user_config(self):
