@@ -9,7 +9,7 @@ from consts import SOURCES
 
 # in case config entry is removed
 DEFAULT_CONFIG = {
-    'sources': ['library', 'trove', 'keys'],
+    'library': ['drm-free', 'trove', 'keys'],
     'show_revealed_keys': False
 }
 
@@ -29,14 +29,14 @@ class Settings:
 
         self.reload_local_config_if_changed(first_run=True)
 
-    def _load_content(self):
-        config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
-        self._sources = [SOURCES.match(s) for s in config_sources]
-        self._show_keys = self._config.get('show_revealed_keys', DEFAULT_CONFIG['show_revaled_keys'])
-
     @property
     def sources(self) -> List[SOURCES]:
-        return self._sources
+        config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
+        return [SOURCES.match(s) for s in config_sources]
+
+    @property
+    def show_revealed_keys(self):
+        return self._config.get('show_revealed_keys', DEFAULT_CONFIG['show_revealed_keys'])
 
     @staticmethod
     def _load_config_file(config_path: pathlib.Path) -> Mapping[str, Any]:
@@ -68,7 +68,6 @@ class Settings:
         except FileNotFoundError:
             logging.exception(f'{path} not found. Clearing current config to use defaults')
             self._config.clear()
-            self._load_content()
         except Exception as e:
             logging.exception(f'Stating {path} has failed: {str(e)}')
             return
@@ -88,5 +87,4 @@ class Settings:
                 else:
                     self._config.update(local_config)
 
-                self._load_content()
                 self._save_cache('config', toml.dumps(self._config))
