@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from local.winappfinder import WindowsAppFinder
 from local._reg_watcher import UninstallKey
-from humblegame import TroveGame
+from model.game import TroveGame
 
 
 @pytest.fixture

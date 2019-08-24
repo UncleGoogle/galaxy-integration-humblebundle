@@ -6,7 +6,7 @@ import logging
 from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
-from humblegame import TroveDownload
+from model.download import TroveDownload
 
 
 class AuthorizedHumbleAPI:

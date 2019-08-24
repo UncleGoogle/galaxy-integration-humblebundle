@@ -4,7 +4,7 @@ import toml
 import os
 from typing import Any, Dict, Callable, Mapping, List
 
-from consts import SOURCES
+from consts import SOURCE
 
 
 # in case config entry is removed
@@ -30,9 +30,9 @@ class Settings:
         self.reload_local_config_if_changed(first_run=True)
 
     @property
-    def sources(self) -> List[SOURCES]:
+    def sources(self) -> List[SOURCE]:
         config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
-        return [SOURCES.match(s) for s in config_sources]
+        return [SOURCE.match(s) for s in config_sources]
 
     @property
     def show_revealed_keys(self):

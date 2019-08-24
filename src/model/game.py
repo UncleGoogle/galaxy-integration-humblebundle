@@ -3,65 +3,8 @@ from typing import Dict, List, Optional
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
-from consts import Platform
-
-
-class DownloadStruct(abc.ABC):
-    """
-    url: Dict[str, str]         # {'bittorent': str, 'web': str}
-    file_size: str
-    md5: str
-    name: str: Optional[str]  # asmjs downloads have no 'name'
-    uploaded_at: Optional[str]  # ex.: 2019-07-10T21:48:11.976780
-    """
-    def __init__(self, data: dict):
-        self._data = data
-        self.url = data.get('url')
-
-    @property
-    def name(self) -> Optional[str]:
-        return self._data.get('name')
-
-    @property
-    def web(self) -> Optional[str]:
-        if self.url is None:
-            return None
-        return self.url['web']
-
-    @property
-    def bittorrent(self) -> Optional[str]:
-        if self.url is None:
-            return None
-        return self.url.get('bittorrent')
-
-    @abc.abstractmethod
-    def human_size(self) -> str:
-        pass
-
-
-class TroveDownload(DownloadStruct):
-    """ Additional fields:
-    sha1: str
-    timestamp: int          # ?
-    machine_name: str
-    size: str
-    """
-    @property
-    def human_size(self):
-        return self._data['size']
-
-    @property
-    def machine_name(self):
-        return self._data['machine_name']
-
-
-class SubproductDownload(DownloadStruct):
-    """ Additional fields:
-    human_size: str
-    """
-    @property
-    def human_size(self):
-        return self._data['human_size']
+from consts import Platform, KEY_TYPE
+from model.download import DownloadStruct, TroveDownload, SubproductDownload
 
 
 class HumbleGame(abc.ABC):
@@ -132,3 +75,32 @@ class Subproduct(HumbleGame):
     @property
     def human_name(self):
         return self._data['human_name']
+
+
+class Key(HumbleGame):
+    @property
+    def downloads(self):
+        """No downloads for keys"""
+        return {}
+
+    @property
+    def license(self) -> LicenseInfo:
+        # second LicenseInfo argument - owner - can I pass there Steam/Origin user id?
+        return LicenseInfo(LicenseType.OtherUserLicense, None)
+
+    @property
+    def human_name(self):
+        return self._data['human_name']
+    
+    @property
+    def key_type(self) -> KEY_TYPE:
+        key_type = self._data['key_type']
+        for typ in KEY_TYPE:
+            if typ.value == key_type:
+                return key_type
+        raise TypeError(f'No such key type: {key_type}')
+    
+    @property
+    def key_val(self) -> Optional[str]:
+        """If returned value is None - the key was not revealed yet"""
+        return self._data.get('redeemed_key_val')

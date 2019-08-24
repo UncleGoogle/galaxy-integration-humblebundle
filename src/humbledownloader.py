@@ -1,4 +1,5 @@
-from humblegame import DownloadStruct, HumbleGame, TroveGame, Subproduct, SubproductDownload, TroveDownload
+from model.game import HumbleGame, TroveGame, Subproduct
+from model.download import DownloadStruct, SubproductDownload, TroveDownload
 from consts import CURRENT_SYSTEM, PlatformNotSupported, CURRENT_BITNESS
 
 

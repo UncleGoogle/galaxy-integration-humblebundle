@@ -8,17 +8,22 @@ class PlatformNotSupported(Exception):
     pass
 
 
-class SOURCES(enum.Enum):
+class KEY_TYPE(enum.Enum):
+    STEAM = 'steam'
+    ORIGIN = 'origin'
+
+
+class SOURCE(enum.Enum):
     LIBRARY = 'drm-free'
     TROVE = 'trove'
     KEYS = 'keys'
-
+    
     @classmethod
     def match(cls, val):
-        for source in cls:
-            if source.value == val:
-                return source
-        raise TypeError(f'No such source value: {val}. Available: {[i.value for i in cls]}')
+        for it in cls:
+            if it.value == val:
+                return it
+        raise TypeError(f'No such enum value: {val}. Available: {[it.value for it in cls]}')
 
 
 class HP(enum.Enum):
@@ -40,7 +45,7 @@ class HP(enum.Enum):
         return hash(self.value)
 
 GAME_PLATFORMS = set([HP.WINDOWS, HP.MAC, HP.LINUX])
-DLC_PLATFORMS = [HP.AUDIO, HP.EBOOK]  # TODO push those with base game
+DLC_PLATFORMS = set([HP.AUDIO, HP.EBOOK])  # TODO push those with base game
 
 # TODO check for more types to filter out. audiobundle?
 NON_GAME_BUNDLE_TYPES = {'mobilebundle', 'softwarebundle', 'bookbundle'}

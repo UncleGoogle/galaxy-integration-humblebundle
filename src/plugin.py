@@ -17,10 +17,10 @@ from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
 
 from version import __version__
-from consts import GAME_PLATFORMS, NON_GAME_BUNDLE_TYPES, SOURCES
+from consts import GAME_PLATFORMS, NON_GAME_BUNDLE_TYPES, SOURCE
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
-from humblegame import TroveGame, Subproduct
+from model.game import TroveGame, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from local import AppFinder
 from model.product import Product
@@ -105,7 +105,7 @@ class HumbleBundlePlugin(Plugin):
 
         games = []
 
-        if SOURCES.TROVE in self._settings.sources and await self._api.had_trove_subscription():
+        if SOURCE.TROVE in self._settings.sources and await self._api.had_trove_subscription():
             troves = await self._api.get_trove_details()
             for trove in troves:
                 try:
