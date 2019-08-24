@@ -9,7 +9,7 @@ class PlatformNotSupported(Exception):
 
 
 class SOURCES(enum.Enum):
-    LIBRARY = 'library'
+    LIBRARY = 'drm-free'
     TROVE = 'trove'
     KEYS = 'keys'
 
