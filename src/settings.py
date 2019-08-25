@@ -31,7 +31,7 @@ class Settings:
 
     @property
     def sources(self) -> List[SOURCE]:
-        config_sources = self._config.get('sources', DEFAULT_CONFIG['sources'])
+        config_sources = self._config.get('library', DEFAULT_CONFIG['library'])
         return [SOURCE.match(s) for s in config_sources]
 
     @property

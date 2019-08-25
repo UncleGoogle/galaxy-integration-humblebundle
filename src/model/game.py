@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from galaxy.api.types import Game, LicenseType, LicenseInfo
 
 from consts import Platform, KEY_TYPE
-from model.download import DownloadStruct, TroveDownload, SubproductDownload
+from model.download import TroveDownload, SubproductDownload
 
 
 class HumbleGame(abc.ABC):
@@ -19,17 +19,22 @@ class HumbleGame(abc.ABC):
     def license(self) -> LicenseInfo:
         pass
 
-    @abc.abstractproperty
-    def human_name(self):
-        pass
+    @property
+    def human_name(self) -> str:
+        return self._data['human_name']
 
     @property
-    def machine_name(self):
+    def machine_name(self) -> str:
         return self._data['machine_name']
+    
+    @abc.abstractproperty
+    def base_name(self) -> str:
+        """Get to real game name ignoring the source. Used for deduplication"""
+        pass
 
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
-        return Game(self.machine_name, self.human_name, dlcs, self.license)
+        return Game(self.base_name, self.human_name, dlcs, self.license)
 
     def __repr__(self):
         return str(self)
@@ -54,6 +59,13 @@ class TroveGame(HumbleGame):
     @property
     def human_name(self):
         return self._data['human-name']
+    
+    @property
+    def base_name(self):
+        if self.machine_name.endswith('_trove'):
+            # sanity check. So far always true
+            return self.machine_name[:-6]
+        return self.machine_name
 
 
 class Subproduct(HumbleGame):
@@ -73,8 +85,8 @@ class Subproduct(HumbleGame):
         return LicenseInfo(LicenseType.SinglePurchase)
 
     @property
-    def human_name(self):
-        return self._data['human_name']
+    def base_name(self) -> str:
+        return self.machine_name
 
 
 class Key(HumbleGame):
@@ -89,10 +101,6 @@ class Key(HumbleGame):
         return LicenseInfo(LicenseType.OtherUserLicense, None)
 
     @property
-    def human_name(self):
-        return self._data['human_name']
-    
-    @property
     def key_type(self) -> KEY_TYPE:
         key_type = self._data['key_type']
         for typ in KEY_TYPE:
@@ -104,3 +112,12 @@ class Key(HumbleGame):
     def key_val(self) -> Optional[str]:
         """If returned value is None - the key was not revealed yet"""
         return self._data.get('redeemed_key_val')
+
+    # TODO truncate bundle name from the beggining
+    @property
+    def base_name(self) -> str:
+        """Truncate 3rd party platform like `steam`"""
+        splited = self.machine_name.split('_')
+        assert splited[-1] == self.key_type
+        return '_'.join(splited[:-1])
+    

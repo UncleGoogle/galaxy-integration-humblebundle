@@ -11,13 +11,15 @@ class PlatformNotSupported(Exception):
 class KEY_TYPE(enum.Enum):
     STEAM = 'steam'
     ORIGIN = 'origin'
+    UPLAY = 'uplay'  # not sure about it
+    EPIC = 'epic'  # not sure about it
 
 
 class SOURCE(enum.Enum):
     LIBRARY = 'drm-free'
     TROVE = 'trove'
     KEYS = 'keys'
-    
+
     @classmethod
     def match(cls, val):
         for it in cls:

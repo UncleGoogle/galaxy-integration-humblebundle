@@ -58,20 +58,20 @@ if __name__ == "__main__":
         ret = await reader.readline()
         print("ret", ret)
 
-        print("local")
-        writer.write(b'{"jsonrpc": "2.0", "id": "4", "method": "import_local_games"}\n')
-        await writer.drain()
-        ret = await reader.readline()
-        print("ret", ret)
+        # print("local")
+        # writer.write(b'{"jsonrpc": "2.0", "id": "4", "method": "import_local_games"}\n')
+        # await writer.drain()
+        # ret = await reader.readline()
+        # print("ret", ret)
 
         # print("install_game")
         # writer.write(b'{"jsonrpc": "2.0", "method": "install_game", "params":{"game_id": "samorost2"}}\n')
 
-        print("launch_game")
-        writer.write(b'{"jsonrpc": "2.0", "method": "launch_game", "params":{"game_id": "annasquest_trove"}}\n')
+        # print("launch_game")
+        # writer.write(b'{"jsonrpc": "2.0", "method": "launch_game", "params":{"game_id": "annasquest_trove"}}\n')
 
-        print("uninstall_game")
-        writer.write(b'{"jsonrpc": "2.0", "method": "uninstall_game", "params":{"game_id": "annasquest_trove"}}\n')
+        # print("uninstall_game")
+        # writer.write(b'{"jsonrpc": "2.0", "method": "uninstall_game", "params":{"game_id": "annasquest_trove"}}\n')
 
     async def wakeup():
         while True:

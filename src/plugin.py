@@ -20,10 +20,10 @@ from version import __version__
 from consts import GAME_PLATFORMS, NON_GAME_BUNDLE_TYPES, SOURCE
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
-from model.game import TroveGame, Subproduct
+from model.product import Product
+from model.game import TroveGame, Subproduct, Key
 from humbledownloader import HumbleDownloadResolver
 from local import AppFinder
-from model.product import Product
 
 
 enable_sentry = False
@@ -129,10 +129,18 @@ class HumbleBundlePlugin(Plugin):
                     logging.warning(f"Error while parsing downloads {e}: {details}")
                     # report_problem(e, details, level=logging.WARNING)  # too many url errors
                     continue
+            
+            if SOURCE.KEYS in self._settings.sources and 'tpkd_dict' in details:
+                logging.info('Adding keys')
+                for tpks in details['tpkd_dict']['all_tpks']:
+                    key = Key(tpks)
+                    if self._settings.show_revealed_keys or key.key_val:
+                        logging.debug(f'adding key {key.human_name}')
+                        games.append(key)
 
         self._owned_games = {
-            product.machine_name: product
-            for product in games
+            game.base_name: game
+            for game in games
         }
 
     async def get_owned_games(self):
@@ -142,6 +150,9 @@ class HumbleBundlePlugin(Plugin):
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def install_game(self, game_id):
+        if game_id.endswith('_trove'):
+            game_id = game_id[:-6]
+
         game = self._owned_games.get(game_id)
         if game is None:
             raise RuntimeError(f'Install game: game {game_id} not found')
@@ -177,6 +188,9 @@ class HumbleBundlePlugin(Plugin):
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def launch_game(self, game_id):
+        if game_id.endswith('_trove'):
+            game_id = game_id[:-6]
+
         try:
             game = self._local_games[game_id]
         except KeyError as e:
@@ -185,6 +199,9 @@ class HumbleBundlePlugin(Plugin):
             game.run()
 
     async def uninstall_game(self, game_id):
+        if game_id.endswith('_trove'):
+            game_id = game_id[:-6]
+
         try:
             game = self._local_games[game_id]
         except KeyError as e:
