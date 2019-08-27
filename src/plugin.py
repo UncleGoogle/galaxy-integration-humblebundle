@@ -5,13 +5,12 @@ import asyncio
 import logging
 import re
 import webbrowser
+import subprocess
+import pathlib
 
-thirdparty = os.path.join(os.path.dirname(__file__), 'modules')
-if thirdparty not in sys.path:
-    sys.path.insert(0, thirdparty)
+sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
 import sentry_sdk
-
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
@@ -117,29 +116,28 @@ class HumbleBundlePlugin(Plugin):
         for details in all_games_details:
             product = Product(details['product'])
             if product.bundle_type in NON_GAME_BUNDLE_TYPES:
-                logging.debug(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
+                logging.info(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
                 continue
-            for sub in details['subproducts']:
-                try:
-                    prod = Subproduct(sub)
-                    if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
-                        # at least one download exists for supported OS
-                        games.append(prod)
-                except Exception as e:
-                    logging.warning(f"Error while parsing downloads {e}: {details}")
-                    # report_problem(e, details, level=logging.WARNING)  # too many url errors
-                    continue
-            
-            if SOURCE.KEYS in self._settings.sources and 'tpkd_dict' in details:
-                logging.info('Adding keys')
+            if SOURCE.DRM_FREE in self._settings.sources:
+                for sub in details['subproducts']:
+                    try:
+                        prod = Subproduct(sub)
+                        if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
+                            # at least one download exists for supported OS
+                            games.append(prod)
+                    except Exception as e:
+                        logging.warning(f"Error while parsing downloads {e}: {details}")
+                        report_problem(e, details, level=logging.WARNING)
+                        continue
+
+            if SOURCE.KEYS in self._settings.sources:
                 for tpks in details['tpkd_dict']['all_tpks']:
                     key = Key(tpks)
                     if self._settings.show_revealed_keys or key.key_val:
-                        logging.debug(f'adding key {key.human_name}')
                         games.append(key)
 
         self._owned_games = {
-            game.base_name: game
+            game.machine_name: game
             for game in games
         }
 
@@ -150,12 +148,21 @@ class HumbleBundlePlugin(Plugin):
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def install_game(self, game_id):
-        if game_id.endswith('_trove'):
-            game_id = game_id[:-6]
-
         game = self._owned_games.get(game_id)
         if game is None:
             raise RuntimeError(f'Install game: game {game_id} not found')
+
+        if isinstance(game, Key):
+            args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
+                game.human_name, game.key_type_human_name, str(game.key_val)
+            ]
+            process = await asyncio.create_subprocess_exec(sys.executable, *args,
+                stderr=asyncio.subprocess.PIPE)
+            stdout_data, stderr_data = await process.communicate()
+            if stderr_data:
+                logging.debug(args)
+                logging.debug(stderr_data)
+            return
 
         try:
             chosen_download = self._download_resolver(game)
@@ -188,9 +195,6 @@ class HumbleBundlePlugin(Plugin):
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def launch_game(self, game_id):
-        if game_id.endswith('_trove'):
-            game_id = game_id[:-6]
-
         try:
             game = self._local_games[game_id]
         except KeyError as e:
@@ -199,9 +203,6 @@ class HumbleBundlePlugin(Plugin):
             game.run()
 
     async def uninstall_game(self, game_id):
-        if game_id.endswith('_trove'):
-            game_id = game_id[:-6]
-
         try:
             game = self._local_games[game_id]
         except KeyError as e:
@@ -214,10 +215,10 @@ class HumbleBundlePlugin(Plugin):
         This method check for new orders more often and also when relevant option in config file was changed.
         """
         # TODO cache owned games and check if new orders are made to trigger refresh once per some time
-        old_library_settings = self._settings.sources.copy()
+        old_library_settings = (self._settings.sources, self._settings.show_revealed_keys)
         self._settings.reload_local_config_if_changed()
-        if old_library_settings != self._settings.sources:
-            logging.info(f'Config file library settings changed: {self._settings.sources}. Reparsing owned games')
+        if old_library_settings != (self._settings.sources, self._settings.show_revealed_keys):
+            logging.info(f'Config file library settings changed: {self._settings.sources} show_revealed_keys: {self._settings.show_revealed_keys}. Reparsing owned games')
             old_ids = self._owned_games.keys()
             await self._get_owned_games()
 

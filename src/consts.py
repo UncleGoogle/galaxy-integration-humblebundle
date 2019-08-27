@@ -2,6 +2,7 @@ import enum
 import platform
 import sys
 import typing
+import pathlib
 
 
 class PlatformNotSupported(Exception):
@@ -11,12 +12,13 @@ class PlatformNotSupported(Exception):
 class KEY_TYPE(enum.Enum):
     STEAM = 'steam'
     ORIGIN = 'origin'
-    UPLAY = 'uplay'  # not sure about it
+    UPLAY = 'uplay'
     EPIC = 'epic'  # not sure about it
+    BATTLENET = 'battlenet'  # not sure about it
 
 
 class SOURCE(enum.Enum):
-    LIBRARY = 'drm-free'
+    DRM_FREE = 'drm-free'
     TROVE = 'trove'
     KEYS = 'keys'
 
@@ -47,11 +49,10 @@ class HP(enum.Enum):
         return hash(self.value)
 
 GAME_PLATFORMS = set([HP.WINDOWS, HP.MAC, HP.LINUX])
-DLC_PLATFORMS = set([HP.AUDIO, HP.EBOOK])  # TODO push those with base game
+# DLC_PLATFORMS = set([HP.AUDIO, HP.EBOOK])  # TODO push those with base game
 
-# TODO check for more types to filter out. audiobundle?
-NON_GAME_BUNDLE_TYPES = {'mobilebundle', 'softwarebundle', 'bookbundle'}
-FREE_GAME_BUNDLES_TYPES = {'freegame', 'free'}  # at least one free game machine_name ends with 'free'
+NON_GAME_BUNDLE_TYPES = {'mobilebundle', 'softwarebundle', 'bookbundle', 'audiobookbundle', 'comicsbundle', 'rpgbookbundle', 'mangabundle'}
+# FREE_GAME_TYPES = {'freegame', 'free'}
 
 if sys.platform == 'win32':
     CURRENT_SYSTEM = HP.WINDOWS

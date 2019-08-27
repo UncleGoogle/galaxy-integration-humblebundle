@@ -26,7 +26,7 @@ class HumbleGame(abc.ABC):
     @property
     def machine_name(self) -> str:
         return self._data['machine_name']
-    
+
     @abc.abstractproperty
     def base_name(self) -> str:
         """Get to real game name ignoring the source. Used for deduplication"""
@@ -34,7 +34,7 @@ class HumbleGame(abc.ABC):
 
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
-        return Game(self.base_name, self.human_name, dlcs, self.license)
+        return Game(self.machine_name, self.human_name, dlcs, self.license)
 
     def __repr__(self):
         return str(self)
@@ -59,7 +59,7 @@ class TroveGame(HumbleGame):
     @property
     def human_name(self):
         return self._data['human-name']
-    
+
     @property
     def base_name(self):
         if self.machine_name.endswith('_trove'):
@@ -107,17 +107,19 @@ class Key(HumbleGame):
             if typ.value == key_type:
                 return key_type
         raise TypeError(f'No such key type: {key_type}')
-    
+
+    @property
+    def key_type_human_name(self) -> str:
+        return self._data['key_type_human_name']
+
     @property
     def key_val(self) -> Optional[str]:
         """If returned value is None - the key was not revealed yet"""
         return self._data.get('redeemed_key_val')
 
-    # TODO truncate bundle name from the beggining
     @property
     def base_name(self) -> str:
         """Truncate 3rd party platform like `steam`"""
         splited = self.machine_name.split('_')
         assert splited[-1] == self.key_type
         return '_'.join(splited[:-1])
-    
