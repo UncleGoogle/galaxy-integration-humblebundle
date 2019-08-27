@@ -150,7 +150,7 @@ class HumbleBundlePlugin(Plugin):
     async def install_game(self, game_id):
         game = self._owned_games.get(game_id)
         if game is None:
-            raise RuntimeError(f'Install game: game {game_id} not found')
+            raise RuntimeError(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
 
         if isinstance(game, Key):
             args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
