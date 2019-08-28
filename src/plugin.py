@@ -134,7 +134,7 @@ class HumbleBundlePlugin(Plugin):
             if SOURCE.KEYS in self._settings.sources:
                 for tpks in details['tpkd_dict']['all_tpks']:
                     key = Key(tpks)
-                    if self._settings.show_revealed_keys or key.key_val:
+                    if key.key_val is None or self._settings.show_revealed_keys:
                         games.append(key)
 
         self._owned_games = {
