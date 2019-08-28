@@ -110,6 +110,7 @@ def test(c, mypy_target=None, python='python', windows=False):
         c.run(f"{python} -m pytest tests/windows")
     if mypy_target:
         modules = ['local', 'model', 'plugin.py', 'consts.py', 'humbledownloader.py', 'webservice.py', 'settings.py']
+        os.environ['MYPYPATH'] = str(Path(mypy_target) / THIRD_PARTY_RELATIVE_DEST)
         modules_full_path = [str(Path(mypy_target) / mod) for mod in modules]
         print(f'running mypy check for {str(Path(mypy_target))} directory')
         c.run(f"{python} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
