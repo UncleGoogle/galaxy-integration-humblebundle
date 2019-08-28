@@ -41,4 +41,4 @@ class HumbleDownloadResolver:
             raise NotImplementedError(f'Found downloads: {len(download_items)}. All: {system_downloads}')
 
     def __platform_not_supporter_handler(self, game):
-        raise PlatformNotSupported(f'{self.human_name} has only downloads for [{game.downloads.keys()}]')
+        raise PlatformotSupported(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')
