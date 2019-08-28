@@ -2,7 +2,6 @@ import enum
 import platform
 import sys
 import typing
-import pathlib
 
 
 class PlatformNotSupported(Exception):

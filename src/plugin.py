@@ -5,7 +5,6 @@ import asyncio
 import logging
 import re
 import webbrowser
-import subprocess
 import pathlib
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -65,6 +64,8 @@ class HumbleBundlePlugin(Plugin):
         self._check_owned_task = asyncio.create_task(asyncio.sleep(0))
         self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
         self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
+
+        self.__under_instalation = set()
 
     def _save_cache(self, key: str, data: str):
         self.persistent_cache[key] = data
@@ -148,33 +149,38 @@ class HumbleBundlePlugin(Plugin):
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def install_game(self, game_id):
-        game = self._owned_games.get(game_id)
-        if game is None:
-            raise RuntimeError(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
-
-        if isinstance(game, Key):
-            args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
-                game.human_name, game.key_type_human_name, str(game.key_val)
-            ]
-            process = await asyncio.create_subprocess_exec(sys.executable, *args,
-                stderr=asyncio.subprocess.PIPE)
-            stdout_data, stderr_data = await process.communicate()
-            if stderr_data:
-                logging.debug(args)
-                logging.debug(stderr_data)
+        if game_id in self.__under_instalation:
             return
+        self.__under_instalation.add(game_id)
 
         try:
-            chosen_download = self._download_resolver(game)
-        except Exception as e:
-            report_problem(e, extra=game, level="error")
-            logging.exception(e)
+            game = self._owned_games.get(game_id)
+            if game is None:
+                raise RuntimeError(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
 
-        if isinstance(game, TroveGame):
-            url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
-            webbrowser.open(url['signed_url'])
-        else:
-            webbrowser.open(chosen_download.web)
+            if isinstance(game, Key):
+                args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
+                    game.human_name, game.key_type_human_name, str(game.key_val)
+                ]
+                process = await asyncio.create_subprocess_exec(sys.executable, *args,
+                    stderr=asyncio.subprocess.PIPE)
+                stdout_data, stderr_data = await process.communicate()
+                if stderr_data:
+                    logging.debug(args)
+                    logging.debug(stderr_data)
+            else:
+                chosen_download = self._download_resolver(game)
+                if isinstance(game, TroveGame):
+                    url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
+                    webbrowser.open(url['signed_url'])
+                else:
+                    webbrowser.open(chosen_download.web)
+
+        except Exception as e:
+            report_problem(e, extra=game)
+            logging.exception(e)
+        finally:
+            self.__under_instalation.remove(game_id)
 
     async def get_local_games(self):
         if not self._app_finder or not self._owned_games:
