@@ -118,9 +118,11 @@ def test(c, mypy_target=None, python='python', windows=False):
 
 
 @task
-def release(c):
+def release(c, zip_name=None):
     # TODO: increment version;
-    zip_name = f'humblebundle_{__version__}'
+    if zip_name is None:
+        zip_name = f'humblebundle_{__version__}'
+
     wd = Path(__file__).parent
     tmp_build_dir = wd / zip_name
 
