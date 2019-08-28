@@ -6,7 +6,7 @@ import logging
 from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
-from humblegame import TroveDownload
+from model.download import TroveDownload
 
 
 class AuthorizedHumbleAPI:
@@ -25,7 +25,6 @@ class AuthorizedHumbleAPI:
         "Accept": "application/json",
         "Accept-Charset": "utf-8",
         "Keep-Alive": "true",
-        "X-Requested-By": "hb_android_app",
         "User-Agent": "Apache-HttpClient/UNAVAILABLE (java 1.4)"
     }
 
@@ -76,7 +75,9 @@ class AuthorizedHumbleAPI:
         return gamekeys
 
     async def get_order_details(self, gamekey):
-        res = await self._request('get', self._ORDER_URL.format(gamekey))
+        res = await self._request('get', self._ORDER_URL.format(gamekey), params={
+            'all_tpkds': 'true'
+        })
         return await res.json()
 
     async def _get_trove_details(self, chunk_index):

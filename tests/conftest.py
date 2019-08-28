@@ -27,6 +27,13 @@ def orders():
 
 
 @pytest.fixture
+def origin_bundle_order():
+    path = pathlib.Path(__file__).parent / 'data' / 'origin_bundle_order.json'
+    with open(path, 'r') as f:
+        return json.load(f)
+
+
+@pytest.fixture
 def overgrowth():
     return json.loads(R'''
     {

@@ -5,7 +5,7 @@ import pathlib
 from typing import List, Optional
 
 from consts import HP
-from humblegame import HumbleGame
+from model.game import HumbleGame
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
 from local._reg_watcher import WinRegUninstallWatcher, UninstallKey

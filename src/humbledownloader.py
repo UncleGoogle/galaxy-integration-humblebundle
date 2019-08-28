@@ -1,4 +1,5 @@
-from humblegame import DownloadStruct, HumbleGame, TroveGame, Subproduct, SubproductDownload, TroveDownload
+from model.game import HumbleGame, TroveGame, Subproduct
+from model.download import DownloadStruct, SubproductDownload, TroveDownload
 from consts import CURRENT_SYSTEM, PlatformNotSupported, CURRENT_BITNESS
 
 
@@ -40,4 +41,4 @@ class HumbleDownloadResolver:
             raise NotImplementedError(f'Found downloads: {len(download_items)}. All: {system_downloads}')
 
     def __platform_not_supporter_handler(self, game):
-        raise PlatformNotSupported(f'{self.human_name} has only downloads for [{game.downloads.keys()}]')
+        raise PlatformNotSupported(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')
