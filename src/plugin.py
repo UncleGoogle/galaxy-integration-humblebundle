@@ -220,7 +220,23 @@ class HumbleBundlePlugin(Plugin):
         """ self.get_owned_games is called periodically by galaxy too rarely.
         This method check for new orders more often and also when relevant option in config file was changed.
         """
-        # TODO cache owned games and check if new orders are made to trigger refresh once per some time
+        # - cache all request responses on get_owned_games: orderlist && orders && trove && was_trove_subscriber
+        # - on get_owned_games: refresh all; **use parsistent_cache; add 1week time counter after which run with mode 'reset'; otherwise run with 'optimized'
+        #   filtered_owned_games = resolver(mode='reset')
+        # - on changed config.owned: use cache.
+        #   filtered_owned_games = resolver(mode='cache')
+        # - on periodical check: refresh only things that may change: 
+        #       - **was_trove_subscriber if was previously False; if true:
+        #         - troves from last seen page + **(& go net only if len(lastpage) == 20) - this on webservice site,
+        #       - orderlist; if new orders:
+        #         - lacking orders,
+        #       - all unrevealed keys orders to check if they has been revealed
+        #   filtered_owned_games = resolver(mode='optimized', owned_games)
+        # ** - optional; nice to have to maybe it is better to KISS than this optimization
+        #
+        # LibraryResolver.__init__(webservice, persistent_cache: dict, settings: dict, save_cache_callback)
+        # LibraryResolver.__call__(mode: CacheStrategy, settings: dict) -> Dict[str, HumbleGame]  # deduplicated_owned_games
+        #   
         old_library_settings = (self._settings.sources, self._settings.show_revealed_keys)
         self._settings.reload_local_config_if_changed()
         if old_library_settings != (self._settings.sources, self._settings.show_revealed_keys):
