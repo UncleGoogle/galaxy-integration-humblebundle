@@ -63,7 +63,7 @@ def main():
 
 
 def test():
-    key_data = '{"machine_name": "jumbo_machinarium_steam", "key_type": "steam", "key_type_human_name": "Steam", "human_name": "Machinarium", "redeemed_key_val": "DXLVR-XXXXX-XXXXX"}'
+    key_data = {"machine_name": "jumbo_machinarium_steam", "key_type": "steam", "key_type_human_name": "Steam", "human_name": "Machinarium", "redeemed_key_val": "DXLVR-XXXXX-XXXXX"}
     human_name = key_data['human_name']
     key_type = key_data['key_type_human_name']
     key_val = key_data['redeemed_key_val']

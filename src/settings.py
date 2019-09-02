@@ -24,7 +24,7 @@ class Settings:
         self._config: Dict[str, Any] = {}
         self._last_modification_time = None
 
-        self._local_config_file = pathlib.Path(config_dir) / 'config.toml'
+        self._local_config_file = pathlib.Path(config_dir) / 'config.ini'
         self._cached_config = toml.loads(cached_config)
 
         self.reload_local_config_if_changed(first_run=True)
