@@ -69,16 +69,14 @@ class HumbleBundlePlugin(Plugin):
 
         self.__under_instalation = set()
 
-    def _save_cache(self, key: str, data: Any, serializator: Optional[Callable]=None):
-        if serializator:
-            data = serializator(data)
+    def _save_cache(self, key: str, data: Any):
+        if type(data) != str:
+            data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
 
     def handshake_complete(self):
         self._settings = Settings(
-            config_dir=os.path.dirname(__file__),
-            current_version=__version__,
             cached_version=self.persistent_cache.get('version'),
             cached_config=self.persistent_cache.get('config', ''),
             save_cache_callback=self._save_cache
@@ -87,7 +85,7 @@ class HumbleBundlePlugin(Plugin):
             api=self._api,
             settings=self._settings,
             cache=json.loads(self.persistent_cache.get('library', '{}')),
-            save_cache_callback=partial(self._save_cache, 'library', serializator=json.dumps)
+            save_cache_callback=partial(self._save_cache, 'library')
         )
 
     async def authenticate(self, stored_credentials=None):
