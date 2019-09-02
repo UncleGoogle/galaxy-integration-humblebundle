@@ -15,11 +15,12 @@ import sentry_sdk
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
+from galaxy.api.errors import AuthenticationRequired
 
 from version import __version__
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
-from model.game import TroveGame, Key
+from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver, Strategy
 from local import AppFinder
@@ -128,13 +129,20 @@ class HumbleBundlePlugin(Plugin):
                 if stderr_data:
                     logging.debug(args)
                     logging.debug(stderr_data)
-            else:
-                chosen_download = self._download_resolver(game)
-                if isinstance(game, TroveGame):
+                return
+
+            chosen_download = self._download_resolver(game)
+            if isinstance(game, Subproduct):
+                webbrowser.open(chosen_download.web)
+
+            if isinstance(game, TroveGame):
+                try:
                     url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
-                    webbrowser.open(url['signed_url'])
+                except AuthenticationRequired:
+                    logging.info('Looks like your Humble Monthly subscription has expired. Refer to config.ini to manage showed games.')
+                    webbrowser.open('https://www.humblebundle.com/monthly/subscriber')
                 else:
-                    webbrowser.open(chosen_download.web)
+                    webbrowser.open(url['signed_url'])
 
         except Exception as e:
             report_problem(e, extra=game)
