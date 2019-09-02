@@ -6,6 +6,9 @@ import logging
 import re
 import webbrowser
 import pathlib
+import json
+from functools import partial
+from typing import Any, Callable, Optional
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
@@ -15,21 +18,18 @@ from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
 
 from version import __version__
-from consts import GAME_PLATFORMS, NON_GAME_BUNDLE_TYPES, SOURCE
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
-from model.product import Product
-from model.game import TroveGame, Subproduct, Key
+from model.game import TroveGame, Key
 from humbledownloader import HumbleDownloadResolver
+from library import LibraryResolver, Strategy
 from local import AppFinder
 
 
-enable_sentry = False
-if enable_sentry:
-    sentry_sdk.init(
-        "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
-        release=f"galaxy-integration-humblebundle@{__version__}"
-    )
+sentry_sdk.init(
+    "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
+    release=f"galaxy-integration-humblebundle@{__version__}"
+)
 
 
 def report_problem(error, extra=None, level=logging.ERROR):
@@ -55,6 +55,8 @@ class HumbleBundlePlugin(Plugin):
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
         self._app_finder = AppFinder
+        self._settings = None
+        self._library_resolver = None
 
         self._owned_games = {}
         self._local_games = {}
@@ -67,7 +69,9 @@ class HumbleBundlePlugin(Plugin):
 
         self.__under_instalation = set()
 
-    def _save_cache(self, key: str, data: str):
+    def _save_cache(self, key: str, data: Any, serializator: Optional[Callable]=None):
+        if serializator:
+            data = serializator(data)
         self.persistent_cache[key] = data
         self.push_cache()
 
@@ -78,6 +82,12 @@ class HumbleBundlePlugin(Plugin):
             cached_version=self.persistent_cache.get('version'),
             cached_config=self.persistent_cache.get('config', ''),
             save_cache_callback=self._save_cache
+        )
+        self._library_resolver = LibraryResolver(
+            api=self._api,
+            settings=self._settings,
+            cache=json.loads(self.persistent_cache.get('library', '{}')),
+            save_cache_callback=partial(self._save_cache, 'library', serializator=json.dumps)
         )
 
     async def authenticate(self, stored_credentials=None):
@@ -95,56 +105,9 @@ class HumbleBundlePlugin(Plugin):
         self.store_credentials(auth_cookie)
         return Authentication(user_id, user_name)
 
-    async def _get_owned_games(self):
-        gamekeys = await self._api.get_gamekeys()
-        orders = [self._api.get_order_details(x) for x in gamekeys]
-
-        start = time.time()
-        all_games_details = await asyncio.gather(*orders)
-        sentry_sdk.capture_message(f'Fetching info about {len(orders)} lasts: {time.time() - start}', level="info")
-
-        games = []
-
-        if SOURCE.TROVE in self._settings.sources and await self._api.had_trove_subscription():
-            troves = await self._api.get_trove_details()
-            for trove in troves:
-                try:
-                    games.append(TroveGame(trove))
-                except Exception as e:
-                    report_problem(e, trove, level=logging.WARNING)
-                    continue
-
-        for details in all_games_details:
-            product = Product(details['product'])
-            if product.bundle_type in NON_GAME_BUNDLE_TYPES:
-                logging.info(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
-                continue
-            if SOURCE.DRM_FREE in self._settings.sources:
-                for sub in details['subproducts']:
-                    try:
-                        prod = Subproduct(sub)
-                        if not set(prod.downloads).isdisjoint(GAME_PLATFORMS):
-                            # at least one download exists for supported OS
-                            games.append(prod)
-                    except Exception as e:
-                        logging.warning(f"Error while parsing downloads {e}: {details}")
-                        report_problem(e, details, level=logging.WARNING)
-                        continue
-
-            if SOURCE.KEYS in self._settings.sources:
-                for tpks in details['tpkd_dict']['all_tpks']:
-                    key = Key(tpks)
-                    if key.key_val is None or self._settings.show_revealed_keys:
-                        games.append(key)
-
-        self._owned_games = {
-            game.machine_name: game
-            for game in games
-        }
-
     async def get_owned_games(self):
         self._getting_owned_games.set()
-        await self._get_owned_games()
+        self._owned_games = self._library_resolver(Strategy.FETCH)
         self._getting_owned_games.clear()
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
@@ -242,7 +205,7 @@ class HumbleBundlePlugin(Plugin):
         if old_library_settings != (self._settings.sources, self._settings.show_revealed_keys):
             logging.info(f'Config file library settings changed: {self._settings.sources} show_revealed_keys: {self._settings.show_revealed_keys}. Reparsing owned games')
             old_ids = self._owned_games.keys()
-            await self._get_owned_games()
+            self._owned_games = self._library_resolver(Strategy.CACHE)
 
             for old_id in old_ids - self._owned_games.keys():
                 self.remove_game(old_id)

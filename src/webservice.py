@@ -1,4 +1,5 @@
 from http.cookies import SimpleCookie
+from typing import List
 import json
 import base64
 import logging
@@ -15,6 +16,7 @@ class AuthorizedHumbleAPI:
     _ORDER_LIST_URL = "api/v1/user/order"
     _ORDER_URL = "/api/v1/order/{}"
 
+    TROVES_PER_CHUNK = 20
     _TROVE_SUBSCRIBER = 'monthly/subscriber'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
     _TROVE_DOWNLOAD_SIGN_URL = 'api/v1/user/download/sign'
@@ -97,20 +99,19 @@ class AuthorizedHumbleAPI:
             logging.info(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status_code}')
             return False
 
-    async def get_trove_details(self):
-        troves = []
-        chunks = 10  # hardcoded for now, as don't know if empty array output is ensured/stable
-        for index in range(chunks):
+    async def get_trove_details(self, from_chunk: int=0):
+        troves: List[str] = []
+        index = from_chunk
+        while True:
             chunk_details = await self._get_trove_details(index)
             if type(chunk_details) != list:
                 logging.debug(f'chunk_details: {chunk_details}')
                 raise UnknownBackendResponse()
             elif len(chunk_details) == 0:
-                logging.debug('No more pages')
+                logging.debug('No more chunk pages')
                 break
             troves += chunk_details
-        else:
-            logging.warning(f'Index limit ({chunks}) for trove games reached!')
+            index += 1
         return troves
 
     async def _get_trove_signed_url(self, download: TroveDownload):
