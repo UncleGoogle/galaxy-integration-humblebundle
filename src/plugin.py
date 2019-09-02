@@ -1,4 +1,3 @@
-import os
 import sys
 import time
 import asyncio
@@ -8,7 +7,7 @@ import webbrowser
 import pathlib
 import json
 from functools import partial
-from typing import Any, Callable, Optional
+from typing import Any
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
