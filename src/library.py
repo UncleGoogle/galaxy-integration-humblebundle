@@ -1,7 +1,6 @@
 import enum
 import logging
 import asyncio
-import json
 from typing import Callable, Dict, List, Set
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
@@ -57,7 +56,7 @@ class LibraryResolver:
             elif source == SOURCE.KEYS:
                 all_games.extend(self._get_keys(self._cache.get('orders', []), show_revealed_keys))
 
-        logging.info(f'all_games: {json.dumps(all_games)}')
+        logging.info(f'all_games: {all_games}')
 
         # deduplication: skip games with the same base_name
         deduplicated: Dict[str, HumbleGame] = {}
