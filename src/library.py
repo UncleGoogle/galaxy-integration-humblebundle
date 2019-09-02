@@ -58,12 +58,12 @@ class LibraryResolver:
 
         logging.info(f'all_games: {all_games}')
 
-        # deduplication: skip games with the same base_name
+        # deduplication of the games with the same title
         deduplicated: Dict[str, HumbleGame] = {}
-        base_names: Set[str] = set()
+        titles: Set[str] = set()
         for game in all_games:
-            if game.base_name not in base_names:
-                base_names.add(game.base_name)
+            if game.human_name not in titles:
+                titles.add(game.human_name)
                 deduplicated[game.machine_name] = game
         return deduplicated
 
