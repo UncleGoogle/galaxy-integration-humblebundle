@@ -1,6 +1,7 @@
 import enum
 import logging
 import asyncio
+import json
 from typing import Callable, Dict, List, Set
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
@@ -47,24 +48,26 @@ class LibraryResolver:
         self._save_cache(self._cache)
         
         # get all games in predefined order
-        games: HumbleGame = []
+        all_games: List[HumbleGame] = []
         for source in sources:
             if source == SOURCE.DRM_FREE:
-                games.extend(self._get_subproducts(self._cache.get('orders', [])))
+                all_games.extend(self._get_subproducts(self._cache.get('orders', [])))
             elif source == SOURCE.TROVE:
-                games.extend(self._get_trove_games(self._cache.get('troves', [])))
+                all_games.extend(self._get_trove_games(self._cache.get('troves', [])))
             elif source == SOURCE.KEYS:
-                games.extend(self._get_keys(self._cache.get('orders', []), show_revealed_keys))
+                all_games.extend(self._get_keys(self._cache.get('orders', []), show_revealed_keys))
+
+        logging.info(f'all_games: {json.dumps(all_games)}')
 
         # deduplication: skip games with the same base_name
         deduplicated: Dict[str, HumbleGame] = {}
         base_names: Set[str] = set()
-        for game in games:
+        for game in all_games:
             if game.base_name not in base_names:
                 base_names.add(game.base_name)
                 deduplicated[game.machine_name] = game
         return deduplicated
-    
+
     async def _fetch_orders(self, cached_gamekeys: List[str]) -> list:
         gamekeys = await self._api.get_gamekeys()
         order_tasks = [self._api.get_order_details(x) for x in gamekeys if x not in cached_gamekeys]

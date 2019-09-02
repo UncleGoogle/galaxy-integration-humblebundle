@@ -5,7 +5,7 @@ import pathlib
 from typing import List, Optional
 
 from consts import HP
-from model.game import HumbleGame
+from model.game import HumbleGame, Key
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
 from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
@@ -85,6 +85,8 @@ class WindowsAppFinder:
             uk = self._reg.uninstall_keys.pop()
             try:
                 for og in owned_games:
+                    if isinstance(og, Key):
+                        continue
                     if self._matches(og.human_name, uk):
                         exe = self._find_executable(og.human_name, uk)
                         if exe is not None:

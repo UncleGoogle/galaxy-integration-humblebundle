@@ -40,7 +40,7 @@ class HumbleGame(abc.ABC):
         return str(self)
 
     def __str__(self):
-        return f"<{self.__class__.__name__}> {self.human_name}, downloads: {self.downloads})"
+        return f"<{self.__class__.__name__}> {self.human_name}, base_name: {self.base_name})"
 
 
 class TroveGame(HumbleGame):
@@ -97,7 +97,6 @@ class Key(HumbleGame):
 
     @property
     def license(self) -> LicenseInfo:
-        # second LicenseInfo argument - owner - can I pass there Steam/Origin user id?
         return LicenseInfo(LicenseType.OtherUserLicense, None)
 
     @property

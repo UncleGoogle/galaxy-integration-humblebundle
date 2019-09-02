@@ -107,7 +107,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_owned_games(self):
         self._getting_owned_games.set()
-        self._owned_games = self._library_resolver(Strategy.FETCH)
+        self._owned_games = await self._library_resolver(Strategy.FETCH)
         self._getting_owned_games.clear()
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
@@ -127,7 +127,7 @@ class HumbleBundlePlugin(Plugin):
                 ]
                 process = await asyncio.create_subprocess_exec(sys.executable, *args,
                     stderr=asyncio.subprocess.PIPE)
-                stdout_data, stderr_data = await process.communicate()
+                _, stderr_data = await process.communicate()
                 if stderr_data:
                     logging.debug(args)
                     logging.debug(stderr_data)
@@ -205,7 +205,7 @@ class HumbleBundlePlugin(Plugin):
         if old_library_settings != (self._settings.sources, self._settings.show_revealed_keys):
             logging.info(f'Config file library settings changed: {self._settings.sources} show_revealed_keys: {self._settings.show_revealed_keys}. Reparsing owned games')
             old_ids = self._owned_games.keys()
-            self._owned_games = self._library_resolver(Strategy.CACHE)
+            self._owned_games = await self._library_resolver(Strategy.CACHE)
 
             for old_id in old_ids - self._owned_games.keys():
                 self.remove_game(old_id)
