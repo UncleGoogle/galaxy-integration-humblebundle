@@ -4,6 +4,7 @@
 galaxy/
 info.md
 credentials*
+GPUCache
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

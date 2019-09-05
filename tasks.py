@@ -104,14 +104,29 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c, mypy_target=None, python='python', windows=False):
-    c.run(f"{python} -m pytest tests/common src --flakes")
-    if windows:
+def test(c, target=None):
+
+    if sys.platform == 'win32':
+        python = 'python'
+    elif sys.platform == 'darwin':
+        python = 'python3'
+
+    if target is not None:
+        config = str(Path(__file__).parent / 'pytest-build.ini')
+        with open(config, 'w') as f:
+            f.write("[pytest]\n")
+            f.write(f"python_paths {target}")  # pytest-pythonpaths required
+    else:
+        config = 'pytest.ini'
+
+    c.run(f"{python} -m pytest -c {config} tests/common src --color=yes")
+    if sys.platform == 'win32':
         c.run(f"{python} -m pytest tests/windows")
-    if mypy_target:
+
+    if target:
         modules = ['local', 'model', 'plugin.py', 'consts.py', 'humbledownloader.py', 'webservice.py', 'settings.py', 'library.py']
-        os.environ['MYPYPATH'] = str(Path(mypy_target) / THIRD_PARTY_RELATIVE_DEST)
-        modules_full_path = [str(Path(mypy_target) / mod) for mod in modules]
+        os.environ['MYPYPATH'] = str(Path(target) / THIRD_PARTY_RELATIVE_DEST)
+        modules_full_path = [str(Path(target) / mod) for mod in modules]
         print(f'running mypy check for {str(Path(mypy_target))} directory')
         c.run(f"{python} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
         print('done')
