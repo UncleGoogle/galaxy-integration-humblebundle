@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Set
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product   
 from model.game import HumbleGame, Subproduct, TroveGame, Key
-from settings import Settings
+from settings import OwnedSettings
 
 
 class Strategy(enum.Enum):
@@ -16,7 +16,7 @@ class Strategy(enum.Enum):
 
 
 class LibraryResolver:
-    def __init__(self, api, settings: Settings, save_cache_callback: Callable, cache: Dict[str, list]={}):
+    def __init__(self, api, settings: OwnedSettings, save_cache_callback: Callable, cache: Dict[str, list]):
         self._api = api
         self._save_cache = save_cache_callback
         self._settings = settings

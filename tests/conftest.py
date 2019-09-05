@@ -2,21 +2,42 @@ import pytest
 import pathlib
 import json
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from plugin import HumbleBundlePlugin
+from webservice import AuthorizedHumbleAPI
+from library import LibraryResolver
+
+
+class AsyncMock(MagicMock):
+    async def __call__(self, *args, **kwargs):
+        return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
 @pytest.fixture
-async def plugin_mock():
+def api_mock():
+    mock = MagicMock(spec=())
+    # spec do not understand coorutines - add them manualy
+    mock.authenticate = AsyncMock()
+    mock.get_order_details = AsyncMock()
+    mock.had_trove_subscription = AsyncMock()
+    mock.get_trove_details = AsyncMock()
+    mock.get_trove_sign_url = AsyncMock()
+    mock.close_session = AsyncMock()
+    return mock
+
+
+@pytest.fixture
+async def plugin_mock(api_mock, mocker):
+    mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
     plugin = HumbleBundlePlugin(MagicMock(), MagicMock(), "handshake_token")
+    plugin.push_cache = MagicMock()
+
     plugin._check_installed_task.cancel()
     plugin._check_statuses_task.cancel()
 
     yield plugin
-
     plugin.shutdown()
-    await asyncio.sleep(0)
 
 
 @pytest.fixture

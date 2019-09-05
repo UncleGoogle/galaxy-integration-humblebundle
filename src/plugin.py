@@ -83,7 +83,7 @@ class HumbleBundlePlugin(Plugin):
         )
         self._library_resolver = LibraryResolver(
             api=self._api,
-            settings=self._settings,
+            settings=self._settings.owned,
             cache=json.loads(self.persistent_cache.get('library', '{}')),
             save_cache_callback=partial(self._save_cache, 'library')
         )
@@ -205,10 +205,10 @@ class HumbleBundlePlugin(Plugin):
         # LibraryResolver.__init__(webservice, persistent_cache: dict, settings: dict, save_cache_callback)
         # LibraryResolver.__call__(mode: CacheStrategy, settings: dict) -> Dict[str, HumbleGame]  # deduplicated_owned_games
         #   
-        old_library_settings = (self._settings.sources, self._settings.show_revealed_keys)
+        old_library_settings = self._settings.owned.astuple()
         self._settings.reload_local_config_if_changed()
-        if old_library_settings != (self._settings.sources, self._settings.show_revealed_keys):
-            logging.info(f'Config file library settings changed: {self._settings.sources} show_revealed_keys: {self._settings.show_revealed_keys}. Reparsing owned games')
+        if old_library_settings != self._settings.owned.astuple():
+            logging.info(f'Config file library settings changed: {self._settings.owned}')
             old_ids = self._owned_games.keys()
             self._owned_games = await self._library_resolver(Strategy.CACHE)
 
@@ -251,7 +251,7 @@ class HumbleBundlePlugin(Plugin):
 
 
     def shutdown(self):
-        asyncio.create_task(self._api._session.close())
+        asyncio.create_task(self._api.close_session())
 
 
 def main():

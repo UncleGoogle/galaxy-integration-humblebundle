@@ -139,3 +139,6 @@ class AuthorizedHumbleAPI:
         urls = await self._get_trove_signed_url(download)
         await self._reedem_trove_download(download, product_machine_name)
         return urls
+
+    async def close_session(self):
+        await self._session.close()
