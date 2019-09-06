@@ -18,21 +18,25 @@ class OwnedSettings:
         sources = owned.get('library')
         show_keys = owned.get('show_revealed_keys')
 
-        if sources:
+        if sources is not None:
             self.sources = tuple([SOURCE.match(s) for s in sources])
-        if show_keys:
+        if show_keys is not None:
             self.show_revealed_keys = show_keys
+    
+    def reset(self):
+        self.sources = (SOURCE.DRM_FREE, SOURCE.TROVE, SOURCE.KEYS)
+        self.show_revealed_keys = False
     
     @staticmethod
     def validate(owned: dict):
         sources = owned.get('library')
         show_keys = owned.get('show_revealed_keys')
 
-        if sources and type(sources) != list:
-            raise TypeError('Sources (library) shoud be a list')
-            [SOURCE.match(s) for s in sources]
         if show_keys and type(show_keys) != bool:
             raise TypeError(f'revealed_keys should be boolean (true or false), got {show_keys}')
+        if sources and type(sources) != list:
+            raise TypeError('Sources (library) shoud be a list')
+        [SOURCE.match(s) for s in sources]
 
 
 class Settings:
@@ -55,11 +59,12 @@ class Settings:
     def owned(self) -> OwnedSettings:
         return self._owned
     
-    def _update_objects(self):
+    def _save_config(self):
         self._owned.update(self._config.get('owned', {}))
+        self._save_cache('config', toml.dumps(self._config))
 
     def _validate(self, config):
-        self._owned.validate(config.get('owned', {}))
+        self._owned.validate(config['owned'])
 
     def _load_config_file(self, config_path: pathlib.Path) -> Mapping[str, Any]:
         try:
@@ -84,14 +89,14 @@ class Settings:
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             f.write(comment)
             f.write(data)
-
-    def reload_local_config_if_changed(self, first_run=False):
+    
+    def has_config_changed(self) -> bool:
         path = self.LOCAL_CONFIG_FILE
-        local_config = {}
         try:
             stat = os.stat(path)
         except FileNotFoundError:
             logging.exception(f'{path} not found. Clearing current config to use defaults')
+            self._owned.reset()
             self._config.clear()
         except Exception as e:
             logging.exception(f'Stating {path} has failed: {str(e)}')
@@ -99,18 +104,25 @@ class Settings:
         else:
             if stat.st_mtime != self._last_modification_time:
                 self._last_modification_time = stat.st_mtime
-                local_config = self._load_config_file(self.LOCAL_CONFIG_FILE)
+                return True
+            return False
 
-                if first_run:
-                    if self._prev_ver is None or self._curr_ver <= self._prev_ver:
-                        self._config = {**self._cached_config, **local_config}
-                    else:  # prioritize cached config in case of plugin update
-                        self._config = {**local_config, **self._cached_config}
-                        if self._config.keys() - local_config.keys():
-                            self._update_user_config()
-                        self._save_cache('version', self._curr_ver)
-                else:
-                    self._config.update(local_config)
+    def reload_local_config_if_changed(self, first_run=False):
+        if not self.has_config_changed():
+            return
 
-                self._update_objects()
-                self._save_cache('config', toml.dumps(self._config))
+        local_config = self._load_config_file(self.LOCAL_CONFIG_FILE)
+        logging.info(local_config)
+
+        if first_run:
+            if self._prev_ver is None or self._curr_ver <= self._prev_ver:
+                self._config = {**self._cached_config, **local_config}
+            else:  # prioritize cached config in case of plugin update
+                self._config = {**local_config, **self._cached_config}
+                if self._config.keys() - local_config.keys():
+                    self._update_user_config()
+                self._save_cache('version', self._curr_ver)
+        else:
+            self._config.update(local_config)
+
+        self._save_config()

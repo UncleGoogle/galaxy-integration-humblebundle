@@ -1,11 +1,11 @@
 import sys
-import time
 import asyncio
 import logging
 import re
 import webbrowser
 import pathlib
 import json
+from dataclasses import astuple
 from functools import partial
 from typing import Any
 
@@ -154,7 +154,6 @@ class HumbleBundlePlugin(Plugin):
         if not self._app_finder or not self._owned_games:
             return []
 
-        start = time.time()
         try:
             self._app_finder.refresh()
         except Exception as e:
@@ -163,8 +162,6 @@ class HumbleBundlePlugin(Plugin):
 
         local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
         self._local_games.update({game.machine_name: game for game in local_games})
-
-        logging.debug(f'Refreshing local games took {time.time()-start}s')
 
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
@@ -205,10 +202,10 @@ class HumbleBundlePlugin(Plugin):
         # LibraryResolver.__init__(webservice, persistent_cache: dict, settings: dict, save_cache_callback)
         # LibraryResolver.__call__(mode: CacheStrategy, settings: dict) -> Dict[str, HumbleGame]  # deduplicated_owned_games
         #   
-        old_library_settings = self._settings.owned.astuple()
+        old_settings = astuple(self._settings.owned)
         self._settings.reload_local_config_if_changed()
-        if old_library_settings != self._settings.owned.astuple():
-            logging.info(f'Config file library settings changed: {self._settings.owned}')
+        if old_settings != astuple(self._settings.owned):
+            logging.info(f'Library settings has changed: {self._settings.owned}')
             old_ids = self._owned_games.keys()
             self._owned_games = await self._library_resolver(Strategy.CACHE)
 
