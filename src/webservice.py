@@ -69,20 +69,20 @@ class AuthorizedHumbleAPI:
 
         return (user_id, user_id)
 
-    async def get_gamekeys(self):
+    async def get_gamekeys(self) -> List[str]:
         res = await self._request('get', self._ORDER_LIST_URL)
         parsed = await res.json()
         logging.info(f"The order list:\n{parsed}")
         gamekeys = [it["gamekey"] for it in parsed]
         return gamekeys
 
-    async def get_order_details(self, gamekey):
+    async def get_order_details(self, gamekey) -> dict:
         res = await self._request('get', self._ORDER_URL.format(gamekey), params={
             'all_tpkds': 'true'
         })
         return await res.json()
 
-    async def _get_trove_details(self, chunk_index):
+    async def _get_trove_details(self, chunk_index) -> list:
         res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
 

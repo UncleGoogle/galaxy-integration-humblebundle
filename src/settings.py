@@ -19,17 +19,18 @@ class OwnedSettings:
         show_keys = owned.get('show_revealed_keys')
 
         if sources:
-            self.sources = tuple(sources)
+            self.sources = tuple([SOURCE.match(s) for s in sources])
         if show_keys:
             self.show_revealed_keys = show_keys
     
     @staticmethod
-    def validate(self, owned: dict):
+    def validate(owned: dict):
         sources = owned.get('library')
         show_keys = owned.get('show_revealed_keys')
 
         if sources and type(sources) != list:
             raise TypeError('Sources (library) shoud be a list')
+            [SOURCE.match(s) for s in sources]
         if show_keys and type(show_keys) != bool:
             raise TypeError(f'revealed_keys should be boolean (true or false), got {show_keys}')
 
@@ -55,28 +56,19 @@ class Settings:
         return self._owned
     
     def _update_objects(self):
-        self._owned.update()
+        self._owned.update(self._config.get('owned', {}))
 
     def _validate(self, config):
         self._owned.validate(config.get('owned', {}))
 
-    # @property
-    # def sources(self) -> List[SOURCE]:
-    #     config_sources = self._config.get('library', self.DEFAULT_CONFIG['library'])
-    #     return [SOURCE.match(s) for s in config_sources]
-
-    # @property
-    # def show_revealed_keys(self):
-    #     return self._config.get('show_revealed_keys', self.DEFAULT_CONFIG['show_revealed_keys'])
-
-    @staticmethod
-    def _load_config_file(config_path: pathlib.Path) -> Mapping[str, Any]:
+    def _load_config_file(self, config_path: pathlib.Path) -> Mapping[str, Any]:
         try:
             with open(config_path, 'r') as f:
                 config = toml.load(f)
-                self._validate(config)
+            self._validate(config)
+            return config
         except Exception as e:
-            logging.error('Parsing config file has failed. Default values will be used. Details:\n' + repr(e))
+            logging.error('Parsing config file has failed. Details:\n' + repr(e))
             return {}
 
     def _update_user_config(self):
@@ -92,11 +84,6 @@ class Settings:
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             f.write(comment)
             f.write(data)
-    
-    @staticmethod
-    def _validate_config(config):
-        # tries to create all things
-        OwnedSettings(config)
 
     def reload_local_config_if_changed(self, first_run=False):
         path = self.LOCAL_CONFIG_FILE

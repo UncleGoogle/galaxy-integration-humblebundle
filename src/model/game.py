@@ -40,7 +40,12 @@ class HumbleGame(abc.ABC):
         return str(self)
 
     def __str__(self):
-        return f"<{self.__class__.__name__}> {self.human_name}, base_name: {self.base_name})"
+        return f"<{self.__class__.__name__}> {self.human_name} : {self.machine_name}"
+    
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return self._data == other._data
 
 
 class TroveGame(HumbleGame):

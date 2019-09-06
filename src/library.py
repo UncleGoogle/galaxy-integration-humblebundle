@@ -78,7 +78,7 @@ class LibraryResolver:
         from_chunk = troves_no // self._api.TROVES_PER_CHUNK
         new_commers = await self._api.get_trove_details(from_chunk)
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
-        return new_commers[:new_troves_no:-1]
+        return cached_trove_data + new_commers[-new_troves_no:]
     
     @staticmethod
     def __filter_out_not_game_bundles(orders: list) -> list:

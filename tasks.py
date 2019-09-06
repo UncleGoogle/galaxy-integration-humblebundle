@@ -119,7 +119,7 @@ def test(c, target=None):
     else:
         config = 'pytest.ini'
 
-    c.run(f"{python} -m pytest -c {config} tests/common src --color=yes")
+    c.run(f"{python} -m pytest -c {config} -vv tests/common src --color=yes")
     if sys.platform == 'win32':
         c.run(f"{python} -m pytest tests/windows")
 

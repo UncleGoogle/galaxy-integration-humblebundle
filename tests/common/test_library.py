@@ -1,5 +1,8 @@
 import pytest
-from unittest.mock import Mock
+import json
+from unittest.mock import Mock, PropertyMock
+from functools import partial
+import inspect
 
 from settings import OwnedSettings
 from library import LibraryResolver, Strategy
@@ -14,17 +17,119 @@ def create_resolver(plugin_mock):
             api=plugin_mock._api,
             settings=settings,
             cache=cache,
-            save_cache_callback=plugin_mock._save_cache
+            save_cache_callback=partial(plugin_mock._save_cache, 'library')
         )
     return fn
 
 
-def test_library_filters(create_resolver, overgrowth):
-    settings = OwnedSettings((SOURCE.DRM_FREE), show_revealed_keys=True)
-    resolver = create_resolver(settings)
-
-    resolver._api.get_gamekeys.return_value = [overgrowth['gamekey']]
-    resolver._api.order_details.return_value = [overgrowth]
-    assert resolver(Strategy.FETCH) == [Subproduct(overgrowth)]
+@pytest.fixture
+def change_settings():
+    def fn(plugin_mock, owned_config):
+        plugin_mock._library_resolver._settings.update(owned_config)
+    return fn
 
 
+@pytest.fixture
+def get_torchlight(orders_keys, get_troves):
+    # torchlight has drm-free downloads and steam key; comes also with trove
+    for i in orders_keys:
+        if i['product']['machine_name'] == 'torchlight_storefront':
+            torchlight_order = i
+    troves_data = get_troves(from_index=0)
+    for i in troves_data:
+        if i['machine_name'] == 'torchlight_trove':
+            trove_torchlight = i
+    return torchlight_order, trove_torchlight
+
+
+@pytest.mark.asyncio
+async def test_library_cache(plugin_mock, get_torchlight, change_settings, orders_keys):
+    torchlight, trove_torchlight = get_torchlight
+
+    drm_free = Subproduct(torchlight['subproducts'][0])
+    trove = TroveGame(trove_torchlight)
+    key = Key(torchlight['tpkd_dict']['all_tpks'][0])
+
+    plugin_mock.push_cache.reset_mock()  # reset initial settings push
+    change_settings(plugin_mock, {'library': ['drm-free'], 'show_revealed_keys': True})
+    result = await plugin_mock._library_resolver(Strategy.FETCH)
+    assert result[drm_free.machine_name] == drm_free
+    # cache and calls to api
+    assert torchlight in json.loads(plugin_mock.persistent_cache['library'])['orders']
+    assert plugin_mock.push_cache.call_count == 1
+    assert plugin_mock._api.get_gamekeys.call_count == 1
+    assert plugin_mock._api.get_order_details.call_count == len(orders_keys)
+
+    plugin_mock._api.get_gamekeys.reset_mock()
+    plugin_mock._api.get_order_details.reset_mock()
+
+    change_settings(plugin_mock, {'library': ['trove']})
+    result = await plugin_mock._library_resolver(Strategy.FETCH)
+    assert result[trove.machine_name] == trove
+    assert trove_torchlight in json.loads(plugin_mock.persistent_cache['library'])['troves']
+    # cache and calls to api
+    assert plugin_mock._api.get_gamekeys.call_count == 0  # only troves are checked
+    assert plugin_mock._api.get_order_details.call_count == 0
+    assert plugin_mock._api.get_trove_details.call_count == 1  # from chunk no. 0
+
+    change_settings(plugin_mock, {'library': ['keys']})
+    result = await plugin_mock._library_resolver(Strategy.FETCH)
+    assert result[key.machine_name] == key
+    # strategy.FETCH: ignore cache, all again
+    assert plugin_mock._api.get_gamekeys.call_count == 1
+    assert plugin_mock._api.get_order_details.call_count == len(orders_keys)
+    
+
+@pytest.mark.asyncio
+async def test_library_cache_orders(plugin_mock, get_torchlight, change_settings, orders_keys):
+    torchlight, _ = get_torchlight
+
+    drm_free = Subproduct(torchlight['subproducts'][0])
+    key = Key(torchlight['tpkd_dict']['all_tpks'][0])
+
+    change_settings(plugin_mock, {'library': ['drm-free'], 'show_revealed_keys': True})
+    result = await plugin_mock._library_resolver(Strategy.FETCH)
+    assert result[drm_free.machine_name] == drm_free
+
+    plugin_mock._api.get_gamekeys.reset_mock()
+    plugin_mock._api.get_order_details.reset_mock()
+
+    change_settings(plugin_mock, {'library': ['keys']})
+    result = await plugin_mock._library_resolver(Strategy.CACHE)
+    assert result[key.machine_name] == key
+    # remove previous game
+    assert drm_free.machine_name not in result
+    # strategy.CACHE do not call to api
+    assert plugin_mock._api.get_gamekeys.call_count == 0
+    assert plugin_mock._api.get_order_details.call_count == 0
+    
+
+@pytest.mark.asyncio
+async def test_library_mixed_orders(plugin_mock, get_torchlight, change_settings, orders_keys):
+    """Refresh reveals keys only if needed"""
+    torchlight, _ = get_torchlight
+
+    drm_free = Subproduct(torchlight['subproducts'][0])
+    key = Key(torchlight['tpkd_dict']['all_tpks'][0])
+
+    change_settings(plugin_mock, {'library': ['keys'], 'show_revealed_keys': False})
+    not_revealed_keys = await plugin_mock._library_resolver(Strategy.FETCH)
+    assert key.machine_name in not_revealed_keys
+    order_calls = plugin_mock._api.get_order_details.call_count
+
+    # Reediming code
+    for i in orders_keys:
+        if i == torchlight:
+            i['tpkd_dict']['all_tpks'][0]['reedemed_key_val'] = 'redeemed mock code'
+
+    plugin_mock._api.get_gamekeys.reset_mock()
+    plugin_mock._api.get_order_details.reset_mock()
+
+    change_settings(plugin_mock, {'library': ['keys'], 'show_revealed_keys': False})
+    # strategy.MIXED to should refresh only orders with unrevealed keys
+    result = await plugin_mock._library_resolver(Strategy.MIXED)
+    assert key.machine_name not in result  # revealed -> removed
+    assert result[key.machine_name] == key
+    assert plugin_mock._api.get_gamekeys.call_count == 1
+    assert plugin_mock._api.get_order_details.call_count < order_calls
+    
