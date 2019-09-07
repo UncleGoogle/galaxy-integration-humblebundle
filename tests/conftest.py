@@ -36,18 +36,18 @@ def api_mock_raw():
 
 @pytest.fixture
 def api_mock(api_mock_raw, orders_keys, get_troves):
-    orders = orders_keys
     mock = api_mock_raw
+    mock.orders = orders_keys
 
     def get_details(gamekey):
-        for i in orders:
+        for i in mock.orders:
             if i['gamekey'] == gamekey:
                 return i
         print('got 404 for gamekey: ' + gamekey)
         raise UnknownError
 
     mock.TROVES_PER_CHUNK = 20
-    mock.get_gamekeys.return_value = [i['gamekey'] for i in orders]
+    mock.get_gamekeys.return_value = [i['gamekey'] for i in mock.orders]
     mock.get_order_details.side_effect = get_details
     mock.had_trove_subscription.return_value = True
     mock.get_trove_details.side_effect = lambda from_chunk: get_troves(from_chunk)

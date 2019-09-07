@@ -38,7 +38,11 @@ class LibraryResolver:
 
         if strategy == Strategy.MIXED:
             if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
-                cached_gamekeys = [order['gamekey'] for order in self._cache.get('orders', [])]
+                cached_gamekeys = [
+                    order['gamekey']
+                    for order in self._cache.get('orders', [])
+                    if self.__all_keys_revealed(order)
+                ]
                 self._cache['orders'].extend(await self._fetch_orders(cached_gamekeys))
             if SOURCE.TROVE in sources and self._cache.get('subscribed'):
                 cached_troves = self._cache.get('troves', [])
@@ -80,6 +84,13 @@ class LibraryResolver:
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
         return cached_trove_data + new_commers[-new_troves_no:]
     
+    @staticmethod
+    def __all_keys_revealed(order):
+        for key in order['tpkd_dict']['all_tpks']:
+            if 'redeemed_key_val' not in key:
+                return False
+        return True
+
     @staticmethod
     def __filter_out_not_game_bundles(orders: list) -> list:
         filtered = []

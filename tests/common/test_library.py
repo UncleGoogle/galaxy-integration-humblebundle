@@ -105,31 +105,32 @@ async def test_library_cache_orders(plugin_mock, get_torchlight, change_settings
     
 
 @pytest.mark.asyncio
-async def test_library_mixed_orders(plugin_mock, get_torchlight, change_settings, orders_keys):
+async def test_library_mixed_orders(plugin_mock, get_torchlight, change_settings):
     """Refresh reveals keys only if needed"""
     torchlight, _ = get_torchlight
-
-    drm_free = Subproduct(torchlight['subproducts'][0])
     key = Key(torchlight['tpkd_dict']['all_tpks'][0])
-
+    # strategy.FETCH: pull all info and put in cache
     change_settings(plugin_mock, {'library': ['keys'], 'show_revealed_keys': False})
-    not_revealed_keys = await plugin_mock._library_resolver(Strategy.FETCH)
-    assert key.machine_name in not_revealed_keys
-    order_calls = plugin_mock._api.get_order_details.call_count
-
-    # Reediming code
-    for i in orders_keys:
+    result = await plugin_mock._library_resolver(Strategy.FETCH)
+    assert result[key.machine_name] == key
+    # reveal all keys in torchlight order
+    for i in plugin_mock._api.orders:
         if i == torchlight:
-            i['tpkd_dict']['all_tpks'][0]['reedemed_key_val'] = 'redeemed mock code'
-
+            for tpk in i['tpkd_dict']['all_tpks']:
+                tpk['redeemed_key_val'] = 'redeemed mock code'
+            break
+    # Get orders that has at least one unrevealed key
+    unrevealed_order_keys = []
+    for i in plugin_mock._api.orders:
+        if any(('redeemed_key_val' not in x for x in i['tpkd_dict']['all_tpks'])):
+            unrevealed_order_keys.append(i['gamekey'])
+    # reset mocks
     plugin_mock._api.get_gamekeys.reset_mock()
     plugin_mock._api.get_order_details.reset_mock()
-
+    # strategy.MIXED should refresh only orders that may change: those with any unrevealed key
     change_settings(plugin_mock, {'library': ['keys'], 'show_revealed_keys': False})
-    # strategy.MIXED to should refresh only orders with unrevealed keys
     result = await plugin_mock._library_resolver(Strategy.MIXED)
     assert key.machine_name not in result  # revealed -> removed
-    assert result[key.machine_name] == key
     assert plugin_mock._api.get_gamekeys.call_count == 1
-    assert plugin_mock._api.get_order_details.call_count < order_calls
+    assert plugin_mock._api.get_order_details.call_count == len(unrevealed_order_keys)
     
