@@ -3,7 +3,7 @@ import logging
 import toml
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Callable, Mapping, List, Tuple
+from typing import Any, Dict, Callable, Mapping, List, Tuple, Optional
 
 from version import __version__
 from consts import SOURCE
@@ -36,7 +36,8 @@ class OwnedSettings:
             raise TypeError(f'revealed_keys should be boolean (true or false), got {show_keys}')
         if sources and type(sources) != list:
             raise TypeError('Sources (library) shoud be a list')
-        [SOURCE.match(s) for s in sources]
+        if sources is not None:  # validate values
+            [SOURCE.match(s) for s in sources]
 
 
 class Settings:
@@ -49,7 +50,7 @@ class Settings:
 
         self._cached_config = toml.loads(cached_config)
         self._config: Dict[str, Any] = {}
-        self._last_modification_time = None
+        self._last_modification_time: Optional[float] = None
 
         self._owned = OwnedSettings()
 
@@ -98,9 +99,10 @@ class Settings:
             logging.exception(f'{path} not found. Clearing current config to use defaults')
             self._owned.reset()
             self._config.clear()
+            return bool(self._last_modification_time)
         except Exception as e:
             logging.exception(f'Stating {path} has failed: {str(e)}')
-            return
+            return False
         else:
             if stat.st_mtime != self._last_modification_time:
                 self._last_modification_time = stat.st_mtime

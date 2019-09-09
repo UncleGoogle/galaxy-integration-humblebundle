@@ -54,6 +54,8 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+# tmp build ini file
+pytest-build.ini
 
 # Translations
 *.mo

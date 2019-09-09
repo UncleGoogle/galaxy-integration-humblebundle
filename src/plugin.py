@@ -1,4 +1,5 @@
 import sys
+import time
 import asyncio
 import logging
 import re
@@ -22,7 +23,7 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
-from library import LibraryResolver, Strategy
+from library import LibraryResolver
 from local import AppFinder
 
 
@@ -105,7 +106,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_owned_games(self):
         self._getting_owned_games.set()
-        self._owned_games = await self._library_resolver(Strategy.FETCH)
+        self._owned_games = await self._library_resolver()
         self._getting_owned_games.clear()
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
@@ -185,29 +186,12 @@ class HumbleBundlePlugin(Plugin):
         """ self.get_owned_games is called periodically by galaxy too rarely.
         This method check for new orders more often and also when relevant option in config file was changed.
         """
-        # - cache all request responses on get_owned_games: orderlist && orders && trove && was_trove_subscriber
-        # - on get_owned_games: refresh all; **use parsistent_cache; add 1week time counter after which run with mode 'reset'; otherwise run with 'optimized'
-        #   filtered_owned_games = resolver(mode='reset')
-        # - on changed config.owned: use cache.
-        #   filtered_owned_games = resolver(mode='cache')
-        # - on periodical check: refresh only things that may change: 
-        #       - **was_trove_subscriber if was previously False; if true:
-        #         - troves from last seen page + **(& go net only if len(lastpage) == 20) - this on webservice site,
-        #       - orderlist; if new orders:
-        #         - lacking orders,
-        #       - all unrevealed keys orders to check if they has been revealed
-        #   filtered_owned_games = resolver(mode='optimized', owned_games)
-        # ** - optional; nice to have to maybe it is better to KISS than this optimization
-        #
-        # LibraryResolver.__init__(webservice, persistent_cache: dict, settings: dict, save_cache_callback)
-        # LibraryResolver.__call__(mode: CacheStrategy, settings: dict) -> Dict[str, HumbleGame]  # deduplicated_owned_games
-        #   
         old_settings = astuple(self._settings.owned)
         self._settings.reload_local_config_if_changed()
         if old_settings != astuple(self._settings.owned):
             logging.info(f'Library settings has changed: {self._settings.owned}')
             old_ids = self._owned_games.keys()
-            self._owned_games = await self._library_resolver(Strategy.CACHE)
+            self._owned_games = await self._library_resolver(only_cache=True)
 
             for old_id in old_ids - self._owned_games.keys():
                 self.remove_game(old_id)

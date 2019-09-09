@@ -1,4 +1,5 @@
 import enum
+import time
 import logging
 import asyncio
 from typing import Callable, Dict, List, Set
@@ -9,56 +10,30 @@ from model.game import HumbleGame, Subproduct, TroveGame, Key
 from settings import OwnedSettings
 
 
-class Strategy(enum.Enum):
-    FETCH = enum.auto()
-    MIXED = enum.auto()
-    CACHE = enum.auto()
-
-
 class LibraryResolver:
+    # NEXT_FETCH_IN = 3600 * 24 * 14
+    NEXT_FETCH_IN = 120
+
     def __init__(self, api, settings: OwnedSettings, save_cache_callback: Callable, cache: Dict[str, list]):
         self._api = api
         self._save_cache = save_cache_callback
         self._settings = settings
         self._cache = cache
     
-    async def __call__(self, strategy: Strategy) -> Dict[str, HumbleGame]:
-        sources = self._settings.sources        
-        show_revealed_keys = self._settings.show_revealed_keys
+    async def __call__(self, only_cache: bool = False) -> Dict[str, HumbleGame]:
 
-        # fetch for data if needed using predefined cache strategy
-        if strategy != Strategy.CACHE and SOURCE.TROVE in sources:
-            self._cache.setdefault('subscribed', await self._api.had_trove_subscription())
-
-        if strategy == Strategy.FETCH:
-            if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
-                self._cache['orders'] = await self._fetch_orders([])
-            if SOURCE.TROVE in sources and self._cache.get('subscribed'):
-                self._cache['troves'] = await self._fetch_troves([])
-
-        if strategy == Strategy.MIXED:
-            if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
-                cached_gamekeys = [
-                    order['gamekey']
-                    for order in self._cache.get('orders', [])
-                    if self.__all_keys_revealed(order)
-                ]
-                self._cache['orders'].extend(await self._fetch_orders(cached_gamekeys))
-            if SOURCE.TROVE in sources and self._cache.get('subscribed'):
-                cached_troves = self._cache.get('troves', [])
-                self._cache['troves'].extend(await self._fetch_troves(cached_troves))
-        
-        self._save_cache(self._cache)
+        if not only_cache:
+            await self._fetch_and_update_cache()
         
         # get all games in predefined order
         all_games: List[HumbleGame] = []
-        for source in sources:
+        for source in self._settings.sources:
             if source == SOURCE.DRM_FREE:
                 all_games.extend(self._get_subproducts(self._cache.get('orders', [])))
             elif source == SOURCE.TROVE:
                 all_games.extend(self._get_trove_games(self._cache.get('troves', [])))
             elif source == SOURCE.KEYS:
-                all_games.extend(self._get_keys(self._cache.get('orders', []), show_revealed_keys))
+                all_games.extend(self._get_keys(self._cache.get('orders', []), self._settings.show_revealed_keys))
 
         logging.info(f'all_games: {all_games}')
 
@@ -70,6 +45,38 @@ class LibraryResolver:
                 titles.add(game.human_name)
                 deduplicated[game.machine_name] = game
         return deduplicated
+    
+    async def _fetch_and_update_cache(self):
+        sources = self._settings.sources        
+
+        next_fetch_orders = self._cache.get('library', {}).get('next_fetch_orders')
+        if next_fetch_orders is not None and time.time() < next_fetch_orders:
+            if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
+                self._cache['orders'] = await self._fetch_orders([])
+                self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
+        else:
+            if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
+                cached_gamekeys = [
+                    order['gamekey']
+                    for order in self._cache.get('orders', [])
+                    if self.__all_keys_revealed(order)
+                ]
+                updated_orders = self._cache.get('orders', [])
+                updated_orders.extend(await self._fetch_orders(cached_gamekeys))
+                self._cache['orders'] = updated_orders
+
+        self._cache.setdefault('subscribed', await self._api.had_trove_subscription())
+        next_fetch_troves = self._cache.get('library', {}).get('next_fetch_troves')
+        if next_fetch_troves is not None and time.time() < next_fetch_troves:
+            if SOURCE.TROVE in sources and self._cache.get('subscribed'):
+                self._cache['troves'] = await self._fetch_troves([])
+                self._cache['next_fetch_troves'] = time.time() + self.NEXT_FETCH_IN
+        else:
+            if SOURCE.TROVE in sources and self._cache.get('subscribed'):
+                cached_troves = self._cache.get('troves', [])
+                self._cache.setdefault('troves', []).extend(await self._fetch_troves(cached_troves))
+
+        self._save_cache(self._cache)
 
     async def _fetch_orders(self, cached_gamekeys: List[str]) -> list:
         gamekeys = await self._api.get_gamekeys()

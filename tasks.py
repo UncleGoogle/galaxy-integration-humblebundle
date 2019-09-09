@@ -115,7 +115,7 @@ def test(c, target=None):
         config = str(Path(__file__).parent / 'pytest-build.ini')
         with open(config, 'w') as f:
             f.write("[pytest]\n")
-            f.write(f"python_paths {target}")  # pytest-pythonpaths required
+            f.write(f"python_paths = {target}")  # pytest-pythonpaths required
     else:
         config = 'pytest.ini'
 
@@ -127,7 +127,7 @@ def test(c, target=None):
         modules = ['local', 'model', 'plugin.py', 'consts.py', 'humbledownloader.py', 'webservice.py', 'settings.py', 'library.py']
         os.environ['MYPYPATH'] = str(Path(target) / THIRD_PARTY_RELATIVE_DEST)
         modules_full_path = [str(Path(target) / mod) for mod in modules]
-        print(f'running mypy check for {str(Path(mypy_target))} directory')
+        print(f'running mypy check for {str(Path(target))} directory')
         c.run(f"{python} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
         print('done')
 
