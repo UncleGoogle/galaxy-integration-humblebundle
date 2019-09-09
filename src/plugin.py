@@ -1,5 +1,4 @@
 import sys
-import time
 import asyncio
 import logging
 import re
@@ -78,9 +77,8 @@ class HumbleBundlePlugin(Plugin):
 
     def handshake_complete(self):
         self._settings = Settings(
-            cached_version=self.persistent_cache.get('version'),
-            cached_config=self.persistent_cache.get('config', ''),
-            save_cache_callback=self._save_cache
+            cache=self.persistent_cache,
+            save_cache_callback=self.push_cache
         )
         self._library_resolver = LibraryResolver(
             api=self._api,
@@ -93,7 +91,7 @@ class HumbleBundlePlugin(Plugin):
         if not stored_credentials:
             return NextStep("web_session", AUTH_PARAMS)
 
-        logging.info('stored credentials found')
+        logging.info('Stored credentials found')
         user_id, user_name = await self._api.authenticate(stored_credentials)
         return Authentication(user_id, user_name)
 

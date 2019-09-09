@@ -3,7 +3,7 @@ import logging
 import toml
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Callable, Mapping, List, Tuple, Optional
+from typing import Any, Dict, Callable, Mapping, Tuple, Optional
 
 from version import __version__
 from consts import SOURCE
@@ -43,12 +43,13 @@ class LibrarySettings:
 class Settings:
     LOCAL_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'
 
-    def __init__(self, cached_version: str, cached_config: str, save_cache_callback: Callable):
+    def __init__(self, cache: Dict[str, str], save_cache_callback: Callable):
         self._curr_ver = __version__
-        self._prev_ver = cached_version
-        self._save_cache = save_cache_callback
+        self._prev_ver = cache.get('version')
+        self._cache = cache
+        self._push_cache = save_cache_callback
 
-        self._cached_config = toml.loads(cached_config)
+        self._cached_config = toml.loads(cache.get('config', '')) 
         self._config: Dict[str, Any] = {}
         self._last_modification_time: Optional[float] = None
 
@@ -59,10 +60,6 @@ class Settings:
     def library(self) -> LibrarySettings:
         return self._library
     
-    def _save_config(self):
-        self._library.update(self._config.get('library', {}))
-        self._save_cache('config', toml.dumps(self._config))
-
     def _validate(self, config):
         self._library.validate(config['library'])
 
@@ -82,9 +79,9 @@ class Settings:
         data = toml.dumps(self._config)
         with open(self.LOCAL_CONFIG_FILE, 'r') as f:
             comment = ''
-            for line in f.readline():
+            for line in f.readlines():
                 comment += line
-                if line == '# ===':
+                if line.strip() == '# ===':
                     break
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             f.write(comment)
@@ -113,17 +110,22 @@ class Settings:
             return
 
         local_config = self._load_config_file(self.LOCAL_CONFIG_FILE)
-        logging.info(local_config)
+        logging.debug(f'local config: {local_config}')
 
         if first_run:
             if self._prev_ver is None or self._curr_ver <= self._prev_ver:
                 self._config = {**self._cached_config, **local_config}
             else:  # prioritize cached config in case of plugin update
                 self._config = {**local_config, **self._cached_config}
+                logging.debug(f'updated config: {self._config}')
                 if self._config.keys() - local_config.keys():
+                    logging.debug(f'differs!')
                     self._update_user_config()
-                self._save_cache('version', self._curr_ver)
+            if self._prev_ver != self._curr_ver:
+                self._cache['version'] = self._curr_ver
         else:
             self._config.update(local_config)
 
-        self._save_config()
+        self._library.update(self._config.get('library', {}))
+        self._cache['config'] = toml.dumps(self._config)
+        self._push_cache()

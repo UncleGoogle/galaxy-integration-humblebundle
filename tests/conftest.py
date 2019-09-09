@@ -1,8 +1,7 @@
 import pytest
 import pathlib
 import json
-import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # workaround for vscode test discovery
 # disable in production!
@@ -12,8 +11,6 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'galaxy-integr
 
 from galaxy.api.errors import UnknownError
 from plugin import HumbleBundlePlugin
-from webservice import AuthorizedHumbleAPI
-from library import LibraryResolver
 
 
 class AsyncMock(MagicMock):

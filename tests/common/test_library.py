@@ -1,12 +1,9 @@
 import pytest
 import time
 import json
-from unittest.mock import Mock, PropertyMock
 from functools import partial
-import inspect
 
 from library import LibraryResolver
-from consts import SOURCE
 from model.game import Subproduct, Key, TroveGame
 
 
