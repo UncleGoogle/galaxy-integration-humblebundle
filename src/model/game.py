@@ -27,11 +27,6 @@ class HumbleGame(abc.ABC):
     def machine_name(self) -> str:
         return self._data['machine_name']
 
-    @abc.abstractproperty
-    def base_name(self) -> str:
-        """Get to real game name ignoring the source. Used for deduplication"""
-        pass
-
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
         return Game(self.machine_name, self.human_name, dlcs, self.license)
@@ -65,13 +60,6 @@ class TroveGame(HumbleGame):
     def human_name(self):
         return self._data['human-name']
 
-    @property
-    def base_name(self):
-        if self.machine_name.endswith('_trove'):
-            # sanity check. So far always true
-            return self.machine_name[:-6]
-        return self.machine_name
-
 
 class Subproduct(HumbleGame):
     @property
@@ -88,10 +76,6 @@ class Subproduct(HumbleGame):
     def license(self) -> LicenseInfo:
         """There is currently not 'subscription' type license"""
         return LicenseInfo(LicenseType.SinglePurchase)
-
-    @property
-    def base_name(self) -> str:
-        return self.machine_name
 
 
 class Key(HumbleGame):
@@ -120,10 +104,3 @@ class Key(HumbleGame):
     def key_val(self) -> Optional[str]:
         """If returned value is None - the key was not revealed yet"""
         return self._data.get('redeemed_key_val')
-
-    @property
-    def base_name(self) -> str:
-        """Truncate 3rd party platform like `steam`"""
-        splited = self.machine_name.split('_')
-        assert splited[-1] == self.key_type
-        return '_'.join(splited[:-1])

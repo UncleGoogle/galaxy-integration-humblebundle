@@ -131,7 +131,6 @@ def test(c, target=None):
 
 @task
 def release(c, zip_name=None):
-    # TODO: increment version;
     if zip_name is None:
         zip_name = f'humblebundle_{__version__}'
     wd = Path(__file__).parent
@@ -146,7 +145,6 @@ def release(c, zip_name=None):
     shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=zip_name)
     shutil.rmtree(tmp_build_dir)
 
-    # TODO: publish on github
     # tag = 'v' + __version__
     # print('creating and pushing to origin tag: ', tag)
     # c.run(f'git tag {tag}')

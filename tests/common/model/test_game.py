@@ -40,22 +40,3 @@ def test_key_properties(origin_bundle_order):
         key.key_val
         key.downloads
         key.in_galaxy_format()
-
-
-def test_base_name():
-    base_name = 'testgame'
-    assert base_name == TroveGame({'machine_name': 'testgame_trove'}).base_name
-    assert base_name == Subproduct({'machine_name': 'testgame'}).base_name
-    assert 'a_b_cde' == Subproduct({'machine_name': 'a_b_cde'}).base_name
-    assert base_name == Key({
-        'key_type': 'uplay',
-        'machine_name': 'testgame_uplay'
-    }).base_name
-    assert base_name == Key({
-        'key_type': 'steam',
-        'machine_name': 'testgame_steam'
-    }).base_name
-    assert 'jbundle_testgame' == Key({
-        'key_type': 'origin',
-        'machine_name': 'jbundle_testgame_origin'
-    }).base_name
