@@ -28,4 +28,4 @@ matrix:
         - inv install --dev
         - inv build -o build
       script:
-        - inv test -t build --windows
+        - inv test -t build
