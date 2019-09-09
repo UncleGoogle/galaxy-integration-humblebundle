@@ -4,8 +4,9 @@ Integration for GOG Galaxy 2.0.
 
 ## Features
 
-* Library: listing DRM free games from HumbleBundle library (those with downloads for Windows, MacOS or Linux)
-* Library: Humble Trove support
+* Library: DRM free games from HumbleBundle (those with downloads for Windows, MacOS or Linux)
+* Library: Humble Trove games
+* Library: Third pary game keys
 * Install: simple download via webbrowser
 * Launch: autodetection of installed games (only those visible in `Control Panel\Programs\Programs and Features`)
 * Launch: running games tracking (only if launched via Galaxy)

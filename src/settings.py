@@ -10,13 +10,13 @@ from consts import SOURCE
 
 
 @dataclass
-class OwnedSettings:
+class LibrarySettings:
     sources: Tuple[SOURCE, ...] = (SOURCE.DRM_FREE, SOURCE.TROVE, SOURCE.KEYS)
     show_revealed_keys: bool = False
 
-    def update(self, owned: dict):
-        sources = owned.get('library')
-        show_keys = owned.get('show_revealed_keys')
+    def update(self, library: dict):
+        sources = library.get('sources')
+        show_keys = library.get('show_revealed_keys')
 
         if sources is not None:
             self.sources = tuple([SOURCE.match(s) for s in sources])
@@ -28,14 +28,14 @@ class OwnedSettings:
         self.show_revealed_keys = False
     
     @staticmethod
-    def validate(owned: dict):
-        sources = owned.get('library')
-        show_keys = owned.get('show_revealed_keys')
+    def validate(library: dict):
+        sources = library.get('sources')
+        show_keys = library.get('show_revealed_keys')
 
         if show_keys and type(show_keys) != bool:
             raise TypeError(f'revealed_keys should be boolean (true or false), got {show_keys}')
         if sources and type(sources) != list:
-            raise TypeError('Sources (library) shoud be a list')
+            raise TypeError('Sources shoud be a list')
         if sources is not None:  # validate values
             [SOURCE.match(s) for s in sources]
 
@@ -52,20 +52,19 @@ class Settings:
         self._config: Dict[str, Any] = {}
         self._last_modification_time: Optional[float] = None
 
-        self._owned = OwnedSettings()
-
+        self._library = LibrarySettings()
         self.reload_local_config_if_changed(first_run=True)
 
     @property
-    def owned(self) -> OwnedSettings:
-        return self._owned
+    def library(self) -> LibrarySettings:
+        return self._library
     
     def _save_config(self):
-        self._owned.update(self._config.get('owned', {}))
+        self._library.update(self._config.get('library', {}))
         self._save_cache('config', toml.dumps(self._config))
 
     def _validate(self, config):
-        self._owned.validate(config['owned'])
+        self._library.validate(config['library'])
 
     def _load_config_file(self, config_path: pathlib.Path) -> Mapping[str, Any]:
         try:
@@ -97,7 +96,7 @@ class Settings:
             stat = os.stat(path)
         except FileNotFoundError:
             logging.exception(f'{path} not found. Clearing current config to use defaults')
-            self._owned.reset()
+            self._library.reset()
             self._config.clear()
             return bool(self._last_modification_time)
         except Exception as e:

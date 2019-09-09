@@ -1,10 +1,10 @@
 import pytest
+import time
 import json
 from unittest.mock import Mock, PropertyMock
 from functools import partial
 import inspect
 
-from settings import OwnedSettings
 from library import LibraryResolver
 from consts import SOURCE
 from model.game import Subproduct, Key, TroveGame
@@ -24,8 +24,8 @@ def create_resolver(plugin_mock):
 
 @pytest.fixture
 def change_settings():
-    def fn(plugin_mock, owned_config):
-        plugin_mock._library_resolver._settings.update(owned_config)
+    def fn(plugin_mock, lib_config):
+        plugin_mock._library_resolver._settings.update(lib_config)
     return fn
 
 
@@ -54,7 +54,7 @@ async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, 
     _, trove = get_torchlight_trove
 
     plugin_mock.push_cache.reset_mock()  # reset initial settings push
-    change_settings(plugin_mock, {'library': ['drm-free', 'trove', 'keys'], 'show_revealed_keys': True})
+    change_settings(plugin_mock, {'sources': ['drm-free', 'trove', 'keys'], 'show_revealed_keys': True})
     result = await plugin_mock._library_resolver()
     assert result[drm_free.machine_name] == drm_free
     # deduplication of the same title game
@@ -72,7 +72,7 @@ async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, 
 async def test_library_trove(plugin_mock, get_torchlight_trove, change_settings):
     trove_torch_data, trove = get_torchlight_trove
 
-    change_settings(plugin_mock, {'library': ['trove']})
+    change_settings(plugin_mock, {'sources': ['trove']})
     result = await plugin_mock._library_resolver()
     assert result[trove.machine_name] == trove
     assert trove_torch_data in json.loads(plugin_mock.persistent_cache['library'])['troves']
@@ -87,14 +87,14 @@ async def test_library_trove(plugin_mock, get_torchlight_trove, change_settings)
 async def test_library_cache_orders(plugin_mock, get_torchlight, change_settings):
     _, drm_free, key = get_torchlight
 
-    change_settings(plugin_mock, {'library': ['drm-free'], 'show_revealed_keys': True})
+    change_settings(plugin_mock, {'sources': ['drm-free'], 'show_revealed_keys': True})
     result = await plugin_mock._library_resolver()
     assert result[drm_free.machine_name] == drm_free
 
     plugin_mock._api.get_gamekeys.reset_mock()
     plugin_mock._api.get_order_details.reset_mock()
 
-    change_settings(plugin_mock, {'library': ['keys']})
+    change_settings(plugin_mock, {'sources': ['keys']})
     result = await plugin_mock._library_resolver(only_cache=True)
     assert result[key.machine_name] == key
     assert drm_free.machine_name not in result
@@ -108,7 +108,7 @@ async def test_library_fetch_with_cache_orders(plugin_mock, get_torchlight, chan
     """Refresh reveals keys only if needed"""
     torchlight, _, key = get_torchlight
 
-    change_settings(plugin_mock, {'library': ['keys'], 'show_revealed_keys': False})
+    change_settings(plugin_mock, {'sources': ['keys'], 'show_revealed_keys': False})
     result = await plugin_mock._library_resolver()
 
     # reveal all keys in torchlight order
@@ -127,11 +127,27 @@ async def test_library_fetch_with_cache_orders(plugin_mock, get_torchlight, chan
     plugin_mock._api.get_gamekeys.reset_mock()
     plugin_mock._api.get_order_details.reset_mock()
 
-    # cache "fetch_in" time have not passed:
+    # cache "fetch_in" time has not passed:
     # refresh only orders that may change - those with any unrevealed key
-    change_settings(plugin_mock, {'library': ['keys'], 'show_revealed_keys': False})
+    change_settings(plugin_mock, {'sources': ['keys'], 'show_revealed_keys': False})
     result = await plugin_mock._library_resolver()
     assert key.machine_name not in result  # revealed -> removed
     assert plugin_mock._api.get_gamekeys.call_count == 1
     assert plugin_mock._api.get_order_details.call_count == len(unrevealed_order_keys)
     
+
+@pytest.mark.asyncio
+async def test_library_cache_period(plugin_mock, change_settings, orders_keys):
+    """Refresh reveals keys only if needed"""
+    change_settings(plugin_mock, {'sources': ['keys', 'trove'], 'show_revealed_keys': False})
+
+    # set expired next fetch 
+    plugin_mock._library_resolver._cache['next_fetch_orders'] = time.time() - 10
+    plugin_mock._library_resolver._cache['next_fetch_troves'] = time.time() - 10
+
+    # cache "fetch_in" time has passed: refresh all
+    await plugin_mock._library_resolver()
+    assert plugin_mock._api.get_gamekeys.call_count == 1
+    assert plugin_mock._api.get_trove_details.call_count == 1
+    assert plugin_mock._api.get_order_details.call_count == len(orders_keys)
+    assert plugin_mock._api.had_trove_subscription.call_count == 1

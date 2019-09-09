@@ -7,14 +7,14 @@ from typing import Callable, Dict, List, Set
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product   
 from model.game import HumbleGame, Subproduct, TroveGame, Key
-from settings import OwnedSettings
+from settings import LibrarySettings
 
 
 class LibraryResolver:
     # NEXT_FETCH_IN = 3600 * 24 * 14
     NEXT_FETCH_IN = 120
 
-    def __init__(self, api, settings: OwnedSettings, save_cache_callback: Callable, cache: Dict[str, list]):
+    def __init__(self, api, settings: LibrarySettings, save_cache_callback: Callable, cache: Dict[str, list]):
         self._api = api
         self._save_cache = save_cache_callback
         self._settings = settings
@@ -49,7 +49,7 @@ class LibraryResolver:
     async def _fetch_and_update_cache(self):
         sources = self._settings.sources        
 
-        next_fetch_orders = self._cache.get('library', {}).get('next_fetch_orders')
+        next_fetch_orders = self._cache.get('next_fetch_orders')
         if next_fetch_orders is not None and time.time() < next_fetch_orders:
             if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
                 self._cache['orders'] = await self._fetch_orders([])
@@ -64,9 +64,10 @@ class LibraryResolver:
                 updated_orders = self._cache.get('orders', [])
                 updated_orders.extend(await self._fetch_orders(cached_gamekeys))
                 self._cache['orders'] = updated_orders
+                # self._cache.setdefault('orders', []).extend(await self._fetch_troves(cached_gamekeys))
 
         self._cache.setdefault('subscribed', await self._api.had_trove_subscription())
-        next_fetch_troves = self._cache.get('library', {}).get('next_fetch_troves')
+        next_fetch_troves = self._cache.get('next_fetch_troves')
         if next_fetch_troves is not None and time.time() < next_fetch_troves:
             if SOURCE.TROVE in sources and self._cache.get('subscribed'):
                 self._cache['troves'] = await self._fetch_troves([])

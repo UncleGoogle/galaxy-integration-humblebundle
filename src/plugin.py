@@ -84,7 +84,7 @@ class HumbleBundlePlugin(Plugin):
         )
         self._library_resolver = LibraryResolver(
             api=self._api,
-            settings=self._settings.owned,
+            settings=self._settings.library,
             cache=json.loads(self.persistent_cache.get('library', '{}')),
             save_cache_callback=partial(self._save_cache, 'library')
         )
@@ -186,10 +186,10 @@ class HumbleBundlePlugin(Plugin):
         """ self.get_owned_games is called periodically by galaxy too rarely.
         This method check for new orders more often and also when relevant option in config file was changed.
         """
-        old_settings = astuple(self._settings.owned)
+        old_settings = astuple(self._settings.library)
         self._settings.reload_local_config_if_changed()
-        if old_settings != astuple(self._settings.owned):
-            logging.info(f'Library settings has changed: {self._settings.owned}')
+        if old_settings != astuple(self._settings.library):
+            logging.info(f'Library settings has changed: {self._settings.library}')
             old_ids = self._owned_games.keys()
             self._owned_games = await self._library_resolver(only_cache=True)
 
