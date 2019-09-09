@@ -22,22 +22,24 @@ DIST_DIR = ''
 if sys.platform == 'win32':
     GALAXY_PATH = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe'
     DIST_DIR = os.environ['localappdata'] + '\\GOG.com\\Galaxy\\plugins\\installed'
+    PYTHON = 'python'
 elif sys.platform == 'darwin':
     GALAXY_PATH = "/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy"
     DIST_DIR = os.environ['HOME'] + r"/Library/Application\ Support/GOG.com/Galaxy/plugins/installed"
+    PYTHON = 'python3'
 
 DIST_PLUGIN = os.path.join(DIST_DIR, 'humblebundle')
 THIRD_PARTY_RELATIVE_DEST = 'modules'
 
 
 @task
-def install(c, dev=False, python="python"):
+def install(c, dev=False):
     req = REQUIREMENTS_DEV if dev else REQUIREMENTS
-    c.run(f"{python} -m pip install -r {req}")
+    c.run(f"{PYTHON} -m pip install -r {req}")
 
 
 @task
-def build(c, output=DIST_PLUGIN, python="python"):
+def build(c, output=DIST_PLUGIN):
     output = Path(output).resolve()
 
     print('removing', output)
@@ -49,7 +51,7 @@ def build(c, output=DIST_PLUGIN, python="python"):
         '__pycache__', '.mypy_cache', 'galaxy'))
 
     args = [
-        python, "-m", "pip", "install",
+        PYTHON, "-m", "pip", "install",
         "-r", REQUIREMENTS,
         "--target", str(output / THIRD_PARTY_RELATIVE_DEST),
         # "--implementation", "cp",
@@ -104,22 +106,31 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 
 @task
-def test(c, mypy_target=None, python='python', windows=False):
-    c.run(f"{python} -m pytest tests/common src --flakes")
-    if windows:
-        c.run(f"{python} -m pytest tests/windows")
-    if mypy_target:
-        modules = ['local', 'model', 'plugin.py', 'consts.py', 'humbledownloader.py', 'webservice.py', 'settings.py']
-        os.environ['MYPYPATH'] = str(Path(mypy_target) / THIRD_PARTY_RELATIVE_DEST)
-        modules_full_path = [str(Path(mypy_target) / mod) for mod in modules]
-        print(f'running mypy check for {str(Path(mypy_target))} directory')
-        c.run(f"{python} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
+def test(c, target=None):
+
+    if target is not None:
+        config = str(Path(__file__).parent / 'pytest-build.ini')
+        with open(config, 'w') as f:
+            f.write("[pytest]\n")
+            f.write(f"python_paths = {target}")  # pytest-pythonpaths required
+    else:
+        config = 'pytest.ini'
+
+    c.run(f"{PYTHON} -m pytest -c {config} -vv tests/common src --color=yes")
+    if sys.platform == 'win32':
+        c.run(f"{PYTHON} -m pytest tests/windows")
+
+    if target:
+        modules = ['local', 'model', 'plugin.py', 'consts.py', 'humbledownloader.py', 'webservice.py', 'settings.py', 'library.py']
+        os.environ['MYPYPATH'] = str(Path(target) / THIRD_PARTY_RELATIVE_DEST)
+        modules_full_path = [str(Path(target) / mod) for mod in modules]
+        print(f'running mypy check for {str(Path(target))} directory')
+        c.run(f"{PYTHON} -m mypy {' '.join(modules_full_path)} --follow-imports silent")
         print('done')
 
 
 @task
 def release(c, zip_name=None):
-    # TODO: increment version;
     if zip_name is None:
         zip_name = f'humblebundle_{__version__}'
     wd = Path(__file__).parent
@@ -134,7 +145,6 @@ def release(c, zip_name=None):
     shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=zip_name)
     shutil.rmtree(tmp_build_dir)
 
-    # TODO: publish on github
     # tag = 'v' + __version__
     # print('creating and pushing to origin tag: ', tag)
     # c.run(f'git tag {tag}')

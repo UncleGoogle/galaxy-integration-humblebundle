@@ -1,8 +1,11 @@
 import pytest
 from unittest.mock import patch
 
-from local.winappfinder import WindowsAppFinder
-from local._reg_watcher import UninstallKey
+try:
+    from local.winappfinder import WindowsAppFinder
+    from local._reg_watcher import UninstallKey
+except ModuleNotFoundError:
+    pass  # workaround problems in vscode test discovery
 from model.game import TroveGame
 
 

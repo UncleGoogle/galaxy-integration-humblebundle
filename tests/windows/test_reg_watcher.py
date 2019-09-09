@@ -3,8 +3,11 @@ import pathlib
 from unittest.mock import patch
 from contextlib import contextmanager
 
-from local.winappfinder import WindowsAppFinder
-from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
+try:
+    from local.winappfinder import WindowsAppFinder
+    from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
+except ModuleNotFoundError:
+    pass # workaround vscode discovery test problems
 
 
 @pytest.fixture
