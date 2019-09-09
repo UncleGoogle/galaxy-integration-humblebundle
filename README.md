@@ -24,6 +24,10 @@ or build from source code (requires `python3.6` or higher):
 3. `pip install -r requirements/dev.txt`
 4. `inv dist`
 
+## Configuration
+
+Refer to [config.ini](src/config.ini)
+
 ## Known Issues
 
 - no launch support for macOS

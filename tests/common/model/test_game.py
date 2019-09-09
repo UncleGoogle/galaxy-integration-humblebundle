@@ -1,4 +1,4 @@
-from model.game import Subproduct, TroveGame, Key
+from model.game import Subproduct, Key
 from consts import GAME_PLATFORMS, HP
 
 
