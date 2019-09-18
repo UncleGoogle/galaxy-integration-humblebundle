@@ -76,7 +76,7 @@ class HumbleBundlePlugin(Plugin):
         self.push_cache()
 
     def handshake_complete(self):
-        # tmp fix for 0.4.0 cache error
+        # tmp migration to fix 0.4.0 cache error
         library = json.loads(self.persistent_cache.get('library', '{}'))
         if library and type(library.get('orders')) == list:
             logging.info('Old cache migration')
