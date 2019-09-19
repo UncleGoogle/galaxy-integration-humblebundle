@@ -24,7 +24,8 @@ class LibraryResolver:
             await self._fetch_and_update_cache()
         
         # get all games in predefined order
-        orders = list(self._cache.get('orders', {}).values())
+        # ignore typecheck as is ensured that orders is a dict
+        orders = list(self._cache.get('orders', {}).values())  # type: ignore
         all_games: List[HumbleGame] = []
         for source in self._settings.sources:
             if source == SOURCE.DRM_FREE:
