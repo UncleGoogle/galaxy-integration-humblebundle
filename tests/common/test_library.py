@@ -59,7 +59,7 @@ async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, 
     assert trove.machine_name not in result
 
     # cache and calls to api
-    assert torchlight_data in json.loads(plugin_mock.persistent_cache['library'])['orders']
+    assert torchlight_data['gamekey'] in json.loads(plugin_mock.persistent_cache['library'])['orders']
     assert plugin_mock.push_cache.call_count == 1
     assert plugin_mock._api.get_gamekeys.call_count == 1
     assert plugin_mock._api.get_order_details.call_count == len(orders_keys)
