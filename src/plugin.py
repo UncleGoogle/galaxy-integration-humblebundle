@@ -76,6 +76,12 @@ class HumbleBundlePlugin(Plugin):
         self.push_cache()
 
     def handshake_complete(self):
+        # tmp migration to fix 0.4.0 cache error
+        library = json.loads(self.persistent_cache.get('library', '{}'))
+        if library and type(library.get('orders')) == list:
+            logging.info('Old cache migration')
+            self._save_cache('library', {})
+
         self._settings = Settings(
             cache=self.persistent_cache,
             save_cache_callback=self.push_cache
@@ -234,6 +240,9 @@ class HumbleBundlePlugin(Plugin):
 
     def shutdown(self):
         asyncio.create_task(self._api.close_session())
+        self._check_owned_task.cancel()
+        self._check_installed_task.cancel()
+        self._check_statuses_task.cancel()
 
 
 def main():
