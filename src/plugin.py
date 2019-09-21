@@ -159,7 +159,10 @@ class HumbleBundlePlugin(Plugin):
             report_problem(e, None)
             return []
 
-        local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
+        local_games = await self._app_finder.find_local_games(
+            list(self._owned_games.values()),  # TODO pass dict?
+            self._settings.installed
+        )
         self._local_games.update({game.machine_name: game for game in local_games})
 
         return [g.in_galaxy_format() for g in self._local_games.values()]

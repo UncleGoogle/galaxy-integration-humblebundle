@@ -5,7 +5,7 @@ https://github.com/FriendsOfGalaxy/galaxy-integration-battlenet/blob/master/src/
 import os
 import difflib
 from pathlib import Path, PurePath
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict
 
 from consts import HP
 
@@ -47,3 +47,28 @@ class PathFinder(object):
             return execs.get(matches[0])  # type: ignore
         else:
             return None
+
+    def scan_folders(self, paths: List[os.PathLike], apps: Dict[str, str]) -> Dict[str, Path]:
+        """
+        :param paths: all master paths to be scan for app finding
+        :param apps:  mapping of ids to app names to be matched with folder names
+        :returns      mapping of ids to found executables
+        """
+        result: Dict[str, Path] = {}
+        for path in paths:
+            for _, dirs, _ in os.walk(path):
+                break  # one level for now
+            for dir_ in dirs:
+                folder = PurePath(dir_).name
+                for app_id, name in apps.items():
+                    if str(folder).lower() == name.lower():
+                        executables = set(self.find_executables(folder))
+                        best_match = self.choose_main_executable(name, executables)
+                        result[app_id] = Path(best_match)
+        return result
+                        
+        # TODO remove matched apps
+        # unmatched_apps = set(apps) - set(result)
+        # TODO difflib.get_close_matches for what has left
+        # for path in paths:
+        #     for folder in dirs:

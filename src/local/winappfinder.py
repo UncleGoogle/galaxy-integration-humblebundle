@@ -1,20 +1,22 @@
 import logging
+import os
 import re
 import asyncio
 import pathlib
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 
 from consts import HP
 from model.game import HumbleGame, Key
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
+from local.appfinder import AppFinder
 from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
-class WindowsAppFinder:
+class WindowsAppFinder(AppFinder):
     def __init__(self):
         self._reg = WinRegUninstallWatcher(ignore_filter=self.is_other_store_game)
-        self._pathfinder = PathFinder(HP.WINDOWS)
+        super().__init__()
 
     @staticmethod
     def is_other_store_game(key_name) -> bool:
@@ -79,8 +81,11 @@ class WindowsAppFinder:
             return pathlib.Path(best_match)
         return None
 
-    async def find_local_games(self, owned_games: List[HumbleGame]) -> List[LocalHumbleGame]:
+    async def find_local_games(self, owned_games: List[HumbleGame], config: Dict[str, Any]) -> List[LocalHumbleGame]:
         local_games = []
+        not_found = owned_games.copy()
+
+        # match using registry
         while self._reg.uninstall_keys:
             uk = self._reg.uninstall_keys.pop()
             try:
@@ -93,6 +98,7 @@ class WindowsAppFinder:
                             game = LocalHumbleGame(og.machine_name, exe, uk.uninstall_string)
                             logging.info(f'New local game found: {game}')
                             local_games.append(game)
+                            not_found.remove(og)
                             break
                         logging.warning(f"Uninstall key matched, but cannot find \
                             game exe for [{og.human_name}]; uk: {uk}")
@@ -100,6 +106,10 @@ class WindowsAppFinder:
                 self._reg.uninstall_keys.add(uk)
                 raise
             await asyncio.sleep(0.001)  # makes this method non blocking
+
+        # match with config paths
+        local_games.extend(super().find_local_games(not_found, config))
+
         return local_games
 
 

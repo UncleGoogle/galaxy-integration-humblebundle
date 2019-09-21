@@ -60,6 +60,10 @@ class Settings:
     def library(self) -> LibrarySettings:
         return self._library
     
+    @property
+    def installed(self) -> Dict[str, Any]:
+        return self._config.get('installed', {})
+    
     def _validate(self, config):
         self._library.validate(config['library'])
 
