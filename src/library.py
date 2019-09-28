@@ -24,8 +24,7 @@ class LibraryResolver:
             await self._fetch_and_update_cache()
         
         # get all games in predefined order
-        # ignore typecheck as is ensured that orders is a dict
-        orders = list(self._cache.get('orders', {}).values())  # type: ignore
+        orders = list(self._cache.get('orders', {}).values())  # type: ignore[union-attr] - orders is always a dict
         all_games: List[HumbleGame] = []
         for source in self._settings.sources:
             if source == SOURCE.DRM_FREE:
@@ -121,7 +120,7 @@ class LibraryResolver:
                         # at least one download exists for supported OS
                         subproducts.append(sub)
                 except Exception as e:
-                    logging.warning(f"Error while parsing downloads {e}: {details}")
+                    logging.warning(f"Error while parsing subproduct {repr(e)}",  extra={'data': sub_data})
                     continue
         return subproducts
 
@@ -132,7 +131,7 @@ class LibraryResolver:
             try:
                 trove_games.append(TroveGame(trove))
             except Exception as e:
-                logging.warning(f"Error while parsing troves {e}: {trove}")
+                logging.warning(f"Error while parsing troves {repr(e)}", extra={'data': trove})
                 continue
         return trove_games
 
@@ -144,7 +143,7 @@ class LibraryResolver:
                 try:
                     key = Key(tpks)
                 except Exception as e:
-                    logging.warning(f"Error while parsing keys {e}: {tpks}")
+                    logging.warning(f"Error while parsing tpks {repr(e)}", extra={'tpks': tpks})
                 else:
                     if key.key_val is None or show_revealed_keys:
                         keys.append(key)

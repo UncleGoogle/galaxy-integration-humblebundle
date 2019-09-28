@@ -7,9 +7,20 @@ from consts import Platform, KEY_TYPE
 from model.download import TroveDownload, SubproductDownload
 
 
+class InvalidHumbleGame(Exception):
+    pass
+
+
 class HumbleGame(abc.ABC):
     def __init__(self, data: dict):
         self._data = data
+        self._minimal_validation()
+    
+    def _minimal_validation(self):
+        try:
+            self.in_galaxy_format()
+        except KeyError as e:
+            raise InvalidHumbleGame(repr(e))
 
     @abc.abstractmethod
     def downloads(self):
