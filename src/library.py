@@ -120,7 +120,7 @@ class LibraryResolver:
                         # at least one download exists for supported OS
                         subproducts.append(sub)
                 except Exception as e:
-                    logging.warning(f"Error while parsing subproduct {repr(e)}",  extra={'data': sub_data})
+                    logging.error(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
                     continue
         return subproducts
 
@@ -131,7 +131,7 @@ class LibraryResolver:
             try:
                 trove_games.append(TroveGame(trove))
             except Exception as e:
-                logging.warning(f"Error while parsing troves {repr(e)}", extra={'data': trove})
+                logging.error(f"Error while parsing troves {repr(e)}: {troves}", extra={'data': trove})
                 continue
         return trove_games
 
@@ -143,7 +143,7 @@ class LibraryResolver:
                 try:
                     key = Key(tpks)
                 except Exception as e:
-                    logging.warning(f"Error while parsing tpks {repr(e)}", extra={'tpks': tpks})
+                    logging.error(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
                 else:
                     if key.key_val is None or show_revealed_keys:
                         keys.append(key)

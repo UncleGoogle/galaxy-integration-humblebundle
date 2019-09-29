@@ -29,7 +29,7 @@ from local import AppFinder
 
 sentry_logging = LoggingIntegration(
     level=logging.INFO,
-    event_level=logging.WARNING
+    event_level=logging.ERROR
 )
 sentry_sdk.init(
     dsn="https://76abb44bffbe45998dd304898327b718@sentry.io/1764525",
