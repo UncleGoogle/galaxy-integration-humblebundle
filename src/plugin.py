@@ -23,7 +23,7 @@ from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
-from local import AppFinder
+from local.appfinder import AppFinder
 
 
 sentry_sdk.init(
@@ -54,7 +54,7 @@ class HumbleBundlePlugin(Plugin):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
-        self._app_finder = AppFinder
+        self._app_finder = AppFinder()
         self._settings = None
         self._library_resolver = None
 
@@ -68,6 +68,22 @@ class HumbleBundlePlugin(Plugin):
         self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
 
         self.__under_instalation = set()
+
+        # import os
+        # from pathlib import PurePath
+        # apps = {'samorost2': 'Samorost2'}
+        # path = 'C:\\Program Files (x86)'
+        # for _, dirs, _ in os.walk(path):
+        #     break  # one level for now
+        # for dir_ in dirs:
+        #     folder = PurePath(dir_).name
+        #     for app_id, name in apps.items():
+        #         if str(folder).lower() == name.lower():
+        #             logging.info('found!')
+        #             logging.info(str(folder))
+        #             # executables = set(self.find_executables(folder))
+        #             # best_match = self.choose_main_executable(name, executables)
+        #             # result[app_id] = Path(best_match)
 
     def _save_cache(self, key: str, data: Any):
         if type(data) != str:
@@ -114,6 +130,24 @@ class HumbleBundlePlugin(Plugin):
         self._getting_owned_games.clear()
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
+    async def get_local_games(self):
+        if not self._app_finder or not self._owned_games:
+            return []
+
+        try:
+            self._app_finder.refresh()
+        except Exception as e:
+            report_problem(e, None)
+            return []
+
+        owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
+        search_paths = self._settings.installed.get('master_paths', [])
+        local_games = await self._app_finder.find_local_games(owned_title_id, search_paths)
+        self._local_games.update({game.machine_name: game for game in local_games})
+
+        return [g.in_galaxy_format() for g in self._local_games.values()]
+
+
     async def install_game(self, game_id):
         if game_id in self.__under_instalation:
             return
@@ -154,24 +188,6 @@ class HumbleBundlePlugin(Plugin):
             logging.exception(e)
         finally:
             self.__under_instalation.remove(game_id)
-
-    async def get_local_games(self):
-        if not self._app_finder or not self._owned_games:
-            return []
-
-        try:
-            self._app_finder.refresh()
-        except Exception as e:
-            report_problem(e, None)
-            return []
-
-        local_games = await self._app_finder.find_local_games(
-            list(self._owned_games.values()),  # TODO pass dict?
-            self._settings.installed
-        )
-        self._local_games.update({game.machine_name: game for game in local_games})
-
-        return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def launch_game(self, game_id):
         try:
