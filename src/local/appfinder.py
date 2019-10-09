@@ -1,4 +1,5 @@
 import logging
+import time
 import os
 import re
 import asyncio
@@ -21,11 +22,13 @@ class BaseAppFinder:
         """
         :param owned_title_id: human_name: machine_name dictionary
         """
-        game_titles = set(owned_title_id)
-        local_games = [
-            LocalHumbleGame(owned_title_id[title], exe)
-            for title, exe in self._pathfinder.scan_folders(paths, game_titles).items()
-        ]
+        start = time.time()
+        found_games = await self._pathfinder.scan_folders(paths, set(owned_title_id))
+        local_games = {
+            owned_title_id[title]: LocalHumbleGame(owned_title_id[title], exe)
+            for title, exe in found_games.items()
+        }
+        logging.debug(f'=== Scan folders took {time.time() - start}')
         return local_games
 
     def refresh(self):
@@ -111,7 +114,7 @@ class WindowsAppFinder(BaseAppFinder):
         return None
 
     async def find_local_games(self, owned_title_id: Dict[str, str], paths: List[os.PathLike]) -> List[LocalHumbleGame]:
-        local_games = []
+        local_games: Dict[str, LocalHumbleGame] = {}
         not_found = owned_title_id.copy()
 
         # match using registry
@@ -124,7 +127,7 @@ class WindowsAppFinder(BaseAppFinder):
                         if exe is not None:
                             game = LocalHumbleGame(machine_name, exe, uk.uninstall_string)
                             logging.info(f'New local game found: {game}')
-                            local_games.append(game)
+                            local_games[machine_name] = game
                             del not_found[human_name]
                             break
                         logging.warning(f"Uninstall key matched, but cannot find \
@@ -134,9 +137,9 @@ class WindowsAppFinder(BaseAppFinder):
                 raise
             await asyncio.sleep(0.001)  # makes this method non blocking
 
-        # match using folders scan
+        # try to match the rest using folders scan
         paths = list(self.DEFAULT_APPS_LOCATIONS | set(paths))
-        local_games.extend(await super().find_local_games(not_found, paths))
+        local_games.update(await super().find_local_games(not_found, paths))
 
         return local_games
 

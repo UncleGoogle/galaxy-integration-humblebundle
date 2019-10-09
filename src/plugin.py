@@ -69,22 +69,6 @@ class HumbleBundlePlugin(Plugin):
 
         self.__under_instalation = set()
 
-        # import os
-        # from pathlib import PurePath
-        # apps = {'samorost2': 'Samorost2'}
-        # path = 'C:\\Program Files (x86)'
-        # for _, dirs, _ in os.walk(path):
-        #     break  # one level for now
-        # for dir_ in dirs:
-        #     folder = PurePath(dir_).name
-        #     for app_id, name in apps.items():
-        #         if str(folder).lower() == name.lower():
-        #             logging.info('found!')
-        #             logging.info(str(folder))
-        #             # executables = set(self.find_executables(folder))
-        #             # best_match = self.choose_main_executable(name, executables)
-        #             # result[app_id] = Path(best_match)
-
     def _save_cache(self, key: str, data: Any):
         if type(data) != str:
             data = json.dumps(data)
@@ -142,8 +126,7 @@ class HumbleBundlePlugin(Plugin):
 
         owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
         search_paths = self._settings.installed.get('master_paths', [])
-        local_games = await self._app_finder.find_local_games(owned_title_id, search_paths)
-        self._local_games.update({game.machine_name: game for game in local_games})
+        self._local_games = await self._app_finder.find_local_games(owned_title_id, search_paths)
 
         return [g.in_galaxy_format() for g in self._local_games.values()]
 

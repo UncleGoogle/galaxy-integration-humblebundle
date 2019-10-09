@@ -1,13 +1,14 @@
 import os
 import logging
 import difflib
+import asyncio
 from pathlib import Path, PurePath
 from typing import List, Optional, Union, Dict, Set
 
 from consts import HP
 
 
-class PathFinder(object):
+class PathFinder:
     def __init__(self, system: HP):
         self.system = system
 
@@ -45,16 +46,16 @@ class PathFinder(object):
         else:
             return None
 
-    def scan_folders(self, paths: List[os.PathLike], app_names: Set[str]) -> Dict[str, Path]:
+    async def scan_folders(self, paths: List[os.PathLike], app_names: Set[str]) -> Dict[str, Path]:
         """
         :param paths: all master paths to be scan for app finding
         :param app_names:  app names to be matched with folder names
         :returns      mapping of app names to found executables
         """
-        def scan(path: os.PathLike, candidates: Set[str], similarity: float):
+        async def scan(path: os.PathLike, candidates: Set[str], similarity: float):
             root, dirs, _ = next(os.walk(path))
             for dir_name in dirs:
-                logging.debug(f'candidates len should decrease: {len(candidates)}')
+                await asyncio.sleep(0)
                 matches = difflib.get_close_matches(dir_name.lower(), list(candidates), cutoff=similarity)
                 if matches:
                     logging.info(f'found close ({similarity}) matches for {dir_name}: [{matches}]')
@@ -67,6 +68,7 @@ class PathFinder(object):
                     logging.debug(f'execs: {executables}')
                     best_exe = self.choose_main_executable(app_name, executables)
                     logging.info(f'best exe match: {best_exe}')
+                    candidates.remove(app_name)
                     yield app_name, Path(best_exe)
                     break
 
@@ -76,17 +78,15 @@ class PathFinder(object):
 
         # exact matches
         for path in paths:
-            for app_name, exe in scan(path, not_yet_found, similarity=1):
+            async for app_name, exe in scan(path, not_yet_found, similarity=1):
                 result[app_name] = exe
-                not_yet_found.remove(app_name)  # small optimization by excluding already found apps
 
         # close matches
         for path in paths:
-            for app_name, exe in scan(path, not_yet_found, similarity=0.8):
+            async for app_name, exe in scan(path, not_yet_found, similarity=0.8):
                 close_matches[app_name] = exe
 
         # overwrite close matches with exact results
         close_matches.update(result)
-        logging.debug(f'close_maches {close_matches}')
 
         return close_matches

@@ -69,11 +69,13 @@ def test_no_match():
 async def test_find_games_display_icon(uk_torchlight2):
     """Find exe based on DisplayIcon subkey"""
     human_name, machine_name = "Torchlight 2", "torchlight2"
-    owned_games = [TroveGame({'human-name': human_name, 'machine_name': machine_name})]
+    owned_games = {human_name: machine_name}
     finder = WindowsAppFinder()
     expected_exe = uk_torchlight2.display_icon
     with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', [uk_torchlight2]):
-        assert expected_exe == str((await finder.find_local_games(owned_games))[0].executable)
+        res = await finder.find_local_games(owned_games, [])
+        assert machine_name in res
+        assert expected_exe == str(res[machine_name].executable)
 
 
 @pytest.mark.asyncio
@@ -87,7 +89,7 @@ async def test_find_game_display_uninstall():
         uninstall_string=uninstall,
         display_icon=uninstall
     )
-    owned_games = [TroveGame({'human-name': human_name, 'machine_name': machine_name})]
+    owned_games = {human_name: machine_name}
     finder = WindowsAppFinder()
     with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', set([uk_game])):
-        assert [] == await finder.find_local_games(owned_games)
+        assert {} == await finder.find_local_games(owned_games, [])
