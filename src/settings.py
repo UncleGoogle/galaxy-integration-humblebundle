@@ -3,7 +3,7 @@ import logging
 import toml
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, Callable, Mapping, Tuple, Optional
+from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
 
 from version import __version__
 from consts import SOURCE
@@ -40,6 +40,33 @@ class LibrarySettings:
             [SOURCE.match(s) for s in sources]
 
 
+@dataclass
+class InstalledSettings:
+    search_dirs: Set[pathlib.Path] = set()
+
+    def update(self, installed: dict):
+        dirs = installed.get('search_dirs', [])
+        self.search_dirs.clear()
+        for i in dirs:
+            expanded = os.path.expandvars(i)
+            path = pathlib.Path(expanded).resolve()
+            self.search_dirs.add(path)
+    
+    def reset(self):
+        self.search_dirs.clear()
+    
+    @staticmethod
+    def validate(self, installed: dict):
+        dirs = installed.get('search_dirs', [])
+        if type(dirs) != list:
+            raise TypeError('search_paths shoud be list put in `[ ]`')
+        for i in dirs:
+            expanded = os.path.expandvars(i)
+            path = pathlib.Path(expanded).resolve()
+            if not path.exists():
+                raise ValueError(f'Path {path} does not exists')
+
+
 class Settings:
     LOCAL_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'
 
@@ -54,6 +81,7 @@ class Settings:
         self._last_modification_time: Optional[float] = None
 
         self._library = LibrarySettings()
+        self._installed = InstalledSettings()
         self.reload_local_config_if_changed(first_run=True)
 
     @property
@@ -67,6 +95,15 @@ class Settings:
     def _validate(self, config):
         self._library.validate(config['library'])
 
+    def _reset_config(self):
+        self._library.reset()
+        self._installed.reset()
+        self._config.clear()
+    
+    def _update_objects(self):
+        self._library.update(self._config.get('library', {}))
+        self._installed.update(self._config.get('installed', {}))
+    
     def _load_config_file(self, config_path: pathlib.Path) -> Mapping[str, Any]:
         try:
             with open(config_path, 'r') as f:
@@ -94,11 +131,10 @@ class Settings:
     def has_config_changed(self) -> bool:
         path = self.LOCAL_CONFIG_FILE
         try:
-            stat = os.stat(path)
+            stat = path.stat()
         except FileNotFoundError:
             logging.exception(f'{path} not found. Clearing current config to use defaults')
-            self._library.reset()
-            self._config.clear()
+            self._reset_config()
             return bool(self._last_modification_time)
         except Exception as e:
             logging.exception(f'Stating {path} has failed: {str(e)}')
@@ -123,13 +159,13 @@ class Settings:
                 self._config = {**local_config, **self._cached_config}
                 logging.debug(f'updated config: {self._config}')
                 if self._config.keys() - local_config.keys():
-                    logging.debug(f'differs!')
+                    logging.debug(f'Config shape differs!')
                     self._update_user_config()
             if self._prev_ver != self._curr_ver:
                 self._cache['version'] = self._curr_ver
         else:
             self._config.update(local_config)
 
-        self._library.update(self._config.get('library', {}))
+        self._update_objects()
         self._cache['config'] = toml.dumps(self._config)
         self._push_cache()
