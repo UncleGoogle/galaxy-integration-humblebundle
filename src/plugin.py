@@ -125,7 +125,7 @@ class HumbleBundlePlugin(Plugin):
         if not self._owned_games:
             return []
 
-        self._local_games = await self._prepare_local_games(self._settings.installed.search_paths)
+        self._local_games = await self._prepare_local_games(self._settings.installed.search_dirs)
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def install_game(self, game_id):

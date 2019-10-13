@@ -51,12 +51,13 @@ class InstalledSettings:
             expanded = os.path.expandvars(i)
             path = pathlib.Path(expanded).resolve()
             self.search_dirs.add(path)
+        logging.info(f'Installed Settings: {self.search_dirs}')
     
     def reset(self):
         self.search_dirs.clear()
     
     @staticmethod
-    def validate(self, installed: dict):
+    def validate(installed: dict):
         dirs = installed.get('search_dirs', [])
         if type(dirs) != list:
             raise TypeError('search_paths shoud be list put in `[ ]`')
@@ -89,11 +90,12 @@ class Settings:
         return self._library
     
     @property
-    def installed(self) -> Dict[str, Any]:
-        return self._config.get('installed', {})
+    def installed(self) -> InstalledSettings:
+        return self._installed
     
     def _validate(self, config):
         self._library.validate(config['library'])
+        self._installed.validate(config['installed'])
 
     def _reset_config(self):
         self._library.reset()
