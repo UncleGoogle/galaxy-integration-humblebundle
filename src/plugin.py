@@ -114,22 +114,19 @@ class HumbleBundlePlugin(Plugin):
         self._getting_owned_games.clear()
         return [g.in_galaxy_format() for g in self._owned_games.values()]
 
-    async def get_local_games(self):
-        if not self._app_finder or not self._owned_games:
-            return []
-
-        try:
-            self._app_finder.refresh()
-        except Exception as e:
-            report_problem(e, None)
+    async def _prepare_local_games(self, paths_to_scan):
+        if not self._owned_games:
             return []
 
         owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
-        search_paths = self._settings.installed.get('master_paths', [])
-        self._local_games = await self._app_finder.find_local_games(owned_title_id, search_paths)
+        return await self._app_finder.find_local_games(owned_title_id, paths_to_scan)
 
+    async def get_local_games(self):
+        if not self._owned_games:
+            return []
+
+        self._local_games = await self._prepare_local_games(self._settings.installed.search_paths)
         return [g.in_galaxy_format() for g in self._local_games.values()]
-
 
     async def install_game(self, game_id):
         if game_id in self.__under_instalation:
@@ -222,8 +219,12 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(0.5)
 
     async def _check_installed(self):
-        """Searches for installed games and updates self._local_games"""
-        await self.get_local_games()
+        """Searches for currently installed games
+        Performs only checks non-intensive for CPU, that is optimized registry scan in Windows case.
+        Do not scan paths, such scan have to be triggered by Galaxy on get_owned_games (eg. refresh integrations button)
+        """
+        local_games = await self._prepare_local_games(paths_to_scan=None)
+        self._local_games.update(local_games)
         await asyncio.sleep(5)
 
     def tick(self):

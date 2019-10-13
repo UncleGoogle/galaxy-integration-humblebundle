@@ -4,7 +4,8 @@ import os
 import re
 import asyncio
 import pathlib
-from typing import List, Optional, Any, Dict
+from typing import Optional, Dict, Set
+from typing import Type  # noqa
 
 from consts import HP, CURRENT_SYSTEM
 from local.pathfinder import PathFinder
@@ -18,7 +19,7 @@ class BaseAppFinder:
     def __init__(self):
         self._pathfinder = PathFinder(CURRENT_SYSTEM)
 
-    async def find_local_games(self, owned_title_id: Dict[str, str], paths: List[os.PathLike]) -> List[LocalHumbleGame]:
+    async def find_local_games(self, owned_title_id: Dict[str, str], paths: Set[pathlib.Path]) -> Dict[str, LocalHumbleGame]:
         """
         :param owned_title_id: human_name: machine_name dictionary
         """
@@ -31,16 +32,12 @@ class BaseAppFinder:
         logging.debug(f'=== Scan folders took {time.time() - start}')
         return local_games
 
-    def refresh(self):
-        pass
-
 
 class MacAppFinder(BaseAppFinder):
-    DEFAULT_APPS_LOCATIONS = {"/Applications"}
-
-    async def find_local_games(self, owned_title_id: Dict[str, str], paths: List[os.PathLike]) -> List[LocalHumbleGame]:
-        paths = list(self.DEFAULT_APPS_LOCATIONS | set(paths))
-        return await super().find_local_games(owned_title_id, paths)
+    async def find_local_games(self, owned_title_id, paths):
+        if paths:
+            return await super().find_local_games(owned_title_id, paths)
+        return []
 
 
 class WindowsAppFinder(BaseAppFinder):
@@ -113,11 +110,12 @@ class WindowsAppFinder(BaseAppFinder):
             return pathlib.Path(best_match)
         return None
 
-    async def find_local_games(self, owned_title_id: Dict[str, str], paths: List[os.PathLike]) -> List[LocalHumbleGame]:
+    async def find_local_games(self, owned_title_id, paths):
         local_games: Dict[str, LocalHumbleGame] = {}
         not_found = owned_title_id.copy()
 
         # match using registry
+        self._reg.refresh()
         while self._reg.uninstall_keys:
             uk = self._reg.uninstall_keys.pop()
             try:
@@ -138,17 +136,14 @@ class WindowsAppFinder(BaseAppFinder):
             await asyncio.sleep(0.001)  # makes this method non blocking
 
         # try to match the rest using folders scan
-        paths = list(self.DEFAULT_APPS_LOCATIONS | set(paths))
-        local_games.update(await super().find_local_games(not_found, paths))
+        if paths:
+            local_games.update(await super().find_local_games(not_found, paths))
 
         return local_games
 
-    def refresh(self):
-        self._reg.refresh()
-
 
 if CURRENT_SYSTEM == HP.WINDOWS:
-    AppFinder = WindowsAppFinder
+    AppFinder = WindowsAppFinder  # type: Type[BaseAppFinder]
 elif CURRENT_SYSTEM == HP.MAC:
     AppFinder = MacAppFinder
 else:

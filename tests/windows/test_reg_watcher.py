@@ -99,5 +99,5 @@ def test_refresh_uks(uk_annas_quest, uk_windosill, patch_wrc):
     expected = set([uk_annas_quest, uk_windosill])
     with patch_wrc(subkeys):
         finder = WindowsAppFinder()
-        finder.refresh()
+        finder._reg.refresh()
         assert finder._reg.uninstall_keys == expected

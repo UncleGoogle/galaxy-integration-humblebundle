@@ -40,9 +40,9 @@ class LibrarySettings:
             [SOURCE.match(s) for s in sources]
 
 
-@dataclass
 class InstalledSettings:
-    search_dirs: Set[pathlib.Path] = set()
+    def __init__(self):
+        self.search_dirs: Set[pathlib.Path] = set()
 
     def update(self, installed: dict):
         dirs = installed.get('search_dirs', [])

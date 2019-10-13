@@ -3,7 +3,8 @@ import logging
 import difflib
 import asyncio
 from pathlib import Path, PurePath
-from typing import List, Optional, Union, Dict, Set
+from typing import List, Union, Dict, Set, Iterable, Sequence
+from typing import cast
 
 from consts import HP
 
@@ -17,7 +18,7 @@ class PathFinder:
 
         if not folder.exists():
             raise FileNotFoundError(f'Pathfinder: {path} does not exist')
-        execs = []
+        execs: List[str] = []
         for root, _, files in os.walk(folder):
             for path in files:
                 whole_path = os.path.join(root, path)
@@ -32,31 +33,30 @@ class PathFinder:
             return os.access(path, os.X_OK)
 
     @staticmethod
-    def choose_main_executable(pattern: str, executables: List[os.PathLike]) -> Optional[os.PathLike]:
+    def choose_main_executable(pattern: str, executables: Sequence[str]) -> str:
         if len(executables) == 1:
             return executables[0]
 
         execs = {PurePath(k).stem.lower(): k for k in executables}
         no_cutoff = 0
 
-        matches = difflib.get_close_matches(pattern.lower(), execs.keys(), cutoff=no_cutoff)
-        if len(matches) > 0:
-            # returns best match
-            return execs.get(matches[0])  # type: ignore
-        else:
-            return None
+        matches_ = difflib.get_close_matches(pattern.lower(), execs.keys(), cutoff=no_cutoff)
+        matches = cast(List[str], matches_)  # as str is Sequence[str] - mypy/issues/5090
+        best_match = matches[0]
+        return execs[best_match]
 
-    async def scan_folders(self, paths: List[os.PathLike], app_names: Set[str]) -> Dict[str, Path]:
+    async def scan_folders(self, paths: Iterable[Union[str, os.PathLike]], app_names: Set[str]) -> Dict[str, Path]:
         """
         :param paths: all master paths to be scan for app finding
         :param app_names:  app names to be matched with folder names
         :returns      mapping of app names to found executables
         """
-        async def scan(path: os.PathLike, candidates: Set[str], similarity: float):
+        async def scan(path: Union[str, os.PathLike], candidates: Set[str], similarity: float):
             root, dirs, _ = next(os.walk(path))
             for dir_name in dirs:
                 await asyncio.sleep(0)
-                matches = difflib.get_close_matches(dir_name.lower(), list(candidates), cutoff=similarity)
+                matches_ = difflib.get_close_matches(dir_name.lower(), list(candidates), cutoff=similarity)
+                matches = cast(List[str], matches_)  # as str is Sequence[str]r - mypy/issues/5090
                 if matches:
                     logging.info(f'found close ({similarity}) matches for {dir_name}: [{matches}]')
                 for app_name in matches:
