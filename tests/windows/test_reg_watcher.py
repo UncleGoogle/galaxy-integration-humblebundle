@@ -4,7 +4,7 @@ from unittest.mock import patch
 from contextlib import contextmanager
 
 try:
-    from local.winappfinder import WindowsAppFinder
+    from local.appfinder import WindowsAppFinder
     from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
 except ModuleNotFoundError:
     pass # workaround vscode discovery test problems
@@ -99,5 +99,5 @@ def test_refresh_uks(uk_annas_quest, uk_windosill, patch_wrc):
     expected = set([uk_annas_quest, uk_windosill])
     with patch_wrc(subkeys):
         finder = WindowsAppFinder()
-        finder.refresh()
+        finder._reg.refresh()
         assert finder._reg.uninstall_keys == expected

@@ -1,3 +1,4 @@
+import os.path
 import pytest
 from unittest.mock import patch
 import pathlib
@@ -12,12 +13,12 @@ from humbledownloader import HumbleDownloadResolver
 async def test_launch_game(plugin_mock, overgrowth):
     id_ = overgrowth['product']['machine_name']
     plugin_mock._local_games = {
-        id_: LocalHumbleGame(id_, pathlib.Path('mock.exe'))
+        id_: LocalHumbleGame(id_, pathlib.Path('game_dir') /  'mock.exe')
     }
     with patch('subprocess.Popen') as subproc:
         with patch('psutil.Process'):
             await plugin_mock.launch_game(id_)
-            subproc.assert_called_once_with('mock.exe')
+            subproc.assert_called_once_with('game_dir' + os.path.sep + 'mock.exe', creationflags=8 ,cwd=pathlib.Path('game_dir'))
 
 
 @pytest.mark.asyncio
@@ -45,8 +46,8 @@ async def test_install_game(plugin_mock, overgrowth):
         "mac": "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-macosx.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=5ade7954d8fc63bbe861932be538c07e",
     }
 
-    for os in [HP.WINDOWS, HP.MAC]:
-        plugin_mock._download_resolver = HumbleDownloadResolver(target_platform=os)
+    for os_ in [HP.WINDOWS, HP.MAC]:
+        plugin_mock._download_resolver = HumbleDownloadResolver(target_platform=os_)
         with patch('webbrowser.open') as browser_open:
             await plugin_mock.install_game(id_)
-            browser_open.assert_called_once_with(download_urls[os.value])
+            browser_open.assert_called_once_with(download_urls[os_.value])

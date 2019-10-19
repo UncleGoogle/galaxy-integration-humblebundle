@@ -18,11 +18,13 @@ REQUIREMENTS_DEV = os.path.join('requirements', 'dev.txt')
 
 GALAXY_PATH = ''
 DIST_DIR = ''
+GALAXY_PYTHONPATH = ''
 
 if sys.platform == 'win32':
     GALAXY_PATH = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe'
     DIST_DIR = os.environ['localappdata'] + '\\GOG.com\\Galaxy\\plugins\\installed'
     PYTHON = 'python'
+    GALAXY_PYTHONPATH = str(Path(os.path.expandvars("%programfiles(x86)%")) / "GOG Galaxy" / "python" / "python.exe")
 elif sys.platform == 'darwin':
     GALAXY_PATH = "/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy"
     DIST_DIR = os.environ['HOME'] + r"/Library/Application\ Support/GOG.com/Galaxy/plugins/installed"
@@ -81,7 +83,7 @@ def build(c, output=DIST_PLUGIN):
 
 
 @task
-def dist(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
+def dist(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH, no_deps=False):
     for proc in psutil.process_iter(attrs=['exe'], ad_value=''):
         if proc.info['exe'] == galaxy_path:
             print(f'Galaxy at {galaxy_path} is running!. Terminating...')
@@ -91,11 +93,30 @@ def dist(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
             break
     else:
         print('Galaxy instance not found.')
-
-    c.run(f'inv build -o {output}')
+    
+    if no_deps:
+        c.run(f'inv copy -o {output}')
+    else:
+        c.run(f'inv build -o {output}')
 
     print(f'Reopening Galaxy from {galaxy_path}')
     subprocess.run([galaxy_path])
+
+
+@task
+def debug(c, output=DIST_PLUGIN, deps=False):
+    this_plugin = 'plugin-humble'
+    for proc in psutil.process_iter(attrs=['exe'], ad_value=''):
+        if proc.info['exe'] == GALAXY_PYTHONPATH:
+            if this_plugin in proc.cmdline()[-1]:
+                print(f'Running plugin instance found!. Terminating...')
+                proc.terminate()
+                break
+    if not deps:
+        c.run(f'inv copy -o {output}')
+    else:
+        c.run(f'inv build -o {output}')
+    print("Now, click 'retry' for crashed plugin in Settings")
 
 
 @task

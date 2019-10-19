@@ -1,20 +1,48 @@
 import logging
+import time
 import re
 import asyncio
 import pathlib
-from typing import List, Optional
+from typing import Optional, Dict, Set
+from typing import Type  # noqa
 
-from consts import HP
-from model.game import HumbleGame, Key
+from consts import HP, CURRENT_SYSTEM
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
-from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
+
+if CURRENT_SYSTEM == HP.WINDOWS:
+    from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
-class WindowsAppFinder:
+class BaseAppFinder:
     def __init__(self):
+        self._pathfinder = PathFinder(CURRENT_SYSTEM)
+
+    async def find_local_games(self, owned_title_id: Dict[str, str], paths: Set[pathlib.Path]) -> Dict[str, LocalHumbleGame]:
+        """
+        :param owned_title_id: human_name: machine_name dictionary
+        """
+        start = time.time()
+        found_games = await self._pathfinder.scan_folders(paths, set(owned_title_id))
+        local_games = {
+            owned_title_id[title]: LocalHumbleGame(owned_title_id[title], exe)
+            for title, exe in found_games.items()
+        }
+        logging.debug(f'=== Scan folders took {time.time() - start}')
+        return local_games
+
+
+class MacAppFinder(BaseAppFinder):
+    async def find_local_games(self, owned_title_id, paths):
+        if paths:
+            return await super().find_local_games(owned_title_id, paths)
+        return []
+
+
+class WindowsAppFinder(BaseAppFinder):
+    def __init__(self):
+        super().__init__()
         self._reg = WinRegUninstallWatcher(ignore_filter=self.is_other_store_game)
-        self._pathfinder = PathFinder(HP.WINDOWS)
 
     @staticmethod
     def is_other_store_game(key_name) -> bool:
@@ -79,29 +107,41 @@ class WindowsAppFinder:
             return pathlib.Path(best_match)
         return None
 
-    async def find_local_games(self, owned_games: List[HumbleGame]) -> List[LocalHumbleGame]:
-        local_games = []
+    async def find_local_games(self, owned_title_id, paths):
+        local_games: Dict[str, LocalHumbleGame] = {}
+        not_found = owned_title_id.copy()
+
+        # match using registry
+        self._reg.refresh()
         while self._reg.uninstall_keys:
             uk = self._reg.uninstall_keys.pop()
             try:
-                for og in owned_games:
-                    if isinstance(og, Key):
-                        continue
-                    if self._matches(og.human_name, uk):
-                        exe = self._find_executable(og.human_name, uk)
+                for human_name, machine_name in owned_title_id.items():
+                    if self._matches(human_name, uk):
+                        exe = self._find_executable(human_name, uk)
                         if exe is not None:
-                            game = LocalHumbleGame(og.machine_name, exe, uk.uninstall_string)
+                            game = LocalHumbleGame(machine_name, exe, uk.uninstall_string)
                             logging.info(f'New local game found: {game}')
-                            local_games.append(game)
+                            local_games[machine_name] = game
+                            del not_found[human_name]
                             break
                         logging.warning(f"Uninstall key matched, but cannot find \
-                            game exe for [{og.human_name}]; uk: {uk}")
+                            game exe for [{human_name}]; uk: {uk}")
             except Exception:
                 self._reg.uninstall_keys.add(uk)
                 raise
             await asyncio.sleep(0.001)  # makes this method non blocking
+
+        # try to match the rest using folders scan
+        if paths:
+            local_games.update(await super().find_local_games(not_found, paths))
+
         return local_games
 
 
-    def refresh(self):
-        self._reg.refresh()
+if CURRENT_SYSTEM == HP.WINDOWS:
+    AppFinder = WindowsAppFinder  # type: Type[BaseAppFinder]
+elif CURRENT_SYSTEM == HP.MAC:
+    AppFinder = MacAppFinder
+else:
+    raise RuntimeError(f'Unsupported system: {CURRENT_SYSTEM}')

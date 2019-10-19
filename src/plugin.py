@@ -16,7 +16,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
-from galaxy.api.errors import AuthenticationRequired
+from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
 from version import __version__
 from settings import Settings
@@ -24,7 +24,7 @@ from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
-from local import AppFinder
+from local.appfinder import AppFinder
 
 
 sentry_logging = LoggingIntegration(
@@ -53,7 +53,7 @@ class HumbleBundlePlugin(Plugin):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
-        self._app_finder = AppFinder
+        self._app_finder = AppFinder()
         self._settings = None
         self._library_resolver = None
 
@@ -61,12 +61,12 @@ class HumbleBundlePlugin(Plugin):
         self._local_games = {}
         self._cached_game_states = {}
 
-        self._getting_owned_games = asyncio.Event()
-        self._check_owned_task = asyncio.create_task(asyncio.sleep(0))
-        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
-        self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
+        self._getting_owned_games = asyncio.Lock()
+        self._check_installed_task = asyncio.create_task(asyncio.sleep(3))
+        self._check_statuses_task = asyncio.create_task(asyncio.sleep(3))
 
-        self.__under_instalation = set()
+        self._rescan_needed = True
+        self._under_instalation = set()
 
     def _save_cache(self, key: str, data: Any):
         if type(data) != str:
@@ -95,28 +95,38 @@ class HumbleBundlePlugin(Plugin):
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
             return NextStep("web_session", AUTH_PARAMS)
-
         logging.info('Stored credentials found')
-        user_id, user_name = await self._api.authenticate(stored_credentials)
-        return Authentication(user_id, user_name)
+
+        user_id = await self._api.authenticate(stored_credentials)
+        if user_id is None:
+            logging.debug('invalid creds')
+            raise InvalidCredentials()
+        return Authentication(user_id, user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
 
         user_id, user_name = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
+        self._settings.open_config_file()
         return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
-        self._getting_owned_games.set()
-        self._owned_games = await self._library_resolver()
-        self._getting_owned_games.clear()
-        return [g.in_galaxy_format() for g in self._owned_games.values()]
+        if not self._api.is_authenticated:
+            raise AuthenticationRequired()
+
+        async with self._getting_owned_games:
+            logging.debug('getting owned games')
+            self._owned_games = await self._library_resolver()
+            return [g.in_galaxy_format() for g in self._owned_games.values()]
+
+    async def get_local_games(self):
+        return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def install_game(self, game_id):
-        if game_id in self.__under_instalation:
+        if game_id in self._under_instalation:
             return
-        self.__under_instalation.add(game_id)
+        self._under_instalation.add(game_id)
 
         game = self._owned_games.get(game_id)
         if game is None:
@@ -152,22 +162,7 @@ class HumbleBundlePlugin(Plugin):
         except Exception as e:
             logging.exception(e, extra={'game': game})
         finally:
-            self.__under_instalation.remove(game_id)
-
-    async def get_local_games(self):
-        if not self._app_finder or not self._owned_games:
-            return []
-
-        try:
-            self._app_finder.refresh()
-        except Exception as e:
-            logging.error(e, exc_info=True)
-            return []
-
-        local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
-        self._local_games.update({game.machine_name: game for game in local_games})
-
-        return [g.in_galaxy_format() for g in self._local_games.values()]
+            self._under_instalation.remove(game_id)
 
     async def launch_game(self, game_id):
         try:
@@ -186,28 +181,38 @@ class HumbleBundlePlugin(Plugin):
             game.uninstall()
 
     async def _check_owned(self):
-        """ self.get_owned_games is called periodically by galaxy too rarely.
-        This method check for new orders more often and also when relevant option in config file was changed.
-        """
-        old_settings = astuple(self._settings.library)
-        self._settings.reload_local_config_if_changed()
-        if old_settings != astuple(self._settings.library):
-            logging.info(f'Library settings has changed: {self._settings.library}')
+        async with self._getting_owned_games:
             old_ids = self._owned_games.keys()
             self._owned_games = await self._library_resolver(only_cache=True)
-
             for old_id in old_ids - self._owned_games.keys():
                 self.remove_game(old_id)
             for new_id in self._owned_games.keys() - old_ids:
                 self.add_game(self._owned_games[new_id].in_galaxy_format())
 
+    async def _check_installed(self):
+        # Owned games are needed to local games search.
+        # The way Galaxy calls plugin methods on startup is unsupportive in such situation:
+        # get_local_games - authenticate - get_local_games - get_owned_games (at the end!)
+        # That is why plugin set its own live-cycle in perdiodic checks like this one.
+        if not self._owned_games:
+            logging.debug('Periodic check for local games: no owned games!')
+            return
+
+        owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
+        if self._rescan_needed:
+            self._rescan_needed = False
+            logging.debug(f'Checking installed games with path scanning')
+            self._local_games = await self._app_finder.find_local_games(owned_title_id, self._settings.installed.search_dirs)
+        else:
+            self._local_games.update(await self._app_finder.find_local_games(owned_title_id, None))
+        await asyncio.sleep(4)
 
     async def _check_statuses(self):
-        """Check satuses of already found installed (local) games.
-        Detects events when game is:
-        - launched (via Galaxy for now)
-        - stopped
+        """Checks satuses of local games. Detects events when game is:
+        - installed (local games list updated in _check_installed)
         - uninstalled
+        - launched (via Galaxy)
+        - stopped
         """
         freezed_locals = list(self._local_games.values())
         for game in freezed_locals:
@@ -218,25 +223,25 @@ class HumbleBundlePlugin(Plugin):
             self._cached_game_states[game.id] = state
         await asyncio.sleep(0.5)
 
-    async def _check_installed(self):
-        """Searches for installed games and updates self._local_games"""
-        await self.get_local_games()
-        await asyncio.sleep(5)
-
     def tick(self):
-        if self._check_owned_task.done() and not self._getting_owned_games.is_set():
-            self._check_owned_task = asyncio.create_task(self._check_owned())
-
-        if self._check_statuses_task.done():
-            self._check_statuses_task = asyncio.create_task(self._check_statuses())
+        old_lib_settings = astuple(self._settings.library)
+        old_ins_settings = astuple(self._settings.installed)
+        if self._settings.reload_local_config_if_changed():
+            if old_lib_settings != astuple(self._settings.library):
+                logging.info(f'Library settings has changed: {self._settings.library}')
+                asyncio.create_task(self._check_owned())
+            if old_ins_settings != self._settings.installed:
+                logging.info(f'Installed settings has changed: {self._settings.installed}')
+                self._rescan_needed = True
 
         if self._check_installed_task.done():
             self._check_installed_task = asyncio.create_task(self._check_installed())
 
+        if self._check_statuses_task.done():
+            self._check_statuses_task = asyncio.create_task(self._check_statuses())
 
     def shutdown(self):
         asyncio.create_task(self._api.close_session())
-        self._check_owned_task.cancel()
         self._check_installed_task.cancel()
         self._check_statuses_task.cancel()
 
