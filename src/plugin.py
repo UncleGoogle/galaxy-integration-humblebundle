@@ -12,6 +12,7 @@ from typing import Any
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
 import sentry_sdk
+from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform
 from galaxy.api.types import Authentication, NextStep, LocalGame
@@ -26,17 +27,15 @@ from library import LibraryResolver
 from local import AppFinder
 
 
-sentry_sdk.init(
-    "https://5b8ef07071c74c0a949169c1a8d41d1c@sentry.io/1514964",
-    release=f"galaxy-integration-humblebundle@{__version__}"
+sentry_logging = LoggingIntegration(
+    level=logging.INFO,
+    event_level=logging.ERROR
 )
-
-
-def report_problem(error, extra=None, level=logging.ERROR):
-    logging.log(level, repr(error))
-    with sentry_sdk.configure_scope() as scope:
-        scope.set_extra("extra_context", extra)
-        sentry_sdk.capture_exception(error)
+sentry_sdk.init(
+    dsn="https://76abb44bffbe45998dd304898327b718@sentry.io/1764525",
+    integrations=[sentry_logging],
+    release=f"hb-galaxy@{__version__}"
+)
 
 
 AUTH_PARAMS = {
@@ -119,11 +118,12 @@ class HumbleBundlePlugin(Plugin):
             return
         self.__under_instalation.add(game_id)
 
-        try:
-            game = self._owned_games.get(game_id)
-            if game is None:
-                raise RuntimeError(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
+        game = self._owned_games.get(game_id)
+        if game is None:
+            logging.error(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
+            return
 
+        try:
             if isinstance(game, Key):
                 args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
                     game.human_name, game.key_type_human_name, str(game.key_val)
@@ -150,8 +150,7 @@ class HumbleBundlePlugin(Plugin):
                     webbrowser.open(url['signed_url'])
 
         except Exception as e:
-            report_problem(e, extra=game)
-            logging.exception(e)
+            logging.exception(e, extra={'game': game})
         finally:
             self.__under_instalation.remove(game_id)
 
@@ -162,7 +161,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             self._app_finder.refresh()
         except Exception as e:
-            report_problem(e, None)
+            logging.error(e, exc_info=True)
             return []
 
         local_games = await self._app_finder.find_local_games(list(self._owned_games.values()))
@@ -174,7 +173,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             game = self._local_games[game_id]
         except KeyError as e:
-            report_problem(e, {'local_games': self._local_games})
+            logging.error(e, extra={'local_games': self._local_games})
         else:
             game.run()
 
@@ -182,7 +181,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             game = self._local_games[game_id]
         except KeyError as e:
-            report_problem(e, {'local_games': self._local_games})
+            logging.error(e, extra={'local_games': self._local_games})
         else:
             game.uninstall()
 
