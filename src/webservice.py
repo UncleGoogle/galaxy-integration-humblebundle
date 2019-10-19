@@ -1,11 +1,13 @@
 from http.cookies import SimpleCookie
-from typing import List
+from http import HTTPStatus
+from typing import List, Optional
+import aiohttp
 import json
 import base64
 import logging
 
 from galaxy.http import create_client_session, handle_exception
-from galaxy.api.errors import UnknownBackendResponse, UnknownError
+from galaxy.api.errors import UnknownBackendResponse, UnknownError, AuthenticationRequired
 
 from model.download import TroveDownload
 
@@ -31,31 +33,42 @@ class AuthorizedHumbleAPI:
     }
 
     def __init__(self):
-        self._simpleauth_sess = None
         self._session = create_client_session(headers=self._DEFAULT_HEADERS)
 
+    @property
     def is_authenticated(self) -> bool:
-        return bool(self._simpleauth_sess)
+        logging.debug(f'is authenticated? {bool(self._session.cookie_jar)}')
+        return bool(self._session.cookie_jar)
 
     async def _request(self, method, path, *args, **kwargs):
         url = self._AUTHORITY + path
+        logging.debug(f'{method}, {url}, {args}, {kwargs}')
         if 'params' not in kwargs:
             kwargs['params'] = self._DEFAULT_PARAMS
         with handle_exception():
+            return await self._session.request(method, url, *args, **kwargs)
+
+    async def _is_session_valid(self):
+        """Simply asks about order list to know if session is valid.
+        galaxy.api.errors instances cannot be catched so galaxy.http.handle_excpetion 
+        is the final check with all the logic under its context.
+        """
+        with handle_exception():
             try:
-                return await self._session.request(method, url, *args, **kwargs)
-            except Exception as e:
-                logging.error(repr(e))
+                await self._session.request('get', self._AUTHORITY + self._ORDER_LIST_URL)
+            except aiohttp.ClientResponseError as e:
+                if e.status == HTTPStatus.UNAUTHORIZED:
+                    return False
                 raise
+        return True
 
     def _decode_user_id(self, _simpleauth_sess):
         info = _simpleauth_sess.split('|')[0]
-        # logging.debug(f'user info cookie: {info}')
         info += '=='  # ensure full padding
         decoded = json.loads(base64.b64decode(info))
         return decoded['user_id']
-
-    async def authenticate(self, auth_cookie: dict):
+    
+    async def authenticate(self, auth_cookie: dict) -> Optional[str]:
         # recreate original cookie
         cookie = SimpleCookie()
         cookie_val = bytes(auth_cookie['value'], "utf-8").decode("unicode_escape")
@@ -67,10 +80,9 @@ class AuthorizedHumbleAPI:
         user_id = self._decode_user_id(cookie_val)
         self._session.cookie_jar.update_cookies(cookie)
 
-        # check if auth session is valid
-        await self.get_gamekeys()
-
-        return (user_id, user_id)
+        if await self._is_session_valid():
+            return user_id
+        return None
 
     async def get_gamekeys(self) -> List[str]:
         res = await self._request('get', self._ORDER_LIST_URL)
