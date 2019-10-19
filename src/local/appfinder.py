@@ -41,8 +41,6 @@ class MacAppFinder(BaseAppFinder):
 
 
 class WindowsAppFinder(BaseAppFinder):
-    DEFAULT_APPS_LOCATIONS = {os.environ["PROGRAMFILES"], os.environ["PROGRAMFILES(X86)"]}
-
     def __init__(self):
         super().__init__()
         self._reg = WinRegUninstallWatcher(ignore_filter=self.is_other_store_game)
