@@ -2,11 +2,12 @@ import pathlib
 import logging
 import toml
 import os
+import subprocess
 from dataclasses import dataclass, field
 from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
 
 from version import __version__
-from consts import SOURCE
+from consts import SOURCE, HP, CURRENT_SYSTEM
 
 
 @dataclass
@@ -92,6 +93,10 @@ class Settings:
     @property
     def installed(self) -> InstalledSettings:
         return self._installed
+    
+    def open_config_file(self):
+        cmd = 'start' if CURRENT_SYSTEM == HP.WINDOWS else 'open'
+        subprocess.run([cmd, str(self.LOCAL_CONFIG_FILE.resolve())], shell=True)
     
     def _validate(self, config):
         self._library.validate(config['library'])

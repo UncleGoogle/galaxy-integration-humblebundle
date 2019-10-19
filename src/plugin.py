@@ -105,6 +105,7 @@ class HumbleBundlePlugin(Plugin):
 
         user_id, user_name = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
+        self._settings.open_config_file()
         return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
