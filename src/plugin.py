@@ -7,7 +7,7 @@ import pathlib
 import json
 from dataclasses import astuple
 from functools import partial
-from typing import Any, Dict
+from typing import Any
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 

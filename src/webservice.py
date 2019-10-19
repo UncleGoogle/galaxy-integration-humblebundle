@@ -7,7 +7,7 @@ import base64
 import logging
 
 from galaxy.http import create_client_session, handle_exception
-from galaxy.api.errors import UnknownBackendResponse, UnknownError, AuthenticationRequired
+from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
 from model.download import TroveDownload
 

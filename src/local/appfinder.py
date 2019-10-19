@@ -1,6 +1,5 @@
 import logging
 import time
-import os
 import re
 import asyncio
 import pathlib
