@@ -34,6 +34,9 @@ class AuthorizedHumbleAPI:
         self._simpleauth_sess = None
         self._session = create_client_session(headers=self._DEFAULT_HEADERS)
 
+    def is_authenticated(self) -> bool:
+        return bool(self._simpleauth_sess)
+
     async def _request(self, method, path, *args, **kwargs):
         url = self._AUTHORITY + path
         if 'params' not in kwargs:

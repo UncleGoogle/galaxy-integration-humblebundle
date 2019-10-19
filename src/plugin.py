@@ -7,7 +7,7 @@ import pathlib
 import json
 from dataclasses import astuple
 from functools import partial
-from typing import Any
+from typing import Any, Dict
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
@@ -62,8 +62,8 @@ class HumbleBundlePlugin(Plugin):
         self._local_games = {}
         self._cached_game_states = {}
 
-        self._getting_owned_games = asyncio.Event()
-        self._check_owned_task = asyncio.create_task(asyncio.sleep(0))
+        self._getting_owned_games = asyncio.Lock()
+        self._getting_local_games = asyncio.Lock()
         self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
         self._check_statuses_task = asyncio.create_task(asyncio.sleep(2))
 
@@ -109,24 +109,32 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_name)
 
     async def get_owned_games(self):
-        self._getting_owned_games.set()
-        self._owned_games = await self._library_resolver()
-        self._getting_owned_games.clear()
-        return [g.in_galaxy_format() for g in self._owned_games.values()]
+        if not self._api.is_authenticated:
+            raise AuthenticationRequired
 
-    async def _prepare_local_games(self, paths_to_scan):
+        async with self._getting_owned_games:
+            self._owned_games = await self._library_resolver()
+            return [g.in_galaxy_format() for g in self._owned_games.values()]
+
+    async def _prepare_local_games(self, paths_to_scan) -> Dict[str, LocalGame]:
         if not self._owned_games:
-            return []
+            logging.debug('-- Cannot scan for local gamPreparing local games: no owned games!')
+            return {}
 
         owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
         return await self._app_finder.find_local_games(owned_title_id, paths_to_scan)
 
     async def get_local_games(self):
+        # Owned games names are needed to local games search.
+        # Galaxy calls orders on startup is unsupportive in such situation:
+        # get_local_games - authenticate - get_local_games - get_owned_games
+        # That is why plugin forces checking for owned games here
         if not self._owned_games:
-            return []
+            await self.get_owned_games()
 
-        self._local_games = await self._prepare_local_games(self._settings.installed.search_dirs)
-        return [g.in_galaxy_format() for g in self._local_games.values()]
+        async with self._getting_local_games:
+            self._local_games = await self._prepare_local_games(self._settings.installed.search_dirs)
+            return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def install_game(self, game_id):
         if game_id in self.__under_instalation:
@@ -186,28 +194,27 @@ class HumbleBundlePlugin(Plugin):
             game.uninstall()
 
     async def _check_owned(self):
-        """ self.get_owned_games is called periodically by galaxy too rarely.
-        This method check for new orders more often and also when relevant option in config file was changed.
-        """
-        old_settings = astuple(self._settings.library)
-        self._settings.reload_local_config_if_changed()
-        if old_settings != astuple(self._settings.library):
-            logging.info(f'Library settings has changed: {self._settings.library}')
+        async with self._getting_owned_games:
             old_ids = self._owned_games.keys()
             self._owned_games = await self._library_resolver(only_cache=True)
-
             for old_id in old_ids - self._owned_games.keys():
                 self.remove_game(old_id)
             for new_id in self._owned_games.keys() - old_ids:
                 self.add_game(self._owned_games[new_id].in_galaxy_format())
 
+    async def _check_installed(self):
+        """Non intensive for CPU check in Windows registry"""
+        async with self._getting_local_games:
+            local_games = await self._prepare_local_games(None)
+            self._local_games.update(local_games)
+        await asyncio.sleep(5)
 
     async def _check_statuses(self):
-        """Check satuses of already found installed (local) games.
-        Detects events when game is:
-        - launched (via Galaxy for now)
-        - stopped
+        """Checks satuses of local games. Detects events when game is:
+        - installed (local games list updated in _check_installed)
         - uninstalled
+        - launched (via Galaxy)
+        - stopped
         """
         freezed_locals = list(self._local_games.values())
         for game in freezed_locals:
@@ -218,29 +225,25 @@ class HumbleBundlePlugin(Plugin):
             self._cached_game_states[game.id] = state
         await asyncio.sleep(0.5)
 
-    async def _check_installed(self):
-        """Searches for currently installed games
-        Performs only checks non-intensive for CPU, that is optimized registry scan in Windows case.
-        Do not scan paths, such scan have to be triggered by Galaxy on get_owned_games (eg. refresh integrations button)
-        """
-        local_games = await self._prepare_local_games(paths_to_scan=None)
-        self._local_games.update(local_games)
-        await asyncio.sleep(5)
-
     def tick(self):
-        if self._check_owned_task.done() and not self._getting_owned_games.is_set():
-            self._check_owned_task = asyncio.create_task(self._check_owned())
-
-        if self._check_statuses_task.done():
-            self._check_statuses_task = asyncio.create_task(self._check_statuses())
+        old_lib_settings = astuple(self._settings.library)
+        old_ins_settings = astuple(self._settings.installed)
+        if self._settings.reload_local_config_if_changed():
+            if old_lib_settings != astuple(self._settings.library):
+                logging.info(f'Library settings has changed: {self._settings.library}')
+                asyncio.create_task(self._check_owned())
+            if old_ins_settings != self._settings.installed:
+                logging.info(f'Installed settings has changed: {self._settings.installed}')
+                asyncio.create_task(self.get_local_games())
 
         if self._check_installed_task.done():
             self._check_installed_task = asyncio.create_task(self._check_installed())
 
+        if self._check_statuses_task.done():
+            self._check_statuses_task = asyncio.create_task(self._check_statuses())
 
     def shutdown(self):
         asyncio.create_task(self._api.close_session())
-        self._check_owned_task.cancel()
         self._check_installed_task.cancel()
         self._check_statuses_task.cancel()
 

@@ -2,7 +2,7 @@ import pathlib
 import logging
 import toml
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
 
 from version import __version__
@@ -22,11 +22,11 @@ class LibrarySettings:
             self.sources = tuple([SOURCE.match(s) for s in sources])
         if show_keys is not None:
             self.show_revealed_keys = show_keys
-    
+
     def reset(self):
         self.sources = (SOURCE.DRM_FREE, SOURCE.TROVE, SOURCE.KEYS)
         self.show_revealed_keys = False
-    
+
     @staticmethod
     def validate(library: dict):
         sources = library.get('sources')
@@ -40,9 +40,9 @@ class LibrarySettings:
             [SOURCE.match(s) for s in sources]
 
 
+@dataclass
 class InstalledSettings:
-    def __init__(self):
-        self.search_dirs: Set[pathlib.Path] = set()
+    search_dirs: Set[pathlib.Path] = field(default_factory=set)
 
     def update(self, installed: dict):
         dirs = installed.get('search_dirs', [])
@@ -147,9 +147,9 @@ class Settings:
                 return True
             return False
 
-    def reload_local_config_if_changed(self, first_run=False):
+    def reload_local_config_if_changed(self, first_run=False) -> bool:
         if not self.has_config_changed():
-            return
+            return False
 
         local_config = self._load_config_file(self.LOCAL_CONFIG_FILE)
         logging.debug(f'local config: {local_config}')
@@ -171,3 +171,4 @@ class Settings:
         self._update_objects()
         self._cache['config'] = toml.dumps(self._config)
         self._push_cache()
+        return True
