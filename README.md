@@ -8,14 +8,16 @@ Integration for GOG Galaxy 2.0.
 * Library: Humble Trove games
 * Library: Third pary game keys
 * Install: simple download via webbrowser
-* Launch: autodetection of installed games (only those visible in `Control Panel\Programs\Programs and Features`)
+* Launch: autodetection of installed games:
+    * scanning Windows registry if game suppports this (if can be uninstalled from `Control Panel\Programs\Programs and Features`)
+    * scanning file directory trees given in config file (experimental feature) 
 * Launch: running games tracking (only if launched via Galaxy)
 
 ## Installation
 
 Unpack `humblebundle_v{}.zip` asset from latest [release][1] to:
-- (WINDOWS) `%localappdata%\GOG.com\Galaxy\plugins\installed`
-- (MACOS) `~/Library/Application Support/GOG.com/Galaxy/plugins/installed`
+- Windows: `%localappdata%\GOG.com\Galaxy\plugins\installed`
+- MacOS: `~/Library/Application Support/GOG.com/Galaxy/plugins/installed`
 
 or build from source code (requires `python3.6` or higher):
 
