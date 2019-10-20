@@ -124,6 +124,8 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
     print('copying source code ...')
     for file_ in glob("src/*.py"):
         shutil.copy(file_, output)
+    for file_ in glob("src/local/*.py"):
+        shutil.copy(file_, Path(output) / 'local')
     for file_ in glob("src/*.ini"):
         shutil.copy(file_, output)
 
