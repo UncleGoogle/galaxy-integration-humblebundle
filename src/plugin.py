@@ -106,10 +106,10 @@ class HumbleBundlePlugin(Plugin):
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
 
-        user_id, user_name = await self._api.authenticate(auth_cookie)
+        user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
         self._settings.open_config_file()
-        return Authentication(user_id, user_name)
+        return Authentication(user_id, user_id)
 
     async def get_owned_games(self):
         if not self._api.is_authenticated:
