@@ -62,7 +62,7 @@ class HumbleBundlePlugin(Plugin):
         self._cached_game_states = {}
 
         self._getting_owned_games = asyncio.Lock()
-        self._check_installed_task = asyncio.create_task(asyncio.sleep(3))
+        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
         self._check_statuses_task = asyncio.create_task(asyncio.sleep(3))
 
         self._rescan_needed = True
@@ -121,6 +121,7 @@ class HumbleBundlePlugin(Plugin):
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def get_local_games(self):
+        self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def install_game(self, game_id):
@@ -195,7 +196,7 @@ class HumbleBundlePlugin(Plugin):
         # get_local_games - authenticate - get_local_games - get_owned_games (at the end!)
         # That is why plugin set its own live-cycle in perdiodic checks like this one.
         if not self._owned_games:
-            logging.debug('Periodic check for local games: no owned games!')
+            logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
             return
 
         owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
