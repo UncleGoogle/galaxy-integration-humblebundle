@@ -225,15 +225,16 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(0.5)
 
     def tick(self):
-        old_lib_settings = astuple(self._settings.library)
-        old_ins_settings = astuple(self._settings.installed)
-        if self._settings.reload_local_config_if_changed():
-            if old_lib_settings != astuple(self._settings.library):
-                logging.info(f'Library settings has changed: {self._settings.library}')
-                self.create_task(self._check_owned(), 'check_owned')
-            if old_ins_settings != self._settings.installed:
-                logging.info(f'Installed settings has changed: {self._settings.installed}')
-                self._rescan_needed = True
+        if self._settings is not None:  # in case tick called before handshake_complete
+            old_lib_settings = astuple(self._settings.library)
+            old_ins_settings = astuple(self._settings.installed)
+            if self._settings.reload_local_config_if_changed():
+                if old_lib_settings != astuple(self._settings.library):
+                    logging.info(f'Library settings has changed: {self._settings.library}')
+                    self.create_task(self._check_owned(), 'check_owned')
+                if old_ins_settings != self._settings.installed:
+                    logging.info(f'Installed settings has changed: {self._settings.installed}')
+                    self._rescan_needed = True
 
         if self._check_installed_task.done():
             self._check_installed_task = asyncio.create_task(self._check_installed())
