@@ -200,7 +200,7 @@ class HumbleBundlePlugin(Plugin):
             return
 
         owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
-        if self._rescan_needed:
+        if self._rescan_needed and self._settings is not None:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning')
             self._local_games = await self._app_finder.find_local_games(owned_title_id, self._settings.installed.search_dirs)
