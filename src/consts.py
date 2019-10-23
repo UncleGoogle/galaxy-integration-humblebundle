@@ -47,11 +47,12 @@ class HP(enum.Enum):
     def __hash__(self):
         return hash(self.value)
 
+
 GAME_PLATFORMS = set([HP.WINDOWS, HP.MAC, HP.LINUX])
-# DLC_PLATFORMS = set([HP.AUDIO, HP.EBOOK])  # TODO push those with base game
+DLC_PLATFORMS = set([HP.AUDIO, HP.EBOOK])  # TODO push those with base game when DLC is supported
 
 NON_GAME_BUNDLE_TYPES = {'mobilebundle', 'softwarebundle', 'bookbundle', 'audiobookbundle', 'comicsbundle', 'rpgbookbundle', 'mangabundle'}
-# FREE_GAME_TYPES = {'freegame', 'free'}
+FREE_GAME_TYPES = {'freegame', 'free'}
 
 if sys.platform == 'win32':
     CURRENT_SYSTEM = HP.WINDOWS
