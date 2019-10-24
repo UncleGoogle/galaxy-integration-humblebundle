@@ -7,14 +7,14 @@ import pathlib
 import json
 from dataclasses import astuple
 from functools import partial
-from typing import Any
+from typing import Any, Optional
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.consts import Platform
+from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
@@ -179,6 +179,14 @@ class HumbleBundlePlugin(Plugin):
             logging.error(e, extra={'local_games': self._local_games})
         else:
             game.uninstall()
+    
+    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
+        try:
+            game = self._local_games[game_id]
+        except KeyError as e:
+            logging.error(e, extra={'local_games': self._local_games})
+        else:
+            return game.os_compatibility
 
     async def _check_owned(self):
         async with self._getting_owned_games:

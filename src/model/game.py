@@ -2,8 +2,9 @@ import abc
 from typing import Dict, List, Optional
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
+from galaxy.api.consts import OSCompatibility
 
-from consts import Platform, KEY_TYPE
+from consts import Platform, KEY_TYPE, HP
 from model.download import TroveDownload, SubproductDownload
 
 
@@ -37,6 +38,17 @@ class HumbleGame(abc.ABC):
     @property
     def machine_name(self) -> str:
         return self._data['machine_name']
+    
+    @property
+    def os_compatibility(self) -> Optional[OSCompatibility]:
+        compatibility = None
+        if HP.WINDOWS in self.downloads:
+            compatibility = OSCompatibility.Windows
+        if HP.MAC in self.downloads:
+            compatibility |= OSCompatibility.MacOS
+        if HP.LINUX in self.downloads:
+            compatibility |= OSCompatibility.Linux
+        return compatibility
 
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
