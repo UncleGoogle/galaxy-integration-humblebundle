@@ -4,9 +4,7 @@ import pathlib
 from dataclasses import dataclass
 from typing import Optional, Set, Dict, Callable
 
-from consts import HP, CURRENT_SYSTEM
-if CURRENT_SYSTEM == HP.WINDOWS:
-    import winreg
+import winreg
 
 
 @dataclass(frozen=True)

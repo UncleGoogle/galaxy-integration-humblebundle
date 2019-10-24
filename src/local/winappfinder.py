@@ -1,41 +1,12 @@
 import logging
-import time
 import re
 import asyncio
 import pathlib
-from typing import Optional, Dict, Set
-from typing import Type  # noqa
+from typing import Optional, Dict
 
-from consts import HP, CURRENT_SYSTEM
-from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
-
-from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
-
-
-class BaseAppFinder:
-    def __init__(self):
-        self._pathfinder = PathFinder(CURRENT_SYSTEM)
-
-    async def find_local_games(self, owned_title_id: Dict[str, str], paths: Set[pathlib.Path]) -> Dict[str, LocalHumbleGame]:
-        """
-        :param owned_title_id: human_name: machine_name dictionary
-        """
-        start = time.time()
-        found_games = await self._pathfinder.scan_folders(paths, set(owned_title_id))
-        local_games = {
-            owned_title_id[title]: LocalHumbleGame(owned_title_id[title], exe)
-            for title, exe in found_games.items()
-        }
-        logging.debug(f'=== Scan folders took {time.time() - start}')
-        return local_games
-
-
-class MacAppFinder(BaseAppFinder):
-    async def find_local_games(self, owned_title_id, paths):
-        if paths:
-            return await super().find_local_games(owned_title_id, paths)
-        return []
+from local.baseappfinder import BaseAppFinder
+from local.reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
 class WindowsAppFinder(BaseAppFinder):
@@ -136,11 +107,3 @@ class WindowsAppFinder(BaseAppFinder):
             local_games.update(await super().find_local_games(not_found, paths))
 
         return local_games
-
-
-if CURRENT_SYSTEM == HP.WINDOWS:
-    AppFinder = WindowsAppFinder  # type: Type[BaseAppFinder]
-elif CURRENT_SYSTEM == HP.MAC:
-    AppFinder = MacAppFinder
-else:
-    raise RuntimeError(f'Unsupported system: {CURRENT_SYSTEM}')

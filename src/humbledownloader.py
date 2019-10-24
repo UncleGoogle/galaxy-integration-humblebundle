@@ -25,13 +25,13 @@ class HumbleDownloadResolver:
         try:
             return game.downloads[self.platform]
         except KeyError:
-            self.__platform_not_supporter_handler(game)
+            self.__platform_not_supported_handler(game)
 
     def _find_best_subproduct_download(self, game: Subproduct) -> SubproductDownload:
         try:
             system_downloads = game.downloads[self.platform]
         except KeyError:
-            self.__platform_not_supporter_handler(game)
+            self.__platform_not_supported_handler(game)
 
         download_items = list(filter(lambda x: x.name in self._allowed_names, system_downloads))
 
@@ -40,5 +40,5 @@ class HumbleDownloadResolver:
         else:
             raise NotImplementedError(f'Found downloads: {len(download_items)}. All: {system_downloads}')
 
-    def __platform_not_supporter_handler(self, game):
+    def __platform_not_supported_handler(self, game):
         raise PlatformNotSupported(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')

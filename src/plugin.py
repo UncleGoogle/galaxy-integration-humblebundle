@@ -24,7 +24,7 @@ from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
-from local.appfinder import AppFinder
+from local import AppFinder
 
 
 sentry_logging = LoggingIntegration(
@@ -248,5 +248,8 @@ class HumbleBundlePlugin(Plugin):
         self._check_statuses_task.cancel()
 
 
-if __name__ == "__main__":
+def main():
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)
+
+if __name__ == "__main__":
+    main()
