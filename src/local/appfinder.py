@@ -10,8 +10,7 @@ from consts import HP, CURRENT_SYSTEM
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
 
-if CURRENT_SYSTEM == HP.WINDOWS:
-    from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
+from local._reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
 class BaseAppFinder:
