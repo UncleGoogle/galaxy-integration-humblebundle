@@ -1,16 +1,13 @@
 import pytest
-import json
 
 from humbledownloader import HumbleDownloadResolver
 from model.game import Subproduct, TroveGame
 from consts import HP, PlatformNotSupported
 
 
-@pytest.mark.parametrize("platform", [HP.WINDOWS, HP.MAC])
-@pytest.mark.parametrize("bitness", [64, 32])
-def test_is_any_download_windows(orders, get_troves, platform, bitness):
-    if platform == HP.MAC and bitness == 32:
-        return  # no 32bit macs now
+@pytest.mark.parametrize("platform,bitness", [(HP.WINDOWS, 64), (HP.WINDOWS, 32), (HP.MAC, 64)])
+def test_any_download_found(orders, get_troves, platform, bitness):
+    """Test choosing proper download"""
     download_resolver = HumbleDownloadResolver(platform, bitness)
 
     for order in orders:
@@ -21,7 +18,7 @@ def test_is_any_download_windows(orders, get_troves, platform, bitness):
             except PlatformNotSupported:
                 pass  # it happens
             except NotImplementedError as e:
-                pytest.fail('Unresolved download: ' + e)
+                pytest.fail('Unresolved download: ' + str(e))
 
     for trove_data in get_troves(from_index=0):
         trove = TroveGame(trove_data)
@@ -29,3 +26,25 @@ def test_is_any_download_windows(orders, get_troves, platform, bitness):
             download_resolver(trove) 
         except PlatformNotSupported:
             pass  # it happens
+
+
+def test_windows_bitness_priority():
+    subproduct_data = {
+        'machine_name': 'test',
+        'human_name': 'TEST',
+        'downloads': [
+            {
+                'platform': 'windows',
+                'machine_name': 'test_dw',
+                'download_struct': [
+                    { 'name': '32-bit' },
+                    { 'name': '64-bit' }
+                ]
+            }
+        ]
+    }
+    sub = Subproduct(subproduct_data)
+    download = HumbleDownloadResolver(HP.WINDOWS, 64)(sub)
+    assert download.name == '64-bit'
+    download = HumbleDownloadResolver(HP.WINDOWS, 32)(sub)
+    assert download.name == '32-bit'
