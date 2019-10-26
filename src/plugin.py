@@ -183,9 +183,9 @@ class HumbleBundlePlugin(Plugin):
     
     async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
         try:
-            game = self._local_games[game_id]
+            game = self._owned_games[game_id]
         except KeyError as e:
-            logging.error(e, extra={'local_games': self._local_games})
+            logging.error(e, extra={'owned_games': self._owned_games})
         else:
             return game.os_compatibility
 
