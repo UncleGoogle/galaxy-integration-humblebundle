@@ -13,6 +13,9 @@ class DownloadStruct(abc.ABC):
     def __init__(self, data: dict):
         self._data = data
         self.url = data.get('url')
+    
+    def __str__(self):
+        return str(self._data)
 
     @property
     def name(self) -> Optional[str]:

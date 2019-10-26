@@ -24,7 +24,7 @@ from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
-from local.appfinder import AppFinder
+from local import AppFinder
 
 
 sentry_logging = LoggingIntegration(
@@ -62,7 +62,7 @@ class HumbleBundlePlugin(Plugin):
         self._cached_game_states = {}
 
         self._getting_owned_games = asyncio.Lock()
-        self._check_installed_task = asyncio.create_task(asyncio.sleep(3))
+        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
         self._check_statuses_task = asyncio.create_task(asyncio.sleep(3))
 
         self._rescan_needed = True
@@ -106,10 +106,10 @@ class HumbleBundlePlugin(Plugin):
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
 
-        user_id, user_name = await self._api.authenticate(auth_cookie)
+        user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
         self._settings.open_config_file()
-        return Authentication(user_id, user_name)
+        return Authentication(user_id, user_id)
 
     async def get_owned_games(self):
         if not self._api.is_authenticated:
@@ -121,6 +121,7 @@ class HumbleBundlePlugin(Plugin):
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def get_local_games(self):
+        self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def install_game(self, game_id):
@@ -195,11 +196,11 @@ class HumbleBundlePlugin(Plugin):
         # get_local_games - authenticate - get_local_games - get_owned_games (at the end!)
         # That is why plugin set its own live-cycle in perdiodic checks like this one.
         if not self._owned_games:
-            logging.debug('Periodic check for local games: no owned games!')
+            logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
             return
 
         owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
-        if self._rescan_needed:
+        if self._rescan_needed and self._settings is not None:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning')
             self._local_games = await self._app_finder.find_local_games(owned_title_id, self._settings.installed.search_dirs)
@@ -224,15 +225,16 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(0.5)
 
     def tick(self):
-        old_lib_settings = astuple(self._settings.library)
-        old_ins_settings = astuple(self._settings.installed)
-        if self._settings.reload_local_config_if_changed():
-            if old_lib_settings != astuple(self._settings.library):
-                logging.info(f'Library settings has changed: {self._settings.library}')
-                asyncio.create_task(self._check_owned())
-            if old_ins_settings != self._settings.installed:
-                logging.info(f'Installed settings has changed: {self._settings.installed}')
-                self._rescan_needed = True
+        if self._settings is not None:  # in case tick called before handshake_complete
+            old_lib_settings = astuple(self._settings.library)
+            old_ins_settings = astuple(self._settings.installed)
+            if self._settings.reload_local_config_if_changed():
+                if old_lib_settings != astuple(self._settings.library):
+                    logging.info(f'Library settings has changed: {self._settings.library}')
+                    self.create_task(self._check_owned(), 'check_owned')
+                if old_ins_settings != self._settings.installed:
+                    logging.info(f'Installed settings has changed: {self._settings.installed}')
+                    self._rescan_needed = True
 
         if self._check_installed_task.done():
             self._check_installed_task = asyncio.create_task(self._check_installed())
@@ -251,4 +253,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

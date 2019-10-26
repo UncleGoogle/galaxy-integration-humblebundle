@@ -6,7 +6,6 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
 
-from version import __version__
 from consts import SOURCE, HP, CURRENT_SYSTEM
 
 
@@ -73,7 +72,7 @@ class Settings:
     LOCAL_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'
 
     def __init__(self, cache: Dict[str, str], save_cache_callback: Callable):
-        self._curr_ver = __version__
+        self._curr_ver = '1'
         self._prev_ver = cache.get('version')
         self._cache = cache
         self._push_cache = save_cache_callback
@@ -122,8 +121,7 @@ class Settings:
             return {}
 
     def _update_user_config(self):
-        """Simple migrations"""
-        logging.info(f'Recreating user config file with new entries')
+        logging.info(f'Recreating user config from cache')
         data = toml.dumps(self._config)
         with open(self.LOCAL_CONFIG_FILE, 'r') as f:
             comment = ''
@@ -160,16 +158,11 @@ class Settings:
         logging.debug(f'local config: {local_config}')
 
         if first_run:
-            if self._prev_ver is None or self._curr_ver <= self._prev_ver:
-                self._config = {**self._cached_config, **local_config}
-            else:  # prioritize cached config in case of plugin update
-                self._config = {**local_config, **self._cached_config}
-                logging.debug(f'updated config: {self._config}')
-                if self._config.keys() - local_config.keys():
-                    logging.debug(f'Config shape differs!')
-                    self._update_user_config()
-            if self._prev_ver != self._curr_ver:
-                self._cache['version'] = self._curr_ver
+            # config migrations here
+            self._config = {**local_config, **self._cached_config}
+            if local_config != self._cached_config:
+                self._update_user_config()
+            self._cache['version'] = self._curr_ver
         else:
             self._config.update(local_config)
 

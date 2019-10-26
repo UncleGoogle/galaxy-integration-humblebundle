@@ -55,10 +55,11 @@ class PathFinder:
             root, dirs, _ = next(os.walk(path))
             for dir_name in dirs:
                 await asyncio.sleep(0)
-                matches_ = difflib.get_close_matches(dir_name.lower(), list(candidates), cutoff=similarity)
+                matches_ = difflib.get_close_matches(dir_name, list(candidates), cutoff=similarity)
+                logging.debug(f'{dir_name}, cands: {list(candidates)}, matches: {matches_}')
                 matches = cast(List[str], matches_)  # as str is Sequence[str]r - mypy/issues/5090
                 if matches:
-                    logging.info(f'found close ({similarity}) matches for {dir_name}: [{matches}]')
+                    logging.info(f'found close ({similarity}) matches for {dir_name}: {matches}')
                 for app_name in matches:
                     dir_path = PurePath(root) / dir_name
                     executables = self.find_executables(dir_path)
