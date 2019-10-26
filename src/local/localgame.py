@@ -41,7 +41,7 @@ class LocalHumbleGame:
         return LocalGame(self.machine_name, self.state)
 
     def run(self):
-        flags = subprocess.DETACHED_PROCESS
+        flags = 0b0001000  # DETACHED_PROCESS on Windows
         proc = subprocess.Popen(str(self.executable), cwd=self.executable.parent, creationflags=flags)
         self.process = psutil.Process(proc.pid)
 
