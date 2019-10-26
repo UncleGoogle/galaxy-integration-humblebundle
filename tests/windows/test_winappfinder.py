@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import patch
 
 try:
-    from local.appfinder import WindowsAppFinder
-    from local._reg_watcher import UninstallKey
+    from local.winappfinder import WindowsAppFinder
+    from local.reg_watcher import UninstallKey
 except ModuleNotFoundError:
     pass  # workaround problems in vscode test discovery
 
