@@ -9,12 +9,13 @@ from distutils.dir_util import copy_tree
 from glob import glob
 
 from invoke import task
+import github
 
 from src.version import __version__
 
 
-REQUIREMENTS = os.path.join('requirements', 'app.txt')
-REQUIREMENTS_DEV = os.path.join('requirements', 'dev.txt')
+REQUIREMENTS = os.path.join('requirements.txt')
+REQUIREMENTS_DEV = os.path.join('requirements-dev')
 
 GALAXY_PATH = ''
 DIST_DIR = ''
@@ -67,17 +68,9 @@ def build(c, output=DIST_PLUGIN):
     copy_tree("galaxy-integrations-python-api/src", str(output))
 
     print('creating manifest ...')
-    manifest = {
-        "name": "Humble Bundle plugin",
-        "platform": "humble",
-        "guid": "f0ca3d80-a432-4d35-a9e3-60f27161ac3a",
-        "version": __version__,
-        "description": "GOG Galaxy 2.0 integration",
-        "author": "Mesco",
-        "email": "mieszkoziemowit@gmail.com",
-        "url": "https://github.com/UncleGoogle/galaxy-integration-humblebundle/",
-        "script": "plugin.py"
-    }
+    with open("src/manifest.json", "r") as file_:
+        manifest = json.load(file_)
+    manifest['version'] = __version__
     with open(output / "manifest.json", "w") as file_:
         json.dump(manifest, file_, indent=4)
 
@@ -93,7 +86,7 @@ def dist(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH, no_deps=False):
             break
     else:
         print('Galaxy instance not found.')
-    
+
     if no_deps:
         c.run(f'inv copy -o {output}')
     else:
@@ -155,22 +148,64 @@ def test(c, target=None):
 
 
 @task
-def release(c, zip_name=None):
+def archive(c, zip_name=None, target=None):
     if zip_name is None:
         zip_name = f'humblebundle_{__version__}'
     wd = Path(__file__).parent
-    tmp_build_dir = wd / zip_name
 
     arch = wd / (zip_name + '.zip')
     if arch.exists():
         if input(f'{str(arch)} already exists. Proceed? y/n') !='y':
             return
 
-    c.run(f"inv build -o {str(tmp_build_dir)}")
-    shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=zip_name)
-    shutil.rmtree(tmp_build_dir)
+    if target:
+        assert Path(target).exists()
+        shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=target)
+    else:
+        target = wd / zip_name
+        c.run(f"inv build -o {str(target)}")
+        shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=target)
+        shutil.rmtree(target)
 
-    # tag = 'v' + __version__
-    # print('creating and pushing to origin tag: ', tag)
-    # c.run(f'git tag {tag}')
-    # c.run(f'git push origin {tag}')
+
+@task
+def release(c, full=None):
+    print('New release version will be: ', __version__, '. is it OK?')
+    if input('y/n').lower() != 'y':
+        return
+
+    print('updating src/manifest.json...')
+    with open("src/manifest.json", "r+") as file_:
+        manifest = json.load(file_)
+        manifest['version'] = __version__
+        file_.seek(0)
+        json.dump(manifest, file_, indent=4)
+
+    c.run(f"git add src/manifest.json")
+    c.run(f'git commit -m "bump version"', warn=True)
+    print('passed')
+
+    if full:
+        print('running tests')
+        build(c, output='build')
+        test(c, target='build')
+        archive(c, target='build')
+
+        print('pushing "bump version" commit')
+        c.run(f'git push')
+
+        print('creating and pushing to origin tag: ', tag)
+        tag = 'v' + __version__
+        c.run(f'git tag {tag}')
+        c.run(f'git push origin {tag}')
+
+        g = github.Github('UncleGoogle', input('personal token: '))
+        repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
+
+        print('creating github draft release')
+        repo.create_git_release(
+            tag=tag,
+            name=__version__,
+            message="draft",
+            draft=True
+        )

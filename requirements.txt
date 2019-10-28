@@ -1,0 +1,5 @@
+galaxy.plugin.api==0.55
+sentry-sdk~=0.12.2
+psutil~=5.6.3
+toml~=0.10.0
+toga==0.3.0.dev14
