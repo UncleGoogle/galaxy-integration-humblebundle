@@ -39,6 +39,13 @@ class HP(enum.Enum):
     EBOOK = 'ebook'
     ASMJS = 'asmjs'
 
+    @classmethod
+    def match(cls, val):
+        for it in cls:
+            if it.value == val:
+                return it
+        raise TypeError(f'No such enum value: {val}. Available: {[it.value for it in cls]}')
+
     def __eq__(self, other):
         if type(other) == str:
             return self.value == other
@@ -65,6 +72,3 @@ if platform.machine().endswith('64'):
     CURRENT_BITNESS = 64
 else:
     CURRENT_BITNESS = 32
-
-# typing aliases
-Platform = typing.Union[HP, str]
