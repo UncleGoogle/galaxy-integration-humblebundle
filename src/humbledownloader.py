@@ -9,9 +9,10 @@ class HumbleDownloadResolver:
         self.platform = target_platform
         self.bitness = target_bitness
 
-        self._allowed_names = ['Download', '32-bit']
         if target_bitness == 64:
-            self._allowed_names.append('64-bit')
+            self._expected_names = ['Download', '64-bit', '32-bit']
+        else:
+            self._expected_names = ['Download', '32-bit']
 
     def __call__(self, game: HumbleGame) -> DownloadStruct:
         if isinstance(game, TroveGame):
@@ -33,12 +34,15 @@ class HumbleDownloadResolver:
         except KeyError:
             self.__platform_not_supported_handler(game)
 
-        download_items = list(filter(lambda x: x.name in self._allowed_names, system_downloads))
+        if len(system_downloads) == 1:
+            return system_downloads[0]
 
-        if len(download_items) == 1:
-            return download_items[0]
-        else:
-            raise NotImplementedError(f'Found downloads: {len(download_items)}. All: {system_downloads}')
+        # choose download prioritizing lower indexes of self._expected_names
+        for name in self._expected_names:
+            for dw in system_downloads:
+                if name == dw.name:
+                    return dw
+        raise NotImplementedError(f'Cannot decide which download to choose: {system_downloads}')
 
     def __platform_not_supported_handler(self, game):
         raise PlatformNotSupported(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')
