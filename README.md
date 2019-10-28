@@ -4,18 +4,19 @@ Integration for GOG Galaxy 2.0.
 
 ## Features
 
-* Library: DRM free games from HumbleBundle (those with downloads for Windows, MacOS or Linux)
-* Library: Humble Trove games
-* Library: Third pary game keys
+* Library:
+    * DRM free direct downloads from HumbleBundle
+    * Third party game keys
+    * Humble Trove games
 * Install: simple download via webbrowser
-* Launch: autodetection of installed games:
-    * scanning Windows registry if game suppports this (if can be uninstalled from `Control Panel\Programs\Programs and Features`)
-    * scanning file directory trees given in config file (experimental feature)
+* Installed games detection:
+    * scanning Windows registry (only for games that can be uninstalled via `Control Panel\Programs\Programs and Features`)
+    * scanning file directory trees given in config file (experimental - 1 level deep tree search for directories names similar to game names from library)
 * Launch: running games tracking (only if launched via Galaxy)
 
 ## Installation
 
-Unpack `humblebundle_v{}.zip` asset from latest [release][1] to:
+Download asset `humblebundle_v{}.zip` from [releases][1] and upack to:
 - Windows: `%localappdata%\GOG.com\Galaxy\plugins\installed`
 - MacOS: `~/Library/Application Support/GOG.com/Galaxy/plugins/installed`
 
@@ -28,13 +29,13 @@ or build from source code (requires `python3.6` or higher):
 
 ## Configuration
 
-Refer to [config.ini](src/config.ini)
+Edit your local [config.ini](src/config.ini)
 
-## Known Issues
+#### Defaults:
+- Library: List DRM-free games and unrevealed third party keys
+- Installed games: use only Windows registry scan; edit `search_paths` to enable directory scaning feature
 
-- no launch support for macOS
-
-## See also
+## Acknowledgements
 - https://github.com/gogcom/galaxy-integrations-python-api
 - https://github.com/MayeulC/hb-downloader
 
