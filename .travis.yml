@@ -10,8 +10,7 @@ matrix:
         - touch setup.cfg  # workaround for homebrew issue with pip
         - echo [install] > setup.cfg
         - echo prefix= >> setup.cfg
-        - python3 -m pip install invoke --user
-        - python3 -m invoke install --dev
+        - python3 -m pip install -r requirements-dev.txt --user
         - python3 -m invoke build -o build
       script:
         - python3 -m invoke test -t build
@@ -24,8 +23,7 @@ matrix:
         - python -m pip install --upgrade pip
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
       install:
-        - python -m pip install invoke
-        - inv install --dev
+        - python -m pip install -r requirements-dev.txt
         - inv build -o build
       script:
         - inv test -t build

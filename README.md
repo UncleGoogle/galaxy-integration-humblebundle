@@ -10,7 +10,7 @@ Integration for GOG Galaxy 2.0.
 * Install: simple download via webbrowser
 * Launch: autodetection of installed games:
     * scanning Windows registry if game suppports this (if can be uninstalled from `Control Panel\Programs\Programs and Features`)
-    * scanning file directory trees given in config file (experimental feature) 
+    * scanning file directory trees given in config file (experimental feature)
 * Launch: running games tracking (only if launched via Galaxy)
 
 ## Installation
@@ -23,7 +23,7 @@ or build from source code (requires `python3.6` or higher):
 
 1. `git clone --recursive https://github.com/UncleGoogle/galaxy-integration-humblebundle.git`
 2. `cd galaxy-integration-humblebundle`
-3. `pip install -r requirements/dev.txt`
+3. `pip install -r requirements-dev.txt`
 4. `inv dist`
 
 ## Configuration
