@@ -34,18 +34,6 @@ elif sys.platform == 'darwin':
 DIST_PLUGIN = os.path.join(DIST_DIR, 'humblebundle')
 THIRD_PARTY_RELATIVE_DEST = 'modules'
 
-MANIFEST = {
-    "name": "Humble Bundle plugin",
-    "platform": "humble",
-    "guid": "f0ca3d80-a432-4d35-a9e3-60f27161ac3a",
-    "version": __version__,
-    "description": "GOG Galaxy 2.0 integration",
-    "author": "Mesco",
-    "email": "mieszkoziemowit@gmail.com",
-    "url": "https://github.com/UncleGoogle/galaxy-integration-humblebundle/",
-    "script": "plugin.py"
-}
-
 
 @task
 def install(c, dev=False):
@@ -80,8 +68,11 @@ def build(c, output=DIST_PLUGIN):
     copy_tree("galaxy-integrations-python-api/src", str(output))
 
     print('creating manifest ...')
+    with open("src/manifest.json", "r") as file_:
+        manifest = json.load(file_)
+    manifest['version'] = __version__
     with open(output / "manifest.json", "w") as file_:
-        json.dump(MANIFEST, file_, indent=4)
+        json.dump(manifest, file_, indent=4)
 
 
 @task
@@ -184,10 +175,14 @@ def release(c, full=None):
         return
 
     print('updating src/manifest.json...')
-    with open("src/manifest.json", "w") as file_:
-        json.dump(MANIFEST, file_, indent=4)
+    with open("src/manifest.json", "r+") as file_:
+        manifest = json.load(file_)
+        manifest['version'] = __version__
+        file_.seek(0)
+        json.dump(manifest, file_, indent=4)
+
     c.run(f"git add src/manifest.json")
-    c.run(f'git commit -m "Bump version"', warn=True)
+    c.run(f'git commit -m "bump version"', warn=True)
     print('passed')
 
     if full:
