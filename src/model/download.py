@@ -15,7 +15,10 @@ class DownloadStruct(abc.ABC):
         self.url = data.get('url')
     
     def __str__(self):
-        return str(self._data)
+        return f"<{self.__class__.__name__}> '{self.name}'"
+
+    def __repr__(self):
+        return f"{self}: {self._data}"
 
     @property
     def name(self) -> Optional[str]:
