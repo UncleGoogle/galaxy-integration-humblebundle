@@ -80,7 +80,7 @@ class TroveGame(HumbleGame):
         result = {}
         for k, v in self._data['downloads'].items():
             try:
-                os_ = HP.match(k)
+                os_ = HP(k)
             except TypeError as e:  # log error and go forward
                 logging.error(e, extra={'game': self})
             else:
@@ -103,7 +103,7 @@ class Subproduct(HumbleGame):
         result = {}
         for dw in self._data['downloads']:
             try:
-                os_ = HP.match(dw['platform'])
+                os_ = HP(dw['platform'])
             except TypeError as e:  # log error and go forward
                 logging.error(e, extra={'game': self})
             else:

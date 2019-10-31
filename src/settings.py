@@ -19,7 +19,7 @@ class LibrarySettings:
         show_keys = library.get('show_revealed_keys')
 
         if sources is not None:
-            self.sources = tuple([SOURCE.match(s) for s in sources])
+            self.sources = tuple([SOURCE(s) for s in sources])
         if show_keys is not None:
             self.show_revealed_keys = show_keys
 
@@ -37,7 +37,7 @@ class LibrarySettings:
         if sources and type(sources) != list:
             raise TypeError('Sources shoud be a list')
         if sources is not None:  # validate values
-            [SOURCE.match(s) for s in sources]
+            [SOURCE(s) for s in sources]
 
 
 @dataclass

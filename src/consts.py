@@ -21,13 +21,6 @@ class SOURCE(enum.Enum):
     TROVE = 'trove'
     KEYS = 'keys'
 
-    @classmethod
-    def match(cls, val):
-        for it in cls:
-            if it.value == val:
-                return it
-        raise TypeError(f'No such enum value: {val}. Available: {[it.value for it in cls]}')
-
 
 class HP(enum.Enum):
     """HumbleBundle platform code name shown in subproducts>download section"""
@@ -38,13 +31,6 @@ class HP(enum.Enum):
     AUDIO = 'audio'
     EBOOK = 'ebook'
     ASMJS = 'asmjs'
-
-    @classmethod
-    def match(cls, val):
-        for it in cls:
-            if it.value == val:
-                return it
-        raise TypeError(f'No such enum value: {val}. Available: {[it.value for it in cls]}')
 
     def __eq__(self, other):
         if type(other) == str:
