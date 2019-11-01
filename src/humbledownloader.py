@@ -22,7 +22,7 @@ class HumbleDownloadResolver:
         else:
             raise AssertionError('Unsupported game type')
 
-    def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:
+    def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:  # type: ignore[return]
         try:
             return game.downloads[self.platform]
         except KeyError:

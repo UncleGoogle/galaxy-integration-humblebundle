@@ -61,12 +61,12 @@ async def test_get_os_compatibility(plugin_mock, overgrowth):
     game = Subproduct(subproduct)
 
     no_downloads_id = 'nodw'
-    nodw_game = Subproduct({
+    no_dw_game = Subproduct({
         'human_name': 'mock',
         'machine_name': no_downloads_id,
         'downloads': []
     })
-    plugin_mock._owned_games= { ovg_id: game, no_downloads_id: nodw_game}
+    plugin_mock._owned_games= { ovg_id: game, no_downloads_id: no_dw_game}
 
     ctx = await plugin_mock.prepare_os_compatibility_context([ovg_id, no_downloads_id])
     await plugin_mock.get_os_compatibility(no_downloads_id, ctx) == None
