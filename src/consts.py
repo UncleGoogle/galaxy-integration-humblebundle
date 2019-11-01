@@ -21,12 +21,10 @@ class SOURCE(enum.Enum):
     TROVE = 'trove'
     KEYS = 'keys'
 
-    @classmethod
-    def match(cls, val):
-        for it in cls:
-            if it.value == val:
-                return it
-        raise TypeError(f'No such enum value: {val}. Available: {[it.value for it in cls]}')
+
+class BITNESS(enum.Enum):
+    B64 = 64
+    B32 = 32
 
 
 class HP(enum.Enum):
@@ -62,9 +60,6 @@ else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
 
 if platform.machine().endswith('64'):
-    CURRENT_BITNESS = 64
+    CURRENT_BITNESS = BITNESS.B64
 else:
-    CURRENT_BITNESS = 32
-
-# typing aliases
-Platform = typing.Union[HP, str]
+    CURRENT_BITNESS = BITNESS.B32

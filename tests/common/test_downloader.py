@@ -2,10 +2,10 @@ import pytest
 
 from humbledownloader import HumbleDownloadResolver
 from model.game import Subproduct, TroveGame
-from consts import HP, PlatformNotSupported
+from consts import HP, BITNESS, PlatformNotSupported
 
 
-@pytest.mark.parametrize("platform,bitness", [(HP.WINDOWS, 64), (HP.WINDOWS, 32), (HP.MAC, 64)])
+@pytest.mark.parametrize("platform,bitness", [(HP.WINDOWS, BITNESS.B64), (HP.WINDOWS, BITNESS.B32), (HP.MAC, BITNESS.B64)])
 def test_any_download_found(orders, get_troves, platform, bitness):
     """Test choosing proper download"""
     download_resolver = HumbleDownloadResolver(platform, bitness)
@@ -13,10 +13,11 @@ def test_any_download_found(orders, get_troves, platform, bitness):
     for order in orders:
         for sub_data in order['subproducts']:
             sub = Subproduct(sub_data)
+            if platform not in sub.downloads:
+                # get_os_compatibility ensures this won't happend
+                continue
             try:
                 download_resolver(sub) 
-            except PlatformNotSupported:
-                pass  # it happens
             except NotImplementedError as e:
                 pytest.fail('Unresolved download: ' + str(e))
 
@@ -44,7 +45,7 @@ def test_windows_bitness_priority():
         ]
     }
     sub = Subproduct(subproduct_data)
-    download = HumbleDownloadResolver(HP.WINDOWS, 64)(sub)
+    download = HumbleDownloadResolver(HP.WINDOWS, BITNESS.B64)(sub)
     assert download.name == '64-bit'
-    download = HumbleDownloadResolver(HP.WINDOWS, 32)(sub)
+    download = HumbleDownloadResolver(HP.WINDOWS, BITNESS.B32)(sub)
     assert download.name == '32-bit'

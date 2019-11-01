@@ -7,17 +7,18 @@ import pathlib
 import json
 from dataclasses import astuple
 from functools import partial
-from typing import Any
+from typing import Any, Optional
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.consts import Platform
+from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
+from consts import HP
 from version import __version__
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
@@ -36,16 +37,6 @@ sentry_sdk.init(
     integrations=[sentry_logging],
     release=f"hb-galaxy@{__version__}"
 )
-
-
-AUTH_PARAMS = {
-    "window_title": "Login to HumbleBundle",
-    "window_width": 560,
-    "window_height": 610,
-    "start_uri": "https://www.humblebundle.com/login?goto=/home/library",
-    # or https://www.humblebundle.com/account-start?goto=home"
-    "end_uri_regex": "^" + re.escape("https://www.humblebundle.com/home/library")
-}
 
 
 class HumbleBundlePlugin(Plugin):
@@ -94,9 +85,16 @@ class HumbleBundlePlugin(Plugin):
 
     async def authenticate(self, stored_credentials=None):
         if not stored_credentials:
-            return NextStep("web_session", AUTH_PARAMS)
-        logging.info('Stored credentials found')
+            return NextStep("web_session", {
+                    "window_title": "Login to HumbleBundle",
+                    "window_width": 560,
+                    "window_height": 610,
+                    "start_uri": "https://www.humblebundle.com/login?goto=/home/library",
+                    # or https://www.humblebundle.com/account-start?goto=home"
+                    "end_uri_regex": "^" + re.escape("https://www.humblebundle.com/home/library")
+                })
 
+        logging.info('Stored credentials found')
         user_id = await self._api.authenticate(stored_credentials)
         if user_id is None:
             logging.debug('invalid creds')
@@ -139,12 +137,10 @@ class HumbleBundlePlugin(Plugin):
                 args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
                     game.human_name, game.key_type_human_name, str(game.key_val)
                 ]
-                process = await asyncio.create_subprocess_exec(sys.executable, *args,
-                    stderr=asyncio.subprocess.PIPE)
+                process = await asyncio.create_subprocess_exec(sys.executable, *args, stderr=asyncio.subprocess.PIPE)
                 _, stderr_data = await process.communicate()
                 if stderr_data:
-                    logging.debug(args)
-                    logging.debug(stderr_data)
+                    logging.error(f'Error for keygui: stderr_data', extra=args)
                 return
 
             chosen_download = self._download_resolver(game)
@@ -180,6 +176,23 @@ class HumbleBundlePlugin(Plugin):
             logging.error(e, extra={'local_games': self._local_games})
         else:
             game.uninstall()
+    
+    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
+        try:
+            game = self._owned_games[game_id]
+        except KeyError as e:
+            logging.error(e, extra={'owned_games': self._owned_games})
+            return None
+        else:
+            HP_OS_MAP = {
+                HP.WINDOWS: OSCompatibility.Windows,
+                HP.MAC: OSCompatibility.MacOS,
+                HP.LINUX: OSCompatibility.Linux
+            }
+            osc = OSCompatibility(0)
+            for platform in game.downloads:
+                osc |= HP_OS_MAP.get(platform, OSCompatibility(0))
+            return osc if osc else None
 
     async def _check_owned(self):
         async with self._getting_owned_games:
@@ -194,7 +207,7 @@ class HumbleBundlePlugin(Plugin):
         # Owned games are needed to local games search.
         # The way Galaxy calls plugin methods on startup is unsupportive in such situation:
         # get_local_games - authenticate - get_local_games - get_owned_games (at the end!)
-        # That is why plugin set its own live-cycle in perdiodic checks like this one.
+        # That is why plugin sets all logic of getting local games this perdiodic check.
         if not self._owned_games:
             logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
             return

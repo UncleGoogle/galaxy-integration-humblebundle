@@ -1,15 +1,15 @@
 from model.game import HumbleGame, TroveGame, Subproduct
 from model.download import DownloadStruct, SubproductDownload, TroveDownload
-from consts import CURRENT_SYSTEM, PlatformNotSupported, CURRENT_BITNESS
+from consts import CURRENT_SYSTEM, PlatformNotSupported, CURRENT_BITNESS, HP, BITNESS
 
 
 class HumbleDownloadResolver:
     """Prepares downloads for specific conditionals"""
-    def __init__(self, target_platform=CURRENT_SYSTEM, target_bitness=CURRENT_BITNESS):
+    def __init__(self, target_platform: HP=CURRENT_SYSTEM, target_bitness: BITNESS=CURRENT_BITNESS):
         self.platform = target_platform
         self.bitness = target_bitness
 
-        if target_bitness == 64:
+        if target_bitness == BITNESS.B64:
             self._expected_names = ['Download', '64-bit', '32-bit']
         else:
             self._expected_names = ['Download', '32-bit']
@@ -22,7 +22,7 @@ class HumbleDownloadResolver:
         else:
             raise AssertionError('Unsupported game type')
 
-    def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:  # type: ignore
+    def _find_best_trove_download(self, game: TroveGame) -> TroveDownload:  # type: ignore[return]
         try:
             return game.downloads[self.platform]
         except KeyError:

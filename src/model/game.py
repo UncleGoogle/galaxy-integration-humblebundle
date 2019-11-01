@@ -1,9 +1,11 @@
 import abc
-from typing import Dict, List, Optional
+import logging
+from typing import Dict, List, Optional, Any
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
+from galaxy.api.consts import OSCompatibility
 
-from consts import Platform, KEY_TYPE
+from consts import KEY_TYPE, HP
 from model.download import TroveDownload, SubproductDownload
 
 
@@ -22,8 +24,8 @@ class HumbleGame(abc.ABC):
         except KeyError as e:
             raise InvalidHumbleGame(repr(e))
 
-    @abc.abstractmethod
-    def downloads(self):
+    @abc.abstractproperty
+    def downloads(self) -> Dict[HP, Any]:
         pass
 
     @abc.abstractproperty
@@ -56,11 +58,16 @@ class HumbleGame(abc.ABC):
 
 class TroveGame(HumbleGame):
     @property
-    def downloads(self) -> Dict[Platform, TroveDownload]:
-        return {
-            k: TroveDownload(v)
-            for k, v in self._data['downloads'].items()
-        }
+    def downloads(self) -> Dict[HP, TroveDownload]:
+        result = {}
+        for k, v in self._data['downloads'].items():
+            try:
+                os_ = HP(k)
+            except TypeError as e:  # log error and go forward
+                logging.error(e, extra={'game': self})
+            else:
+                result[os_] = TroveDownload(v)
+        return result
 
     @property
     def license(self) -> LicenseInfo:
@@ -74,14 +81,19 @@ class TroveGame(HumbleGame):
 
 class Subproduct(HumbleGame):
     @property
-    def downloads(self) -> Dict[Platform, List[SubproductDownload]]:
-        return {
-            dw['platform']: [
-                SubproductDownload(x)
-                for x in dw['download_struct']
-            ]
-            for dw in self._data['downloads']
-        }
+    def downloads(self) -> Dict[HP, List[SubproductDownload]]:
+        result = {}
+        for dw in self._data['downloads']:
+            try:
+                os_ = HP(dw['platform'])
+            except TypeError as e:  # log error and go forward
+                logging.error(e, extra={'game': self})
+            else:
+                result[os_] = [
+                    SubproductDownload(x)
+                    for x in dw['download_struct']
+                ]
+        return result
 
     @property
     def license(self) -> LicenseInfo:

@@ -3,6 +3,8 @@ import pytest
 from unittest.mock import patch
 import pathlib
 
+from galaxy.api.consts import OSCompatibility as OSC
+
 from consts import HP
 from local.localgame import LocalHumbleGame
 from model.game import Subproduct
@@ -36,7 +38,6 @@ async def test_uninstall_game(plugin_mock, overgrowth):
 async def test_install_game(plugin_mock, overgrowth):
     id_ = overgrowth['product']['machine_name']
     subproduct = overgrowth['subproducts'][0]
-
     game = Subproduct(subproduct)
     plugin_mock._owned_games= { id_: game }
     # Note windows have also download_struct named "Patch". Not supported currently, only one download
@@ -51,3 +52,22 @@ async def test_install_game(plugin_mock, overgrowth):
         with patch('webbrowser.open') as browser_open:
             await plugin_mock.install_game(id_)
             browser_open.assert_called_once_with(download_urls[os_.value])
+
+
+@pytest.mark.asyncio
+async def test_get_os_compatibility(plugin_mock, overgrowth):
+    ovg_id = overgrowth['product']['machine_name']
+    subproduct = overgrowth['subproducts'][0]
+    game = Subproduct(subproduct)
+
+    no_downloads_id = 'nodw'
+    no_dw_game = Subproduct({
+        'human_name': 'mock',
+        'machine_name': no_downloads_id,
+        'downloads': []
+    })
+    plugin_mock._owned_games= { ovg_id: game, no_downloads_id: no_dw_game}
+
+    ctx = await plugin_mock.prepare_os_compatibility_context([ovg_id, no_downloads_id])
+    await plugin_mock.get_os_compatibility(no_downloads_id, ctx) == None
+    await plugin_mock.get_os_compatibility(ovg_id, ctx) == OSC.Windows | OSC.MacOS | OSC.Linux
