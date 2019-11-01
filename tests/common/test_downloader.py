@@ -14,7 +14,7 @@ def test_any_download_found(orders, get_troves, platform, bitness):
         for sub_data in order['subproducts']:
             sub = Subproduct(sub_data)
             if platform not in sub.downloads:
-                # get_os_compatibility ensure this won't happend
+                # get_os_compatibility ensures this won't happend
                 continue
             try:
                 download_resolver(sub) 

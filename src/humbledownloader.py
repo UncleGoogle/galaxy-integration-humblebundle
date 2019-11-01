@@ -9,7 +9,7 @@ class HumbleDownloadResolver:
         self.platform = target_platform
         self.bitness = target_bitness
 
-        if target_bitness == 64:
+        if target_bitness == BITNESS.B64:
             self._expected_names = ['Download', '64-bit', '32-bit']
         else:
             self._expected_names = ['Download', '32-bit']
