@@ -22,6 +22,11 @@ class SOURCE(enum.Enum):
     KEYS = 'keys'
 
 
+class BITNESS(enum.Enum):
+    B64 = 64
+    B32 = 32
+
+
 class HP(enum.Enum):
     """HumbleBundle platform code name shown in subproducts>download section"""
     WINDOWS = 'windows'
@@ -55,6 +60,6 @@ else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
 
 if platform.machine().endswith('64'):
-    CURRENT_BITNESS = 64
+    CURRENT_BITNESS = BITNESS.B64
 else:
-    CURRENT_BITNESS = 32
+    CURRENT_BITNESS = BITNESS.B32
