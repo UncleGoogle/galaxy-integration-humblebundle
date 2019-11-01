@@ -9,14 +9,6 @@ from consts import KEY_TYPE, HP
 from model.download import TroveDownload, SubproductDownload
 
 
-HP_OS_MAP = {
-    HP.WINDOWS: OSCompatibility.Windows,
-    HP.MAC: OSCompatibility.MacOS,
-    HP.LINUX: OSCompatibility.Linux
-}
-NO_OS = OSCompatibility.Windows ^ OSCompatibility.Windows
-
-
 class InvalidHumbleGame(Exception):
     pass
 
@@ -47,16 +39,6 @@ class HumbleGame(abc.ABC):
     @property
     def machine_name(self) -> str:
         return self._data['machine_name']
-    
-    @property
-    def os_compatibility(self) -> Optional[OSCompatibility]:
-        compatibility = NO_OS
-        for os_ in self.downloads.keys():
-            compatibility |= HP_OS_MAP.get(os_, NO_OS)
-
-        if compatibility == NO_OS:
-            return None
-        return compatibility
 
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
