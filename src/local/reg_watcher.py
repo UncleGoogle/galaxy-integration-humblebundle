@@ -1,4 +1,5 @@
-import re
+import re 
+import logging
 import platform
 import pathlib
 from dataclasses import dataclass
@@ -57,8 +58,8 @@ class WinRegUninstallWatcher:
             self._ARCH_KEYS = [0]
 
         self.__uninstall_keys: Set[UninstallKey] = set()
-        self.__cache: Dict[int, Set[str]] = {
-            arch | hive : set()  # only subkey names
+        self.__keys_count: Dict[int, int] = {
+            arch | hive : 0
             for arch in self._ARCH_KEYS
             for hive in self._LOOKUP_REGISTRY_HIVES
         }
@@ -94,21 +95,21 @@ class WinRegUninstallWatcher:
                 with winreg.OpenKey(hive, self._UNINSTALL_LOCATION, 0, winreg.KEY_READ | arch_key) as key:
                     subkeys = winreg.QueryInfoKey(key)[0]
 
-                    # skip check if no more subkeys than previously - intended to be called frequently
-                    name_cache = self.__cache.get(hive | arch_key)
-                    if subkeys <= len(name_cache):
+                    cached_subkeys = self.__keys_count[hive | arch_key]
+                    if subkeys == cached_subkeys:
+                        continue  # equal number of installed programs since last refresh
+                    self.__keys_count[hive | arch_key] = subkeys
+
+                    if subkeys < cached_subkeys:
+                        logging.debug(f'Uninstallation detected. No need to scan {hive | arch_key} registry.') 
                         continue
+                    logging.debug(f'New keys in registry {hive | arch_key}: {subkeys}. Reparsing.')
 
                     for i in range(subkeys):
                         subkey_name = winreg.EnumKey(key, i)
-
-                        if subkey_name in name_cache:
-                            continue
-                        name_cache.add(subkey_name)
-
                         if self._ignore_filter and self._ignore_filter(subkey_name):
+                            logging.debug(f'Filtred out subkey: {subkey_name}')
                             continue
-
                         with winreg.OpenKey(key, subkey_name) as subkey:
                             yield (subkey_name, subkey)
 
