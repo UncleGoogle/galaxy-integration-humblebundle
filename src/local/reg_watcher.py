@@ -96,14 +96,10 @@ class WinRegUninstallWatcher:
                     subkeys = winreg.QueryInfoKey(key)[0]
 
                     cached_subkeys = self.__keys_count[hive | arch_key]
-                    if subkeys == cached_subkeys:
-                        continue  # equal number of installed programs since last refresh
                     self.__keys_count[hive | arch_key] = subkeys
-
-                    if subkeys < cached_subkeys:
-                        logging.debug(f'Uninstallation detected. No need to scan {hive | arch_key} registry.') 
-                        continue
-                    logging.debug(f'New keys in registry {hive | arch_key}: {subkeys}. Reparsing.')
+                    if subkeys <= cached_subkeys:
+                        continue  # same or lower number of installed programs since last refresh
+                    logging.info(f'New keys in registry {hive | arch_key}: {subkeys}. Reparsing.')
 
                     for i in range(subkeys):
                         subkey_name = winreg.EnumKey(key, i)
