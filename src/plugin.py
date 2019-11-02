@@ -87,10 +87,9 @@ class HumbleBundlePlugin(Plugin):
         if not stored_credentials:
             return NextStep("web_session", {
                     "window_title": "Login to HumbleBundle",
-                    "window_width": 560,
-                    "window_height": 610,
-                    "start_uri": "https://www.humblebundle.com/login?goto=/home/library",
-                    # or https://www.humblebundle.com/account-start?goto=home"
+                    "window_width": 375,
+                    "window_height": 540,
+                    "start_uri": "https://www.humblebundle.com/account-start?goto=home/library",
                     "end_uri_regex": "^" + re.escape("https://www.humblebundle.com/home/library")
                 })
 
