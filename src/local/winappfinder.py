@@ -68,7 +68,7 @@ class WindowsAppFinder(BaseAppFinder):
 
         # find all executables and get best machting (exclude uninstall_path)
         if location and location.exists():
-            executables = set(self._pathfinder.find_executables(location)) - {str(upath)}
+            executables = list(set(self._pathfinder.find_executables(location)) - {str(upath)})
             best_match = self._pathfinder.choose_main_executable(human_name, executables)
             if best_match is None:
                 logging.warning(f'Main exe not found for {human_name}; \
