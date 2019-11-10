@@ -86,7 +86,6 @@ class LibraryResolver:
     async def _fetch_troves(self, cached_trove_data: list) -> list:
         troves_no = len(cached_trove_data)
         from_chunk = troves_no // self._api.TROVES_PER_CHUNK
-        logging.info(f'=== cached troves number: {troves_no} -> from chunk: {from_chunk}')
         new_commers = await self._api.get_trove_details(from_chunk)
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
         return cached_trove_data + new_commers[-new_troves_no:]

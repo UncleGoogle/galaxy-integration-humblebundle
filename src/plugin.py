@@ -53,8 +53,8 @@ class HumbleBundlePlugin(Plugin):
         self._cached_game_states = {}
 
         self._getting_owned_games = asyncio.Lock()
-        self._check_installed_task = self.create_task(asyncio.sleep(5), 'check installed dummy')
-        self._check_statuses_task = self.create_task(asyncio.sleep(3), 'check statuses dummy')
+        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
+        self._check_statuses_task = asyncio.create_task(asyncio.sleep(3))
 
         self._rescan_needed = True
         self._under_instalation = set()
