@@ -5,13 +5,14 @@ import os
 import subprocess
 import shutil
 from pathlib import Path
-from distutils.dir_util import copy_tree
 from glob import glob
 
 from invoke import task
 import github
 
-from src.version import __version__
+
+with open('src/manifest.json') as f:
+    __version__ = json.load(f)['version']
 
 
 REQUIREMENTS = os.path.join('requirements.txt')
@@ -64,24 +65,12 @@ def build(c, output=DIST_PLUGIN):
     print(f'running `{" ".join(args)}`')
     subprocess.check_call(args)
 
-    print('copying galaxy api ...')
-    copy_tree("galaxy-integrations-python-api/src", str(output))
-
-    print('creating manifest ...')
-    with open("src/manifest.json", "r") as file_:
-        manifest = json.load(file_)
-    manifest['version'] = __version__
-    with open(output / "manifest.json", "w") as file_:
-        json.dump(manifest, file_, indent=4)
-
 
 @task
 def dist(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH, no_deps=False):
     for proc in psutil.process_iter(attrs=['exe'], ad_value=''):
         if proc.info['exe'] == galaxy_path:
             print(f'Galaxy at {galaxy_path} is running!. Terminating...')
-            for child in proc.children():
-                child.terminate()
             proc.terminate()
             break
     else:
