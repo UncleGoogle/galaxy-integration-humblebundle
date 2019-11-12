@@ -244,21 +244,19 @@ class HumbleBundlePlugin(Plugin):
             if self._settings.reload_local_config_if_changed():
                 if old_lib_settings != astuple(self._settings.library):
                     logging.info(f'Library settings has changed: {self._settings.library}')
-                    self.create_task(self._check_owned(), 'check_owned')
+                    self.create_task(self._check_owned(), 'check owned')
                 if old_ins_settings != self._settings.installed:
                     logging.info(f'Installed settings has changed: {self._settings.installed}')
                     self._rescan_needed = True
 
         if self._check_installed_task.done():
-            self._check_installed_task = asyncio.create_task(self._check_installed())
+            self._check_installed_task = self.create_task(self._check_installed(), 'check installed')
 
         if self._check_statuses_task.done():
-            self._check_statuses_task = asyncio.create_task(self._check_statuses())
+            self._check_statuses_task = self.create_task(self._check_statuses(), 'check statuses')
 
-    def shutdown(self):
-        asyncio.create_task(self._api.close_session())
-        self._check_installed_task.cancel()
-        self._check_statuses_task.cancel()
+    async def shutdown(self):
+        self.create_task(self._api.close_session(), 'closing session')
 
 
 def main():

@@ -63,7 +63,7 @@ async def plugin_mock(api_mock, mocker):
     plugin.handshake_complete()
 
     yield plugin
-    plugin.shutdown()
+    await plugin.shutdown()
 
 
 @pytest.fixture
