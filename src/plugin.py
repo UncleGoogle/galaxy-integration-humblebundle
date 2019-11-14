@@ -26,7 +26,11 @@ from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
+from privacy import SensitiveFilter
 
+
+logger = logging.getLogger()
+logger.addFilter(SensitiveFilter)
 
 sentry_logging = LoggingIntegration(
     level=logging.INFO,
