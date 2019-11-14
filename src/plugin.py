@@ -27,7 +27,7 @@ from library import LibraryResolver
 from local import AppFinder
 
 
-with open('src/manifest.json') as f:
+with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
     __version__ = json.load(f)['version']
 
 
