@@ -19,13 +19,16 @@ from galaxy.api.types import Authentication, NextStep, LocalGame
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
 from consts import HP
-from version import __version__
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
+
+
+with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
+    __version__ = json.load(f)['version']
 
 
 sentry_logging = LoggingIntegration(
