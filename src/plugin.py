@@ -30,7 +30,7 @@ from privacy import SensitiveFilter
 
 
 logger = logging.getLogger()
-logger.addFilter(SensitiveFilter)
+logger.addFilter(SensitiveFilter())
 
 sentry_logging = LoggingIntegration(
     level=logging.INFO,
