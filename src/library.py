@@ -48,13 +48,13 @@ class LibraryResolver:
     async def _fetch_and_update_cache(self):
         sources = self._settings.sources        
 
-        next_fetch_orders = self._cache.get('next_fetch_orders')
-        if next_fetch_orders is not None and time.time() < next_fetch_orders:
-            if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
+        if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
+            next_fetch_orders = self._cache.get('next_fetch_orders')
+            if next_fetch_orders is None or time.time() > next_fetch_orders:
+                logging.info('Refreshing all orders')
                 self._cache['orders'] = await self._fetch_orders([])
                 self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
-        else:
-            if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
+            else:
                 const_orders = {
                     gamekey: order
                     for gamekey, order in self._cache.get('orders', {}).items()
@@ -62,14 +62,13 @@ class LibraryResolver:
                 }
                 self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
-        self._cache.setdefault('subscribed', await self._api.had_trove_subscription())
-        next_fetch_troves = self._cache.get('next_fetch_troves')
-        if next_fetch_troves is not None and time.time() < next_fetch_troves:
-            if SOURCE.TROVE in sources and self._cache.get('subscribed'):
+        if SOURCE.TROVE in sources and await self._api.had_trove_subscription():
+            next_fetch_troves = self._cache.get('next_fetch_troves')
+            if next_fetch_troves is None or time.time() > next_fetch_troves:
+                logging.info('Refreshing all troves')
                 self._cache['troves'] = await self._fetch_troves([])
                 self._cache['next_fetch_troves'] = time.time() + self.NEXT_FETCH_IN
-        else:
-            if SOURCE.TROVE in sources and self._cache.get('subscribed'):
+            else:
                 cached_troves = self._cache.get('troves', [])
                 updated_troves = await self._fetch_troves(cached_troves)
                 if updated_troves:
