@@ -13,13 +13,15 @@ class SensitiveFilter(logging.Filter):
         record.msg = self.redact(record.msg)
         if hasattr(record, self.KEY):
             record.redeemed_key_val = self.redact(record.redeemed_key_val)
+        if hasattr(record, 'game'):
+            record.game = self.redact(record.game)
         if isinstance(record.args, dict):
             for k in record.args.keys():
                 record.args[k] = self.redact(record.args[k])
         else:
             record.args = tuple(self.redact(arg) for arg in record.args)
         return True
-    
+
     def redact(self, msg):
         if type(msg) == dict:
             if self.KEY in msg:

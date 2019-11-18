@@ -22,7 +22,7 @@ def test_strip_from_dict(sensitive_logger, caplog):
     assert "TOP_SECRET" not in caplog.text
 
 
-def test_strip_from_key(sensitive_logger, caplog, orders_keys):
+def test_strip_from_key(sensitive_logger, caplog):
     key_val = "ABCD-EDGH-IJKL"
     data = {
         "machine_name": "dead_space_origin_key",
@@ -35,7 +35,7 @@ def test_strip_from_key(sensitive_logger, caplog, orders_keys):
     assert key.key_val == key_val  # logger doesnt affect actual data
 
 
-def test_strip_extra(sensitive_logger, caplog, orders_keys):
+def test_strip_extra(sensitive_logger, caplog):
     """Extra arguments are used also by sentry.io"""
     key_val = "ABCD-EDGH-IJKL"
     data = {
@@ -49,6 +49,24 @@ def test_strip_extra(sensitive_logger, caplog, orders_keys):
         if hasattr(record, "redeemed_key_val"):
             assert record.redeemed_key_val == '***'
     assert data['redeemed_key_val'] == key_val  # logger doesnt affect actual data
+
+def test_strip_extra_game_key(sensitive_logger, caplog):
+    """Extra arguments are used also by sentry.io"""
+    key_val = "ABCD-EDGH-IJKL"
+    data = {
+        "machine_name": "dead_space_origin_key",
+        "human_name": "Dead Space Origin Key",
+        "redeemed_key_val": key_val
+    }
+    key = Key(data)
+    logging.error("some text", extra={'game': key})
+    for record in caplog.records:
+        if hasattr(record, "game"):
+            assert record.game.key_val != key_val
+            assert record.game._data['redeemed_key_val'] != key_val
+    # logger doesnt affect actual data
+    assert key._data['redeemed_key_val'] == key_val
+    assert key.key_val == key_val
 
 
 @pytest.mark.parametrize("key_val", [
