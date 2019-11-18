@@ -25,11 +25,14 @@ from model.game import TroveGame, Key, Subproduct
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
+from privacy import SensitiveFilter
 
 
 with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
     __version__ = json.load(f)['version']
 
+logger = logging.getLogger()
+logger.addFilter(SensitiveFilter())
 
 sentry_logging = LoggingIntegration(
     level=logging.INFO,
@@ -179,7 +182,7 @@ class HumbleBundlePlugin(Plugin):
             logging.error(e, extra={'local_games': self._local_games})
         else:
             game.uninstall()
-    
+
     async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
         try:
             game = self._owned_games[game_id]

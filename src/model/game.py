@@ -64,7 +64,7 @@ class TroveGame(HumbleGame):
             try:
                 os_ = HP(k)
             except TypeError as e:  # log error and go forward
-                logging.error(e, extra={'game': self})
+                logging.error(e, extra={'game': self._data})
             else:
                 result[os_] = TroveDownload(v)
         return result
@@ -87,7 +87,7 @@ class Subproduct(HumbleGame):
             try:
                 os_ = HP(dw['platform'])
             except TypeError as e:  # log error and go forward
-                logging.error(e, extra={'game': self})
+                logging.error(e, extra={'game': self._data})
             else:
                 result[os_] = [
                     SubproductDownload(x)
