@@ -111,7 +111,7 @@ class AuthorizedHumbleAPI:
         elif res.status == 302:
             return False
         else:
-            logging.info(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status_code}')
+            logging.warning(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status}')
             return False
 
     async def get_trove_details(self, from_chunk: int=0):
