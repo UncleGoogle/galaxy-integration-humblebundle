@@ -146,7 +146,7 @@ class HumbleBundlePlugin(Plugin):
                 process = await asyncio.create_subprocess_exec(sys.executable, *args, stderr=asyncio.subprocess.PIPE)
                 _, stderr_data = await process.communicate()
                 if stderr_data:
-                    logging.error(f'Error for keygui: stderr_data', extra=args)
+                    logging.error(f'Error for keygui: {stderr_data}', extra={'args': args[:-1]})
                 return
 
             chosen_download = self._download_resolver(game)
