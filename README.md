@@ -35,6 +35,10 @@ Edit your local [config.ini](src/config.ini)
 - Library: List DRM-free games and unrevealed third party keys
 - Installed games: use only Windows registry scan; edit `search_paths` to enable directory scaning feature
 
+## Bug Reporting
+This integrations uses sentry.io to report anonymous error reports.
+Personal and sensitive data are not gathered.
+
 ## Acknowledgements
 - https://github.com/gogcom/galaxy-integrations-python-api
 - https://github.com/MayeulC/hb-downloader
