@@ -3,7 +3,11 @@ import webbrowser
 import sys
 from typing import Optional
 
-sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
+modules = pathlib.Path(__file__).parent / 'modules'
+if modules.exists():
+    sys.path.insert(0, str(modules))
+else:  # FriendsOfGalaxy structure
+    sys.path.insert(0, str(modules.parent))
 
 import toga
 
