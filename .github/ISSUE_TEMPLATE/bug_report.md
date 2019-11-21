@@ -13,6 +13,9 @@ A clear and concise description of what the bug is. Provide steps to reproduce.
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
+**Plugin installed**
+directly from Galaxy / manually from your repository releases
+
 **Provide logs**
 - make reproduction steps you described above (tip: _cogwheel menu -> Sync Integration_ refreshes owned and local games)
 - go to logs location:
