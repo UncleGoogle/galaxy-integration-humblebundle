@@ -4,10 +4,8 @@ import sys
 from typing import Optional
 
 modules = pathlib.Path(__file__).parent / 'modules'
-if modules.exists():
-    sys.path.insert(0, str(modules))
-else:  # FriendsOfGalaxy structure
-    sys.path.insert(0, str(modules.parent))
+sys.path.insert(0, str(modules))
+sys.path.insert(0, str(modules.parent))  # FriendsOfGalaxy structure
 
 import toga
 
