@@ -4,7 +4,7 @@ import asyncio
 from typing import Callable, Dict, List, Set, Iterable
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
-from model.product import Product   
+from model.product import Product
 from model.game import HumbleGame, Subproduct, TroveGame, Key
 from settings import LibrarySettings
 
@@ -17,12 +17,12 @@ class LibraryResolver:
         self._save_cache = save_cache_callback
         self._settings = settings
         self._cache = cache
-    
+
     async def __call__(self, only_cache: bool = False) -> Dict[str, HumbleGame]:
 
         if not only_cache:
             await self._fetch_and_update_cache()
-        
+
         # get all games in predefined order
         orders = list(self._cache.get('orders', {}).values())  # type: ignore[union-attr] - orders is always a dict
         all_games: List[HumbleGame] = []
@@ -44,9 +44,9 @@ class LibraryResolver:
                 titles.add(game.human_name)
                 deduplicated[game.machine_name] = game
         return deduplicated
-    
+
     async def _fetch_and_update_cache(self):
-        sources = self._settings.sources        
+        sources = self._settings.sources
 
         if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
             next_fetch_orders = self._cache.get('next_fetch_orders')
@@ -62,7 +62,7 @@ class LibraryResolver:
                 }
                 self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
-        if SOURCE.TROVE in sources:
+        if SOURCE.TROVE in sources and await self._api.had_trove_subscription():
             next_fetch_troves = self._cache.get('next_fetch_troves')
             if next_fetch_troves is None or time.time() > next_fetch_troves:
                 logging.info('Refreshing all troves')
@@ -82,14 +82,14 @@ class LibraryResolver:
         orders = await asyncio.gather(*order_tasks)
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
-    
+
     async def _fetch_troves(self, cached_trove_data: list) -> list:
         troves_no = len(cached_trove_data)
         from_chunk = troves_no // self._api.TROVES_PER_CHUNK
         new_commers = await self._api.get_trove_details(from_chunk)
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
         return cached_trove_data + new_commers[-new_troves_no:]
-    
+
     @staticmethod
     def __all_keys_revealed(order):
         for key in order['tpkd_dict']['all_tpks']:
@@ -107,7 +107,7 @@ class LibraryResolver:
                 continue
             filtered.append(details)
         return filtered
-    
+
     @staticmethod
     def _get_subproducts(orders: list) -> List[Subproduct]:
         subproducts = []
