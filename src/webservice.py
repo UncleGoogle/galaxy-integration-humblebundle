@@ -19,7 +19,7 @@ class AuthorizedHumbleAPI:
     _ORDER_URL = "/api/v1/order/{}"
 
     TROVES_PER_CHUNK = 20
-    _TROVE_SUBSCRIBER = 'monthly/subscriber'
+    _TROVE_SUBSCRIBER = 'subscription/home'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
     _TROVE_DOWNLOAD_SIGN_URL = 'api/v1/user/download/sign'
     _TROVE_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
@@ -50,7 +50,7 @@ class AuthorizedHumbleAPI:
 
     async def _is_session_valid(self):
         """Simply asks about order list to know if session is valid.
-        galaxy.api.errors instances cannot be catched so galaxy.http.handle_excpetion 
+        galaxy.api.errors instances cannot be catched so galaxy.http.handle_excpetion
         is the final check with all the logic under its context.
         """
         with handle_exception():
@@ -67,7 +67,7 @@ class AuthorizedHumbleAPI:
         info += '=='  # ensure full padding
         decoded = json.loads(base64.b64decode(info))
         return decoded['user_id']
-    
+
     async def authenticate(self, auth_cookie: dict) -> Optional[str]:
         # recreate original cookie
         cookie = SimpleCookie()
@@ -102,8 +102,8 @@ class AuthorizedHumbleAPI:
         return await res.json()
 
     async def had_trove_subscription(self) -> bool:
-        """Based on current behavior of `humblebundle.com/monthly/subscriber` that redirect to `monthly`
-        if subscription was never enabled for the user.
+        """Based on current behavior of `humblebundle.com/subscription/home`
+        that is accesable only by "current and former subscribers"
         """
         res = await self._request('get', self._TROVE_SUBSCRIBER, allow_redirects=False)
         if res.status == 200:
@@ -111,7 +111,7 @@ class AuthorizedHumbleAPI:
         elif res.status == 302:
             return False
         else:
-            logging.info(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status_code}')
+            logging.warning(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status}')
             return False
 
     async def get_trove_details(self, from_chunk: int=0):
