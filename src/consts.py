@@ -14,6 +14,7 @@ class KEY_TYPE(enum.Enum):
     UPLAY = 'uplay'
     EPIC = 'epic'  # not sure about it
     BATTLENET = 'battlenet'  # not sure about it
+    GOG = 'gog'  # not sure about it
 
 
 class SOURCE(enum.Enum):
@@ -47,10 +48,7 @@ class HP(enum.Enum):
 
 
 GAME_PLATFORMS = set([HP.WINDOWS, HP.MAC, HP.LINUX])
-DLC_PLATFORMS = set([HP.AUDIO, HP.EBOOK])  # TODO push those with base game when DLC is supported
-
 NON_GAME_BUNDLE_TYPES = {'mobilebundle', 'softwarebundle', 'bookbundle', 'audiobookbundle', 'comicsbundle', 'rpgbookbundle', 'mangabundle'}
-FREE_GAME_TYPES = {'freegame', 'free'}
 
 if sys.platform == 'win32':
     CURRENT_SYSTEM = HP.WINDOWS
