@@ -2,6 +2,9 @@ import pytest
 import time
 import json
 from functools import partial
+from unittest.mock import Mock
+
+from galaxy.api.errors import UnknownError
 
 from library import LibraryResolver
 from model.game import Subproduct, Key, TroveGame
@@ -148,3 +151,31 @@ async def test_library_cache_period(plugin_mock, change_settings, orders_keys):
     assert plugin_mock._api.get_trove_details.call_count == 1
     assert plugin_mock._api.get_order_details.call_count == len(orders_keys)
     assert plugin_mock._api.had_trove_subscription.call_count == 1
+
+
+# --------test fetching orders-------------------
+
+@pytest.mark.asyncio
+async def test_fetch_orders_filter_errors_ok(plugin_mock, create_resolver, caplog):
+    resolver = create_resolver(Mock())
+    await resolver._fetch_orders([])
+
+@pytest.mark.asyncio
+async def test_fetch_orders_filter_errors_all_bad(plugin_mock, create_resolver, caplog):
+    resolver = create_resolver(Mock())
+    plugin_mock._api.get_gamekeys.return_value = ['this_will_give_UnknownError', 'this_too']
+    with pytest.raises(UnknownError):
+        await resolver._fetch_orders([])
+
+@pytest.mark.asyncio
+async def test_fetch_orders_filter_errors_one_404(plugin_mock, create_resolver, caplog):
+    """404 for specific order key"""
+    resolver = create_resolver(Mock())
+    resolver = create_resolver(Mock())
+    real_gamekeys = await plugin_mock._api.get_gamekeys()
+    plugin_mock._api.get_gamekeys.return_value = [real_gamekeys[0], 'this_will_give_UnknownError']
+    caplog.clear()
+    orders = await resolver._fetch_orders([])
+    assert len(orders) == 1
+    assert 'UnknownError' in caplog.text
+    assert caplog.records[0].levelname == 'ERROR'

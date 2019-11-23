@@ -1,7 +1,7 @@
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable
+from typing import Callable, Dict, List, Set, Iterable, Union, Any
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product
@@ -79,7 +79,8 @@ class LibraryResolver:
     async def _fetch_orders(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
         gamekeys = await self._api.get_gamekeys()
         order_tasks = [self._api.get_order_details(x) for x in gamekeys if x not in cached_gamekeys]
-        orders = await asyncio.gather(*order_tasks)
+        results = await asyncio.gather(*order_tasks, return_exceptions=True)
+        orders = self.__filter_out_and_examine_errors(results)
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
 
@@ -89,6 +90,22 @@ class LibraryResolver:
         new_commers = await self._api.get_trove_details(from_chunk)
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
         return cached_trove_data + new_commers[-new_troves_no:]
+
+    @staticmethod
+    def __filter_out_and_examine_errors(items: Iterable[Union[Exception, Any]]) -> List[Any]:
+        """Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
+        Use case: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/59
+        """
+        if len(items) == 0:
+            return []
+        err, ok = [], []
+        for it in items:
+            (err if isinstance(it, Exception) else ok).append(it)
+        if len(ok) == 0:
+            raise err[0]
+        if len(err) != len(items):
+            logging.error(f'Exception(s) occured: [{err}].\nSkipping and going forward')
+        return ok
 
     @staticmethod
     def __all_keys_revealed(order):

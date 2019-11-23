@@ -41,7 +41,7 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
             if i['gamekey'] == gamekey:
                 return i
         print('got 404 for gamekey: ' + gamekey)
-        raise UnknownError
+        raise UnknownError()
 
     mock.TROVES_PER_CHUNK = 20
     mock.get_gamekeys.return_value = [i['gamekey'] for i in mock.orders]
