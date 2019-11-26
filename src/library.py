@@ -1,7 +1,7 @@
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Union, Any
+from typing import Callable, Dict, List, Set, Iterable, Union, Any, Collection
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product
@@ -92,15 +92,18 @@ class LibraryResolver:
         return cached_trove_data + new_commers[-new_troves_no:]
 
     @staticmethod
-    def __filter_out_and_examine_errors(items: Iterable[Union[Exception, Any]]) -> List[Any]:
+    def __filter_out_and_examine_errors(items: Collection[Union[Exception, Any]]) -> List[Any]:
         """Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
         Use case: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/59
         """
         if len(items) == 0:
             return []
-        err, ok = [], []
+
+        err: List[Exception] = []
+        ok: List[Any] = []
         for it in items:
             (err if isinstance(it, Exception) else ok).append(it)
+
         if len(ok) == 0:
             raise err[0]
         if len(err) != len(items):
