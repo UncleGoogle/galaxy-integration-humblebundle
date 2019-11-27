@@ -72,12 +72,6 @@ class HumbleBundlePlugin(Plugin):
         self.push_cache()
 
     def handshake_complete(self):
-        # tmp migration to fix 0.4.0 cache error
-        library = json.loads(self.persistent_cache.get('library', '{}'))
-        if library and type(library.get('orders')) == list:
-            logging.info('Old cache migration')
-            self._save_cache('library', {})
-
         self._settings = Settings(
             cache=self.persistent_cache,
             save_cache_callback=self.push_cache
@@ -147,7 +141,7 @@ class HumbleBundlePlugin(Plugin):
                 _, stderr_data = await process.communicate()
                 if stderr_data:
                     logging.error(f'Error for keygui: {stderr_data}', extra={'guiargs': args[:-1]})
-                    webbrowser.open('https://www.humblebundle.com/home/keys')  # fallback to browser
+                    webbrowser.open('https://www.humblebundle.com/home/keys')
                 return
 
             chosen_download = self._download_resolver(game)
@@ -211,10 +205,11 @@ class HumbleBundlePlugin(Plugin):
                 self.add_game(self._owned_games[new_id].in_galaxy_format())
 
     async def _check_installed(self):
-        # Owned games are needed to local games search.
-        # The way Galaxy calls plugin methods on startup is unsupportive in such situation:
-        # get_local_games - authenticate - get_local_games - get_owned_games (at the end!)
-        # That is why plugin sets all logic of getting local games this perdiodic check.
+        """
+        Owned games are needed to local games search. Galaxy methods call order is:
+        get_local_games -> authenticate -> get_local_games -> get_owned_games (at the end!)
+        That is why plugin sets all logic of getting local games in perdiodic checks
+        """
         if not self._owned_games:
             logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
             return
