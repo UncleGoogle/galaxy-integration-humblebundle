@@ -6,6 +6,7 @@ from typing import Optional
 
 from galaxy.api.types import LocalGameState, LocalGame
 
+from consts import IS_WINDOWS
 
 @dataclasses.dataclass
 class LocalHumbleGame:
@@ -41,7 +42,7 @@ class LocalHumbleGame:
         return LocalGame(self.machine_name, self.state)
 
     def run(self):
-        flags = 0b0001000  # DETACHED_PROCESS on Windows
+        # flags = 0b0001000  # DETACHED_PROCESS on Windows
         proc = subprocess.Popen(str(self.executable), cwd=self.executable.parent, creationflags=flags)
         self.process = psutil.Process(proc.pid)
 

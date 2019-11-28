@@ -57,6 +57,8 @@ elif sys.platform == 'darwin':
 else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
 
+IS_WINDOWS = HP.WINDOWS == CURRENT_SYSTEM
+
 if platform.machine().endswith('64'):
     CURRENT_BITNESS = BITNESS.B64
 else:
