@@ -30,7 +30,13 @@ class LocalHumbleGame:
     def is_running(self):
         if self.process is None:
             return False
-        return self.process.is_running()
+        if not self.process.is_running():
+            self.process = None
+            return False
+        if self.process.status() == psutil.STATUS_ZOMBIE:
+            self.process.wait()
+            return False
+        return True
 
     @property
     def state(self):
