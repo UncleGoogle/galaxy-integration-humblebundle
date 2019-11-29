@@ -8,6 +8,9 @@ from galaxy.api.types import LocalGameState, LocalGame
 
 from consts import IS_WINDOWS
 
+DETACHED_PROCESS = 0b0001000
+
+
 @dataclasses.dataclass
 class LocalHumbleGame:
     machine_name: str
@@ -42,7 +45,7 @@ class LocalHumbleGame:
         return LocalGame(self.machine_name, self.state)
 
     def run(self):
-        # flags = 0b0001000  # DETACHED_PROCESS on Windows
+        flags = DETACHED_PROCESS if IS_WINDOWS else None
         proc = subprocess.Popen(str(self.executable), cwd=self.executable.parent, creationflags=flags)
         self.process = psutil.Process(proc.pid)
 
