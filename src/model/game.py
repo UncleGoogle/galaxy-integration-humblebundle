@@ -3,7 +3,6 @@ import logging
 from typing import Dict, List, Optional, Any
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
-from galaxy.api.consts import OSCompatibility
 
 from consts import KEY_TYPE, HP
 from model.download import TroveDownload, SubproductDownload
