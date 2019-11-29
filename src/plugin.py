@@ -218,9 +218,9 @@ class HumbleBundlePlugin(Plugin):
         if self._rescan_needed and self._settings is not None:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning in: {self._settings.installed.search_dirs}')
-            self._local_games = await self._app_finder.find_local_games(owned_title_id, self._settings.installed.search_dirs)
+            self._local_games = await self._app_finder(owned_title_id, self._settings.installed.search_dirs)
         else:
-            self._local_games.update(await self._app_finder.find_local_games(owned_title_id, None))
+            self._local_games.update(await self._app_finder(owned_title_id, None))
         await asyncio.sleep(4)
 
     async def _check_statuses(self):

@@ -1,7 +1,7 @@
 import os
 import plistlib
 import logging
-from typing import Optional, Set
+from typing import Optional, Set, Dict
 import pathlib
 from dataclasses import dataclass
 
@@ -22,10 +22,12 @@ class BundleInfo:
 class MacAppFinder(BaseAppFinder):
     DEFAULT_PATH = '/Applications'
 
-    async def find_local_games(self, owned_title_id, paths: Set[pathlib.Path]):
-        if not paths:
+    async def __call__(self, owned_title_id, paths=None):
+        if paths is None:
+            return dict()
+        if paths == set():
             paths = {pathlib.Path(self.DEFAULT_PATH)}
-        return await super().find_local_games(owned_title_id, paths)
+        return await super().__call__(owned_title_id, paths)
 
     def __get_close_matches(dir_name, candidates, similarity):
         """Cuts .app suffix"""

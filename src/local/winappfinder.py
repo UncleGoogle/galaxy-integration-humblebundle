@@ -77,7 +77,7 @@ class WindowsAppFinder(BaseAppFinder):
             return pathlib.Path(best_match)
         return None
 
-    async def find_local_games(self, owned_title_id, paths):
+    async def __call__(self, owned_title_id, paths=None):
         local_games: Dict[str, LocalHumbleGame] = {}
         not_found = owned_title_id.copy()
 
@@ -103,7 +103,7 @@ class WindowsAppFinder(BaseAppFinder):
             await asyncio.sleep(0.001)  # makes this method non blocking
 
         # try to match the rest using folders scan
-        if paths:
-            local_games.update(await super().find_local_games(not_found, paths))
+        if paths is not None:
+            local_games.update(await super().__call__(not_found, paths))
 
         return local_games

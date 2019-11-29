@@ -17,7 +17,7 @@ class BaseAppFinder(abc.ABC):
     def __init__(self):
         self._pathfinder = PathFinder(CURRENT_SYSTEM)
 
-    async def find_local_games(self, owned_title_id: Dict[str, str], paths: Set[pathlib.Path]) -> Dict[str, LocalHumbleGame]:
+    async def __call__(self, owned_title_id: Dict[str, str], paths: Set[pathlib.Path]) -> Dict[str, LocalHumbleGame]:
         """
         :param owned_title_id: human_name: machine_name dictionary
         """
