@@ -1,7 +1,7 @@
 .venv
-.vscode
+# .vscode  # test saving settings between mac and Windows
+.DS_Store
 .env
-galaxy/
 info.md
 credentials*
 GPUCache
