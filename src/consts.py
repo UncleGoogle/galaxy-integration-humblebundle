@@ -1,7 +1,6 @@
 import enum
 import platform
 import sys
-import typing
 
 
 class PlatformNotSupported(Exception):

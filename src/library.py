@@ -106,7 +106,7 @@ class LibraryResolver:
 
         if len(ok) == 0:
             raise err[0]
-        if len(err) != len(items):
+        if err and len(err) != len(items):
             logging.error(f'Exception(s) occured: [{err}].\nSkipping and going forward')
         return ok
 
