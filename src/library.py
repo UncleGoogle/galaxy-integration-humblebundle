@@ -79,8 +79,7 @@ class LibraryResolver:
     async def _fetch_orders(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
         gamekeys = await self._api.get_gamekeys()
         order_tasks = [self._api.get_order_details(x) for x in gamekeys if x not in cached_gamekeys]
-        results = await asyncio.gather(*order_tasks, return_exceptions=True)
-        orders = self.__filter_out_and_examine_errors(results)
+        orders = await self.__gather_no_exceptions(order_tasks)
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
 
@@ -90,12 +89,13 @@ class LibraryResolver:
         new_commers = await self._api.get_trove_details(from_chunk)
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
         return cached_trove_data + new_commers[-new_troves_no:]
-
-    @staticmethod
-    def __filter_out_and_examine_errors(items: Collection[Union[Exception, Any]]) -> List[Any]:
-        """Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
+    
+    async def __gather_no_exceptions(self, tasks):
+        """Wrapper around asyncio.gather(*args, return_exception=True) 
+        Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
         Use case: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/59
         """
+        items = await asyncio.gather(*tasks, return_exceptions=True)
         if len(items) == 0:
             return []
 
@@ -106,7 +106,7 @@ class LibraryResolver:
 
         if len(ok) == 0:
             raise err[0]
-        if len(err) != len(items):
+        if err and len(err) != len(items):
             logging.error(f'Exception(s) occured: [{err}].\nSkipping and going forward')
         return ok
 
