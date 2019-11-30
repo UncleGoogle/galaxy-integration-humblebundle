@@ -89,7 +89,7 @@ class LibraryResolver:
         new_commers = await self._api.get_trove_details(from_chunk)
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
         return cached_trove_data + new_commers[-new_troves_no:]
-    
+
     async def __gather_no_exceptions(self, tasks):
         """Wrapper around asyncio.gather(*args, return_exception=True) 
         Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
