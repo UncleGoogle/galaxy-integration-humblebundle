@@ -38,7 +38,7 @@ class HP(enum.Enum):
     EBOOK = 'ebook'
     ASMJS = 'asmjs'
     VIDEO = 'video'
-    COMEDY = 'comedy'  # no idea
+    COMEDY = 'comedy'
 
     def __eq__(self, other):
         if type(other) == str:
