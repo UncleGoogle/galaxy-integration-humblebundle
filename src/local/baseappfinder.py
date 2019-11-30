@@ -72,7 +72,7 @@ class BaseAppFinder(abc.ABC):
                 yield app_name, pathlib.Path(best_exe)
                 break
 
-    def __get_close_matches(self, dir_name, candidates, similarity) -> List[str]:
+    def __get_close_matches(self, dir_name: str, candidates: Set[str], similarity: float) -> List[str]:
         """Wrapper around difflib.get_close_matches"""
         matches_ = difflib.get_close_matches(dir_name, candidates, cutoff=similarity)
         logging.debug(f'{dir_name}, candidates: {list(candidates)}, matches: {matches_}')

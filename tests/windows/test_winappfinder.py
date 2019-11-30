@@ -72,7 +72,7 @@ async def test_find_games_display_icon(uk_torchlight2):
     finder = WindowsAppFinder()
     expected_exe = uk_torchlight2.display_icon
     with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', set([uk_torchlight2])):
-        res = await finder.find_local_games(owned_games, [])
+        res = await finder(owned_games, [])
         assert machine_name in res
         assert expected_exe == str(res[machine_name].executable)
 
@@ -91,4 +91,4 @@ async def test_find_game_display_uninstall():
     owned_games = {human_name: machine_name}
     finder = WindowsAppFinder()
     with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', set([uk_game])):
-        assert {} == await finder.find_local_games(owned_games, [])
+        assert {} == await finder(owned_games, [])
