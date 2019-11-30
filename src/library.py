@@ -1,7 +1,7 @@
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Union, Any, Collection
+from typing import Callable, Dict, List, Set, Iterable, Union, Any, Collection, Coroutine
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product
@@ -90,7 +90,8 @@ class LibraryResolver:
         new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
         return cached_trove_data + new_commers[-new_troves_no:]
 
-    async def __gather_no_exceptions(self, tasks):
+    @staticmethod
+    async def __gather_no_exceptions(tasks: Iterable[Coroutine]):
         """Wrapper around asyncio.gather(*args, return_exception=True) 
         Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
         Use case: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/59
