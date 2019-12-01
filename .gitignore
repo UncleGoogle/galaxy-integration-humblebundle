@@ -1,5 +1,5 @@
 .venv
-# .vscode  # test saving settings between mac and Windows
+.vscode
 .DS_Store
 .env
 info.md

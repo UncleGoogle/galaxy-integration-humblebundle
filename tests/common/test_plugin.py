@@ -22,7 +22,7 @@ async def test_launch_game(plugin_mock, overgrowth):
             if CURRENT_SYSTEM == HP.WINDOWS:
                 subproc.assert_called_once_with('game_dir\\mock.exe', creationflags=8 ,cwd=pathlib.Path('game_dir'))
             elif CURRENT_SYSTEM == HP.MAC:
-                subproc.assert_called_once_with('game_dir/mock.exe', creationflags=None, cwd=pathlib.Path('game_dir'))
+                subproc.assert_called_once()
 
 
 @pytest.mark.asyncio
