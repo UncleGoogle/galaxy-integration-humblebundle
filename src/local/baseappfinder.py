@@ -11,11 +11,13 @@ from typing import cast
 from consts import CURRENT_SYSTEM
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
+from local.matcher import TitleMatcher
 
 
 class BaseAppFinder(abc.ABC):
     def __init__(self):
         self._pathfinder = PathFinder(CURRENT_SYSTEM)
+        self._matcher = TitleMatcher()
 
     async def __call__(self, owned_title_id: Dict[str, str], paths: Set[pathlib.Path]) -> Dict[str, LocalHumbleGame]:
         """
@@ -59,6 +61,7 @@ class BaseAppFinder(abc.ABC):
         :yields:            2-el. tuple of app_name and executable
         """
         root, dirs, _ = next(os.walk(path))
+        logging.debug(f'candidates: {list(candidates)}')
         for dir_name in dirs:
             await asyncio.sleep(0)
             matches = self.__get_close_matches(dir_name, candidates, similarity)
@@ -75,7 +78,6 @@ class BaseAppFinder(abc.ABC):
     def __get_close_matches(self, dir_name: str, candidates: Set[str], similarity: float) -> List[str]:
         """Wrapper around difflib.get_close_matches"""
         matches_ = difflib.get_close_matches(dir_name, candidates, cutoff=similarity)
-        logging.debug(f'{dir_name}, candidates: {list(candidates)}, matches: {matches_}')
         matches = cast(List[str], matches_)  # as str is Sequence[str] - mypy/issues/5090
         if matches:
             logging.info(f'found close ({similarity}) matches for {dir_name}: {matches}')
