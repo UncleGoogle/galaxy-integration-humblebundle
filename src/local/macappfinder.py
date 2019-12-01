@@ -29,10 +29,10 @@ class MacAppFinder(BaseAppFinder):
             paths = {pathlib.Path(self.DEFAULT_PATH)}
         return await super().__call__(owned_title_id, paths)
 
-    def __get_close_matches(dir_name, candidates, similarity):
+    def __get_close_matches(self, dir_name, candidates, similarity):
         """Cuts .app suffix"""
         dir_name_stem = dir_name[:-4] if dir_name.endswith('.app') else dir_name
-        return super().get_close_matches(dir_name_stem, candidates, similarity)
+        return super().__get_close_matches(dir_name_stem, candidates, similarity)
 
     def __find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):
         if dir_path.suffix == '.app':
@@ -44,7 +44,7 @@ class MacAppFinder(BaseAppFinder):
         dir_ = pathlib.Path(app_dir).resolve()
         try:
             with open(dir_ / 'Contents' / 'Info.plist', 'rb') as f:
-                plist = plistlib.load(f)  # type: ignore
+                plist: Dict[str, str]= plistlib.load(f)
         except (FileExistsError, OSError) as e:
             logging.error(f'{repr(e)}')
             return None

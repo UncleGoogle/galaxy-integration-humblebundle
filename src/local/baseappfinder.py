@@ -27,7 +27,7 @@ class BaseAppFinder(abc.ABC):
             owned_title_id[title]: LocalHumbleGame(owned_title_id[title], exe)
             for title, exe in found_games.items()
         }
-        logging.debug(f'=== Scan folders took {time.time() - start}')
+        logging.debug(f'=== Scanning folders took {time.time() - start}')
         return local_games
 
     async def _scan_folders(self, paths: Iterable[Union[str, os.PathLike]], app_names: Set[str]) -> Dict[str, pathlib.Path]:
