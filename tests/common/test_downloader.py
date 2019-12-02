@@ -2,7 +2,7 @@ import pytest
 
 from humbledownloader import HumbleDownloadResolver
 from model.game import Subproduct, TroveGame
-from consts import HP, BITNESS, PlatformNotSupported
+from consts import HP, BITNESS
 
 
 @pytest.mark.parametrize("platform,bitness", [(HP.WINDOWS, BITNESS.B64), (HP.WINDOWS, BITNESS.B32), (HP.MAC, BITNESS.B64)])
