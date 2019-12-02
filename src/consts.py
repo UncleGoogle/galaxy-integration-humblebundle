@@ -1,7 +1,6 @@
 import enum
 import platform
 import sys
-import typing
 
 
 class PlatformNotSupported(Exception):
@@ -58,6 +57,9 @@ elif sys.platform == 'darwin':
     CURRENT_SYSTEM = HP.MAC
 else:
     raise PlatformNotSupported('GOG Galaxy 2.0 supports only Windows and macos for now')
+
+IS_WINDOWS = HP.WINDOWS == CURRENT_SYSTEM
+IS_MAC = HP.MAC == CURRENT_SYSTEM
 
 if platform.machine().endswith('64'):
     CURRENT_BITNESS = BITNESS.B64

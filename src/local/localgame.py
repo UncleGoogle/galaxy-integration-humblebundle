@@ -6,6 +6,10 @@ from typing import Optional
 
 from galaxy.api.types import LocalGameState, LocalGame
 
+from consts import HP, CURRENT_SYSTEM
+
+DETACHED_PROCESS = 0b0001000
+
 
 @dataclasses.dataclass
 class LocalHumbleGame:
@@ -26,7 +30,13 @@ class LocalHumbleGame:
     def is_running(self):
         if self.process is None:
             return False
-        return self.process.is_running()
+        if not self.process.is_running():
+            self.process = None
+            return False
+        if self.process.status() == psutil.STATUS_ZOMBIE:
+            self.process.wait()
+            return False
+        return True
 
     @property
     def state(self):
@@ -39,10 +49,28 @@ class LocalHumbleGame:
 
     def in_galaxy_format(self):
         return LocalGame(self.machine_name, self.state)
+    
+    @property
+    def bundle_name(self) -> Optional[pathlib.Path]:
+        assert CURRENT_SYSTEM == HP.MAC, "macos only property"
+        for p in self.executable.parents:
+            if p.suffix == '.app':
+                return p
+        return None
 
     def run(self):
-        flags = 0b0001000  # DETACHED_PROCESS on Windows
-        proc = subprocess.Popen(str(self.executable), cwd=self.executable.parent, creationflags=flags)
+        if CURRENT_SYSTEM == HP.WINDOWS:
+            flags = DETACHED_PROCESS
+            proc = subprocess.Popen(str(self.executable), cwd=self.executable.parent, creationflags=flags)
+        elif CURRENT_SYSTEM == HP.MAC:
+            '''
+            -a   Opens with the specified application.
+            -W   Blocks until the used applications are closed (even if they were already running).
+            '''
+            app_name = self.bundle_name or self.executable
+            cmd = ["/usr/bin/open", "-W", "-a", str(app_name)]
+            proc = subprocess.Popen(cmd, cwd=app_name.parent)
+
         self.process = psutil.Process(proc.pid)
 
     def uninstall(self):

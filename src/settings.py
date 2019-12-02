@@ -94,8 +94,10 @@ class Settings:
         return self._installed
     
     def open_config_file(self):
-        cmd = 'start' if CURRENT_SYSTEM == HP.WINDOWS else 'open'
-        subprocess.run([cmd, str(self.LOCAL_CONFIG_FILE.resolve())], shell=True)
+        if CURRENT_SYSTEM == HP.WINDOWS:
+            subprocess.run(['start', str(self.LOCAL_CONFIG_FILE.resolve())], shell=True)
+        elif CURRENT_SYSTEM == HP.MAC:
+            subprocess.run(['/usr/bin/open', str(self.LOCAL_CONFIG_FILE.resolve())])
     
     def _validate(self, config):
         self._library.validate(config['library'])

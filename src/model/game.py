@@ -3,7 +3,6 @@ import logging
 from typing import Dict, List, Optional, Any
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo
-from galaxy.api.consts import OSCompatibility
 
 from consts import KEY_TYPE, HP
 from model.download import TroveDownload, SubproductDownload
@@ -31,6 +30,9 @@ class HumbleGame(abc.ABC):
     @abc.abstractproperty
     def license(self) -> LicenseInfo:
         pass
+
+    def os_compatibile(self, os: HP) -> bool:
+        return os in self.downloads
 
     @property
     def human_name(self) -> str:

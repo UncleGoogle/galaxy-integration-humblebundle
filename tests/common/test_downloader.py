@@ -2,7 +2,7 @@ import pytest
 
 from humbledownloader import HumbleDownloadResolver
 from model.game import Subproduct, TroveGame
-from consts import HP, BITNESS, PlatformNotSupported
+from consts import HP, BITNESS
 
 
 @pytest.mark.parametrize("platform,bitness", [(HP.WINDOWS, BITNESS.B64), (HP.WINDOWS, BITNESS.B32), (HP.MAC, BITNESS.B64)])
@@ -13,8 +13,7 @@ def test_any_download_found(orders, get_troves, platform, bitness):
     for order in orders:
         for sub_data in order['subproducts']:
             sub = Subproduct(sub_data)
-            if platform not in sub.downloads:
-                # get_os_compatibility ensures this won't happend
+            if not sub.os_compatibile(platform):
                 continue
             try:
                 download_resolver(sub) 
@@ -23,10 +22,9 @@ def test_any_download_found(orders, get_troves, platform, bitness):
 
     for trove_data in get_troves(from_index=0):
         trove = TroveGame(trove_data)
-        try:
-            download_resolver(trove) 
-        except PlatformNotSupported:
-            pass  # it happens
+        if not trove.os_compatibile(platform):
+            continue
+        download_resolver(trove)
 
 
 def test_windows_bitness_priority():

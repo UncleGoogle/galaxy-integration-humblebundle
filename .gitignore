@@ -1,7 +1,7 @@
 .venv
 .vscode
+.DS_Store
 .env
-galaxy/
 info.md
 credentials*
 GPUCache

@@ -4,10 +4,8 @@ import json
 from unittest.mock import MagicMock
 
 # workaround for vscode test discovery
-# disable in production!
 import sys
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'src'))
-sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'galaxy-integrations-python-api' / 'src'))
 
 from galaxy.api.errors import UnknownError
 from plugin import HumbleBundlePlugin

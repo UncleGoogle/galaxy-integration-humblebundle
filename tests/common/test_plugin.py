@@ -1,11 +1,10 @@
-import os.path
 import pytest
 from unittest.mock import patch
 import pathlib
 
 from galaxy.api.consts import OSCompatibility as OSC
 
-from consts import HP
+from consts import HP, CURRENT_SYSTEM
 from local.localgame import LocalHumbleGame
 from model.game import Subproduct
 from humbledownloader import HumbleDownloadResolver
@@ -20,7 +19,10 @@ async def test_launch_game(plugin_mock, overgrowth):
     with patch('subprocess.Popen') as subproc:
         with patch('psutil.Process'):
             await plugin_mock.launch_game(id_)
-            subproc.assert_called_once_with('game_dir' + os.path.sep + 'mock.exe', creationflags=8 ,cwd=pathlib.Path('game_dir'))
+            if CURRENT_SYSTEM == HP.WINDOWS:
+                subproc.assert_called_once_with('game_dir\\mock.exe', creationflags=8 ,cwd=pathlib.Path('game_dir'))
+            elif CURRENT_SYSTEM == HP.MAC:
+                subproc.assert_called_once()
 
 
 @pytest.mark.asyncio

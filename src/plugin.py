@@ -18,7 +18,7 @@ from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
-from consts import HP
+from consts import HP, CURRENT_SYSTEM
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
@@ -106,7 +106,8 @@ class HumbleBundlePlugin(Plugin):
 
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
-        self._settings.open_config_file()
+        if self._settings:
+            self._settings.open_config_file()
         return Authentication(user_id, user_id)
 
     async def get_owned_games(self):
@@ -214,13 +215,17 @@ class HumbleBundlePlugin(Plugin):
             logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
             return
 
-        owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
+        owned_title_id = {
+            game.human_name: uid for uid, game
+            in self._owned_games.items()
+            if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
+        }
         if self._rescan_needed and self._settings is not None:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning in: {self._settings.installed.search_dirs}')
-            self._local_games = await self._app_finder.find_local_games(owned_title_id, self._settings.installed.search_dirs)
+            self._local_games = await self._app_finder(owned_title_id, self._settings.installed.search_dirs)
         else:
-            self._local_games.update(await self._app_finder.find_local_games(owned_title_id, None))
+            self._local_games.update(await self._app_finder(owned_title_id, None))
         await asyncio.sleep(4)
 
     async def _check_statuses(self):
