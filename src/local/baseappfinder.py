@@ -14,8 +14,10 @@ from local.localgame import LocalHumbleGame
 
 
 class BaseAppFinder(abc.ABC):
-    def __init__(self):
+    def __init__(self, get_close_matches=None, find_best_exe=None):
         self._pathfinder = PathFinder(CURRENT_SYSTEM)
+        self.get_close_matches = get_close_matches or self._get_close_matches
+        self.find_best_exe = find_best_exe or self._find_best_exe
 
     async def __call__(self, owned_title_id: Dict[str, str], paths: Set[pathlib.Path]) -> Dict[str, LocalHumbleGame]:
         """
@@ -62,10 +64,10 @@ class BaseAppFinder(abc.ABC):
         logging.debug(f'New scan - similarity: {similarity}, candidates: {list(candidates)}')
         for dir_name in dirs:
             await asyncio.sleep(0)
-            matches = self.__get_close_matches(dir_name, candidates, similarity)
+            matches = self.get_close_matches(dir_name, candidates, similarity)
             for app_name in matches:
                 dir_path = pathlib.PurePath(root) / dir_name
-                best_exe = self.__find_best_exe(dir_path, app_name)
+                best_exe = self.find_best_exe(dir_path, app_name)
                 if best_exe is None:
                     logging.warning('No executable found, moving to next best matched app')
                     continue
@@ -73,7 +75,7 @@ class BaseAppFinder(abc.ABC):
                 yield app_name, pathlib.Path(best_exe)
                 break
 
-    def __get_close_matches(self, dir_name: str, candidates: Set[str], similarity: float) -> List[str]:
+    def _get_close_matches(self, dir_name: str, candidates: Set[str], similarity: float) -> List[str]:
         """Wrapper around difflib.get_close_matches"""
         matches_ = difflib.get_close_matches(dir_name, candidates, cutoff=similarity)
         matches = cast(List[str], matches_)  # as str is Sequence[str] - mypy/issues/5090
@@ -81,7 +83,7 @@ class BaseAppFinder(abc.ABC):
             logging.info(f'found close ({similarity}) matches for {dir_name}: {matches}')
         return matches
 
-    def __find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):
+    def _find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):
         executables = self._pathfinder.find_executables(dir_path)
         if not executables:
             return None

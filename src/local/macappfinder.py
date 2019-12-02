@@ -22,6 +22,9 @@ class BundleInfo:
 class MacAppFinder(BaseAppFinder):
     DEFAULT_PATH = '/Applications'
 
+    def __init__(self):
+        super().__init__(self._get_close_matches, self._find_best_exe)
+
     async def __call__(self, owned_title_id, paths=None):
         if paths is None:
             return dict()
@@ -29,15 +32,15 @@ class MacAppFinder(BaseAppFinder):
             paths = {pathlib.Path(self.DEFAULT_PATH)}
         return await super().__call__(owned_title_id, paths)
 
-    def __get_close_matches(self, dir_name, candidates, similarity):
+    def _get_close_matches(self, dir_name, candidates, similarity):
         """Cuts .app suffix"""
         dir_name_stem = dir_name[:-4] if dir_name.endswith('.app') else dir_name
-        return super().__get_close_matches(dir_name_stem, candidates, similarity)
+        return super()._get_close_matches(dir_name_stem, candidates, similarity)
 
-    def __find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):
+    def _find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):
         if dir_path.suffix == '.app':
             return self.__parse_bundle(dir_path)
-        return super().__find_best_exe(dir_path, app_name)
+        return super()._find_best_exe(dir_path, app_name)
 
     @staticmethod
     def __parse_bundle(app_dir: os.PathLike) -> Optional[pathlib.Path]:
