@@ -31,6 +31,9 @@ class HumbleGame(abc.ABC):
     def license(self) -> LicenseInfo:
         pass
 
+    def os_compatibile(self, os: HP) -> bool:
+        return os in self.downloads
+
     @property
     def human_name(self) -> str:
         return self._data['human_name']

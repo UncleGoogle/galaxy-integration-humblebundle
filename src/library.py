@@ -1,7 +1,7 @@
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Union, Any, Collection, Coroutine
+from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product

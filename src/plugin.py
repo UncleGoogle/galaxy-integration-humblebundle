@@ -18,7 +18,7 @@ from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
-from consts import HP
+from consts import HP, CURRENT_SYSTEM
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct
@@ -215,7 +215,11 @@ class HumbleBundlePlugin(Plugin):
             logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
             return
 
-        owned_title_id = {v.human_name: k for k, v in self._owned_games.items() if not isinstance(v, Key)}
+        owned_title_id = {
+            game.human_name: uid for uid, game
+            in self._owned_games.items()
+            if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
+        }
         if self._rescan_needed and self._settings is not None:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning in: {self._settings.installed.search_dirs}')

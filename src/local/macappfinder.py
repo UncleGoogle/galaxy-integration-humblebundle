@@ -1,7 +1,7 @@
 import os
 import plistlib
 import logging
-from typing import Optional, Set, Dict
+from typing import Optional, Dict
 import pathlib
 from dataclasses import dataclass
 
