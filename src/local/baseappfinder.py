@@ -59,6 +59,7 @@ class BaseAppFinder(abc.ABC):
         :yields:            2-el. tuple of app_name and executable
         """
         root, dirs, _ = next(os.walk(path))
+        logging.debug(f'New scan - similarity: {similarity}, candidates: {list(candidates)}')
         for dir_name in dirs:
             await asyncio.sleep(0)
             matches = self.__get_close_matches(dir_name, candidates, similarity)
@@ -75,7 +76,6 @@ class BaseAppFinder(abc.ABC):
     def __get_close_matches(self, dir_name: str, candidates: Set[str], similarity: float) -> List[str]:
         """Wrapper around difflib.get_close_matches"""
         matches_ = difflib.get_close_matches(dir_name, candidates, cutoff=similarity)
-        logging.debug(f'{dir_name}, candidates: {list(candidates)}, matches: {matches_}')
         matches = cast(List[str], matches_)  # as str is Sequence[str] - mypy/issues/5090
         if matches:
             logging.info(f'found close ({similarity}) matches for {dir_name}: {matches}')
