@@ -9,6 +9,7 @@ from glob import glob
 
 from invoke import task
 import github
+from galaxy.tools import zip_folder_to_file
 
 
 with open('src/manifest.json') as f:
@@ -139,22 +140,10 @@ def test(c, target=None):
 @task
 def archive(c, zip_name=None, target=None):
     if zip_name is None:
-        zip_name = f'humblebundle_{__version__}'
-    wd = Path(__file__).parent
+        zip_name = f'humblebundle_{__version__}.zip'
 
-    arch = wd / (zip_name + '.zip')
-    if arch.exists():
-        if input(f'{str(arch)} already exists. Proceed? y/n') !='y':
-            return
-
-    if target:
-        assert Path(target).exists()
-        shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=target)
-    else:
-        target = wd / zip_name
-        c.run(f"inv build -o {str(target)}")
-        shutil.make_archive(zip_name, 'zip', root_dir=wd, base_dir=target)
-        shutil.rmtree(target)
+    zip_folder_to_file(target, zip_name)
+    return zip_name
 
 
 @task
@@ -163,38 +152,34 @@ def release(c, full=None):
     if input('y/n').lower() != 'y':
         return
 
-    print('updating src/manifest.json...')
-    with open("src/manifest.json", "r+") as file_:
-        manifest = json.load(file_)
-        manifest['version'] = __version__
-        file_.seek(0)
-        json.dump(manifest, file_, indent=4)
-
-    c.run(f"git add src/manifest.json")
-    c.run(f'git commit -m "bump version"', warn=True)
-    print('passed')
+    g = github.Github('UncleGoogle', input('personal token: '))
+    repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
 
     if full:
         print('running tests')
         build(c, output='build')
         test(c, target='build')
-        archive(c, target='build')
+        asset_path = archive(c, target='build')
+        print(asset_path)
 
-        print('pushing "bump version" commit')
-        c.run(f'git push')
+    # TODO check if release already is therek
+    # if not:
 
-        print('creating and pushing to origin tag: ', tag)
-        tag = 'v' + __version__
-        c.run(f'git tag {tag}')
-        c.run(f'git push origin {tag}')
+    tag = 'v' + __version__
+    print('creating and pushing to origin tag: ', tag)
+    # c.run(f'git tag {tag}')
+    # c.run(f'git push origin {tag}')
 
-        g = github.Github('UncleGoogle', input('personal token: '))
-        repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
+    print('creating github draft release')
+    release = repo.create_git_release(
+        tag=tag,
+        name=__version__,
+        message="draft",
+        draft=True
+    )
 
-        print('creating github draft release')
-        repo.create_git_release(
-            tag=tag,
-            name=__version__,
-            message="draft",
-            draft=True
-        )
+    #------
+
+    if full:
+        print('uploading assets')
+        release.upload_asset(asset_path, label='', content_type= , name=)
