@@ -24,11 +24,13 @@ DIST_DIR = ''
 GALAXY_PYTHONPATH = ''
 
 if sys.platform == 'win32':
+    PLATFORM = 'Windows'
     GALAXY_PATH = 'C:\\Program Files (x86)\\GOG Galaxy\\GalaxyClient.exe'
     DIST_DIR = os.environ['localappdata'] + '\\GOG.com\\Galaxy\\plugins\\installed'
     PYTHON = 'python'
     GALAXY_PYTHONPATH = str(Path(os.path.expandvars("%programfiles(x86)%")) / "GOG Galaxy" / "python" / "python.exe")
 elif sys.platform == 'darwin':
+    PLATFORM = 'Mac'
     GALAXY_PATH = "/Applications/GOG Galaxy.app/Contents/MacOS/GOG Galaxy"
     DIST_DIR = os.environ['HOME'] + r"/Library/Application\ Support/GOG.com/Galaxy/plugins/installed"
     PYTHON = 'python3'
@@ -143,43 +145,39 @@ def archive(c, zip_name=None, target=None):
         zip_name = f'humblebundle_{__version__}.zip'
 
     zip_folder_to_file(target, zip_name)
-    return zip_name
+    zip_path = Path('.') / zip_name
+    return str(zip_path.resolve())
 
 
 @task
-def release(c, full=None):
+def release(c):
     print('New release version will be: ', __version__, '. is it OK?')
     if input('y/n').lower() != 'y':
         return
 
-    g = github.Github('UncleGoogle', input('personal token: '))
+    token = os.environ['GITHUB_TOKEN']
+    g = github.Github(token)
     repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
 
-    if full:
-        print('running tests')
-        build(c, output='build')
-        test(c, target='build')
-        asset_path = archive(c, target='build')
-        print(asset_path)
-
-    # TODO check if release already is therek
-    # if not:
+    print('running tests')
+    build(c, output='build')
+    test(c, target='build')
+    asset_path = archive(c, target='build')
+    print(asset_path)
 
     tag = 'v' + __version__
-    print('creating and pushing to origin tag: ', tag)
-    # c.run(f'git tag {tag}')
-    # c.run(f'git push origin {tag}')
+    latest_release = repo.get_latest_release()
+    print(latest_release.tag_name)
+    if latest_release.tag_name != tag:
+        print('No release with current tag. Creating tag and draft release.')
+        c.run(f'git tag {tag}')
+        c.run(f'git push origin {tag}')
+        release = repo.create_git_release(
+            tag=tag,
+            name=__version__,
+            message="draft",
+            draft=True
+        )
 
-    print('creating github draft release')
-    release = repo.create_git_release(
-        tag=tag,
-        name=__version__,
-        message="draft",
-        draft=True
-    )
-
-    #------
-
-    if full:
-        print('uploading assets')
-        release.upload_asset(asset_path, label='', content_type= , name=)
+    print(f'Uploading asset for {PLATFORM}: {asset_path}')
+    release.upload_asset(asset_path, label=PLATFORM)
