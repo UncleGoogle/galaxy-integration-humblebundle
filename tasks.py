@@ -47,13 +47,14 @@ def install(c, dev=False):
 
 @task
 def build(c, output=DIST_PLUGIN):
-    output = Path(output).resolve()
+    print(f'Preparing build to folder `{output}`')
 
-    print('removing', output)
+    output = Path(output).resolve()
+    print('Removing', output)
     if os.path.exists(output):
         shutil.rmtree(output)
 
-    print('copying source code to ', str(output))
+    print('Copying source code to ', str(output))
     shutil.copytree('src', output, ignore=shutil.ignore_patterns(
         '__pycache__', '.mypy_cache', 'galaxy'))
 
@@ -65,7 +66,7 @@ def build(c, output=DIST_PLUGIN):
         # "--python-version", "37",
         # "--no-deps"
     ]
-    print(f'running `{" ".join(args)}`')
+    print(f'Running `{" ".join(args)}`')
     subprocess.check_call(args)
 
 
@@ -117,6 +118,7 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
 
 @task
 def test(c, target=None):
+    print(f'Running tests vs code dumped in folder `{target}`')
 
     if target is not None:
         config = str(Path(__file__).parent / 'pytest-build.ini')
@@ -143,6 +145,7 @@ def test(c, target=None):
 def archive(c, zip_name=None, target=None):
     if zip_name is None:
         zip_name = f'humblebundle_{__version__}.zip'
+    print(f'Zipping build from `{target}` to `{zip_name}`')
 
     zip_folder_to_file(target, zip_name)
     zip_path = Path('.') / zip_name
@@ -150,32 +153,38 @@ def archive(c, zip_name=None, target=None):
 
 
 @task
-def release(c, pre=False):
-    tag = 'v' + __version__
-    print(f'New tag version for release will be: {tag}. is it OK?')
-    if input('y/n').lower() != 'y':
-        return
+def release(c, pre=False, for_tag=None):
+    if for_tag is not None:
+        tag = for_tag
+        print(f'Creating release with assets for {PLATFORM} to version {tag}')
+    else:
+        tag = 'v' + __version__
+        print(f'New tag version for release will be: {tag}. is it OK?')
+        if input('y/n').lower() != 'y':
+            return
 
     token = os.environ['GITHUB_TOKEN']
     g = github.Github(token)
     repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
     release = repo.get_latest_release()
 
-    print('running tests')
     build(c, output='build')
     test(c, target='build')
     asset_path = archive(c, target='build')
-    print(asset_path)
 
     if release.tag_name != tag:
-        print('No release with current tag. Creating tag and draft release.')
-        c.run(f'git tag {tag}')
-        c.run(f'git push origin {tag}')
+        if for_tag is None:
+            print(f'Creating and pushing a new tag `{tag}`')
+            c.run(f'git tag {tag}')
+            c.run(f'git push origin {tag}')
+
+        print(f'Creating new release for tag `{tag}`')
         release = repo.create_git_release(
             tag=tag,
             name=__version__,
             message="draft",
-            draft=True
+            draft=True,
+            prerelease=pre
         )
 
     print(f'Uploading asset for {PLATFORM}: {asset_path}')
