@@ -143,6 +143,9 @@ def test(c, target=None):
 
 @task
 def archive(c, zip_name=None, target=None):
+    if target is None:
+        build(c, 'build')
+        target = 'build'
     if zip_name is None:
         zip_name = f'humblebundle_{__version__}.zip'
     print(f'Zipping build from `{target}` to `{zip_name}`')
