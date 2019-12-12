@@ -1,4 +1,4 @@
-galaxy.plugin.api==0.58
+galaxy.plugin.api==0.62
 sentry-sdk==0.13.1
 psutil==5.6.3
 toml==0.10.0
