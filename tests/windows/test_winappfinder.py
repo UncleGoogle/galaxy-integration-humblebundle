@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, PropertyMock
 
 try:
     from local.winappfinder import WindowsAppFinder
@@ -69,12 +69,15 @@ async def test_find_games_display_icon(uk_torchlight2):
     """Find exe based on DisplayIcon subkey"""
     human_name, machine_name = "Torchlight 2", "torchlight2"
     owned_games = {human_name: machine_name}
-    finder = WindowsAppFinder()
     expected_exe = uk_torchlight2.display_icon
-    with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', set([uk_torchlight2])):
+
+    finder = WindowsAppFinder()
+    with patch('local.reg_watcher.WinRegUninstallWatcher.uninstall_keys', new_callable=PropertyMock) as keys:
+        keys.return_value = set([uk_torchlight2])
         res = await finder(owned_games, [])
-        assert machine_name in res
-        assert expected_exe == str(res[machine_name].executable)
+
+    assert machine_name in res
+    assert expected_exe == str(res[machine_name].executable)
 
 
 @pytest.mark.asyncio
@@ -90,5 +93,6 @@ async def test_find_game_display_uninstall():
     )
     owned_games = {human_name: machine_name}
     finder = WindowsAppFinder()
-    with patch.object(finder._reg, '_WinRegUninstallWatcher__uninstall_keys', set([uk_game])):
+    with patch('local.reg_watcher.WinRegUninstallWatcher.uninstall_keys', new_callable=PropertyMock) as keys:
+        keys.return_value = set([uk_game])
         assert {} == await finder(owned_games, [])

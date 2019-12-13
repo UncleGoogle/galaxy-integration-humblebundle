@@ -1,4 +1,4 @@
-name: Routine build check
+name: Routine build tests and linters check
 
 on:
   push
