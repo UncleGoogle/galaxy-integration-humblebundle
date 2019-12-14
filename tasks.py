@@ -159,8 +159,9 @@ def archive(c, zip_name=None, target=None):
 def create_tag(c, tag=None):
     if tag is None:
         tag = 'v' + __version__
+    branch = c.run("git rev-parse --abbrev-ref HEAD").stdout.strip()
 
-    print(f'New tag version for release will be: {tag}. is it OK?')
+    print(f'New tag version for release will be: [{tag}] on [{branch}] branch. is it OK?')
     if input('y/n').lower() != 'y':
         return
 
