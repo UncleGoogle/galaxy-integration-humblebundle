@@ -171,10 +171,6 @@ def release(c, automa=False):
     repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
     last_release = repo.get_latest_release()
 
-    build(c, output='build')
-    test(c, target='build')
-    asset_path = archive(c, target='build')
-
     if last_release.tag_name == tag:
         if not automa:
             raise RuntimeError(f'Release for tag {tag} already exists')
@@ -192,6 +188,10 @@ def release(c, automa=False):
             draft=True,
             prerelease=not automa
         )
+
+    build(c, output='build')
+    test(c, target='build')
+    asset_path = archive(c, target='build')
 
     print(f'Uploading asset for {PLATFORM}: {asset_path}')
     last_release.upload_asset(asset_path, label=PLATFORM)
