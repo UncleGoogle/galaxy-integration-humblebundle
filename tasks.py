@@ -173,7 +173,7 @@ def create_tag(c, tag=None):
 def release(c, automa=False):
     tag = 'v' + __version__
     if automa:
-        print(f'Creating release with assets for {PLATFORM} to version {tag}')
+        print(f'Creating/updating release with assets for {PLATFORM} to version {tag}')
     else:
         print(f'New tag version for release will be: {tag}. is it OK?')
         if input('y/n').lower() != 'y':
@@ -182,17 +182,18 @@ def release(c, automa=False):
     token = os.environ['GITHUB_TOKEN']
     g = github.Github(token)
     repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
-    last_release = repo.get_latest_release()
 
-    if last_release.tag_name == tag:
-        if not automa:
-            raise RuntimeError(f'Release for tag {tag} already exists')
+    for release in repo.get_releases():
+        if release.tag_name == tag and release.draft:
+            draft_release = release
+            break
     else:
+        print('No draft release with given tag found.')
         if not automa:
             create_tag(c, tag)
 
         print(f'Creating new release for tag `{tag}`')
-        last_release = repo.create_git_release(
+        draft_release = repo.create_git_release(
             tag=tag,
             name=__version__,
             message="draft",
@@ -205,4 +206,4 @@ def release(c, automa=False):
     asset_path = archive(c, target='build')
 
     print(f'Uploading asset for {PLATFORM}: {asset_path}')
-    last_release.upload_asset(asset_path, label=PLATFORM)
+    draft_release.upload_asset(asset_path, label=PLATFORM)
