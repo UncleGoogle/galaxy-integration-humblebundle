@@ -156,12 +156,12 @@ def archive(c, zip_name=None, target=None):
 
 
 @task
-def release(c, pre=False, for_tag=None):
-    if for_tag is not None:
-        tag = for_tag
+def release(c, automa=False):
+    tag = 'v' + __version__
+    if automa:
         print(f'Creating release with assets for {PLATFORM} to version {tag}')
     else:
-        tag = 'v' + __version__
+        assert '-' in tag, f'tag {tag} looks like for regular release, but no --automa option means pre-release'
         print(f'New tag version for release will be: {tag}. is it OK?')
         if input('y/n').lower() != 'y':
             return
@@ -169,26 +169,29 @@ def release(c, pre=False, for_tag=None):
     token = os.environ['GITHUB_TOKEN']
     g = github.Github(token)
     repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
-    release = repo.get_latest_release()
+    last_release = repo.get_latest_release()
 
     build(c, output='build')
     test(c, target='build')
     asset_path = archive(c, target='build')
 
-    if release.tag_name != tag:
-        if for_tag is None:
+    if last_release.tag_name == tag:
+        if not automa:
+            raise RuntimeError(f'Release for tag {tag} already exists')
+    else:
+        if not automa:
             print(f'Creating and pushing a new tag `{tag}`')
             c.run(f'git tag {tag}')
             c.run(f'git push origin {tag}')
 
         print(f'Creating new release for tag `{tag}`')
-        release = repo.create_git_release(
+        last_release = repo.create_git_release(
             tag=tag,
             name=__version__,
             message="draft",
             draft=True,
-            prerelease=pre
+            prerelease=not automa
         )
 
     print(f'Uploading asset for {PLATFORM}: {asset_path}')
-    release.upload_asset(asset_path, label=PLATFORM)
+    last_release.upload_asset(asset_path, label=PLATFORM)
