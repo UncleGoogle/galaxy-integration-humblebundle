@@ -1,11 +1,21 @@
 import pytest
-from unittest.mock import patch, PropertyMock
+from unittest.mock import PropertyMock, MagicMock
+from typing import Iterable
 
 try:
     from local.winappfinder import WindowsAppFinder
-    from local.reg_watcher import UninstallKey
+    from local.reg_watcher import UninstallKey, WinRegUninstallWatcher
 except ModuleNotFoundError:
     pass  # workaround problems in vscode test discovery
+
+
+@pytest.fixture
+def mock_winreg_watcher():
+    def fn(uninstall_keys: Iterable):
+        watcher = MagicMock(spec=WinRegUninstallWatcher)
+        type(watcher).uninstall_keys = PropertyMock(return_value=set(uninstall_keys))
+        return watcher
+    return fn
 
 
 @pytest.fixture
@@ -65,23 +75,21 @@ def test_no_match():
 # ------------ find local games ---------
 
 @pytest.mark.asyncio
-async def test_find_games_display_icon(uk_torchlight2):
+async def test_find_games_display_icon(uk_torchlight2, mock_winreg_watcher):
     """Find exe based on DisplayIcon subkey"""
     human_name, machine_name = "Torchlight 2", "torchlight2"
     owned_games = {human_name: machine_name}
     expected_exe = uk_torchlight2.display_icon
 
     finder = WindowsAppFinder()
-    with patch('local.reg_watcher.WinRegUninstallWatcher.uninstall_keys', new_callable=PropertyMock) as keys:
-        keys.return_value = set([uk_torchlight2])
-        res = await finder(owned_games, [])
-
+    finder._reg = mock_winreg_watcher(uninstall_keys=[uk_torchlight2])
+    res = await finder(owned_games)
     assert machine_name in res
     assert expected_exe == str(res[machine_name].executable)
 
 
 @pytest.mark.asyncio
-async def test_find_game_display_uninstall():
+async def test_find_game_display_uninstall(mock_winreg_watcher):
     """Find exe based on DisplayIcon subkey but not if it is uninstaller"""
     human_name, machine_name = "Agame", 'agame'
     uninstall = "C:\\agame\\uninstall.exe"
@@ -93,6 +101,5 @@ async def test_find_game_display_uninstall():
     )
     owned_games = {human_name: machine_name}
     finder = WindowsAppFinder()
-    with patch('local.reg_watcher.WinRegUninstallWatcher.uninstall_keys', new_callable=PropertyMock) as keys:
-        keys.return_value = set([uk_game])
-        assert {} == await finder(owned_games, [])
+    finder._reg = mock_winreg_watcher(uninstall_keys=[uk_game])
+    assert {} == await finder(owned_games)
