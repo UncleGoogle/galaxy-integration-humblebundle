@@ -155,13 +155,23 @@ def archive(c, zip_name=None, target=None):
     return str(zip_path.resolve())
 
 
+@task(aliases=['tag'])
+def create_tag(c, tag):
+    print(f'New tag version for release will be: {tag}. is it OK?')
+    if input('y/n').lower() != 'y':
+        return
+
+    print(f'Creating and pushing a new tag `{tag}`.')
+    c.run(f'git tag {tag}')
+    c.run(f'git push origin {tag}')
+
+
 @task
 def release(c, automa=False):
     tag = 'v' + __version__
     if automa:
         print(f'Creating release with assets for {PLATFORM} to version {tag}')
     else:
-        assert '-' in tag, f'tag {tag} looks like for regular release, but no --automa option means pre-release'
         print(f'New tag version for release will be: {tag}. is it OK?')
         if input('y/n').lower() != 'y':
             return
@@ -176,9 +186,7 @@ def release(c, automa=False):
             raise RuntimeError(f'Release for tag {tag} already exists')
     else:
         if not automa:
-            print(f'Creating and pushing a new tag `{tag}`')
-            c.run(f'git tag {tag}')
-            c.run(f'git push origin {tag}')
+            create_tag(c, tag)
 
         print(f'Creating new release for tag `{tag}`')
         last_release = repo.create_git_release(
