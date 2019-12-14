@@ -7,14 +7,6 @@ on:
       - '!v*-*'  # pre-releases
 
 jobs:
-  debug:
-    runs-on: ubuntu-16.04
-    steps:
-      - name: Dump GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-
   release:
     strategy:
       matrix:
