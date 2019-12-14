@@ -156,7 +156,10 @@ def archive(c, zip_name=None, target=None):
 
 
 @task(aliases=['tag'])
-def create_tag(c, tag):
+def create_tag(c, tag=None):
+    if tag is None:
+        tag = 'v' + __version__
+
     print(f'New tag version for release will be: {tag}. is it OK?')
     if input('y/n').lower() != 'y':
         return
