@@ -6,8 +6,8 @@ import webbrowser
 import pathlib
 import json
 from dataclasses import astuple
-from functools import partial
-from typing import Any, Optional
+from functools import partial, wraps
+from typing import Any, Optional, Callable
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
@@ -43,6 +43,30 @@ sentry_sdk.init(
     integrations=[sentry_logging],
     release=f"hb-galaxy@{__version__}"
 )
+
+
+def bounce(bouncer: Callable, interval: float):
+    def _wrapper(func):
+        async def wrap(*args, **kwargs):
+            if wrap.sem.locked():
+                wrap.timer.set()  # cancel another clicks
+                result = bouncer(*args, **kwargs)
+                wrap.sem.release()
+                return result
+
+            try:
+                print(wrap.sem.locked())
+                await wrap.sem.acquire()
+                await asyncio.wait_for(wrap.timer.wait(), interval)
+            except asyncio.TimeoutError:
+                print('Timeouted. Normal exit')
+                return await func(*args, **kwargs)
+
+        wrap.timer = asyncio.Event()
+        wrap.sem = asyncio.Semaphore(0)
+        return wrap
+    return _wrapper
+
 
 
 class HumbleBundlePlugin(Plugin):
