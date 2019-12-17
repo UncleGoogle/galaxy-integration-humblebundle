@@ -26,6 +26,7 @@ from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
 from privacy import SensitiveFilter
+from utils.decorators import double_click_effect
 
 
 with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
@@ -43,30 +44,6 @@ sentry_sdk.init(
     integrations=[sentry_logging],
     release=f"hb-galaxy@{__version__}"
 )
-
-
-def bounce(bouncer: Callable, interval: float):
-    def _wrapper(func):
-        async def wrap(*args, **kwargs):
-            if wrap.sem.locked():
-                wrap.timer.set()  # cancel another clicks
-                result = bouncer(*args, **kwargs)
-                wrap.sem.release()
-                return result
-
-            try:
-                print(wrap.sem.locked())
-                await wrap.sem.acquire()
-                await asyncio.wait_for(wrap.timer.wait(), interval)
-            except asyncio.TimeoutError:
-                print('Timeouted. Normal exit')
-                return await func(*args, **kwargs)
-
-        wrap.timer = asyncio.Event()
-        wrap.sem = asyncio.Semaphore(0)
-        return wrap
-    return _wrapper
-
 
 
 class HumbleBundlePlugin(Plugin):
@@ -147,6 +124,7 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
+    @double_click_effect(self._settings.open_config_file, timeout=1)
     async def install_game(self, game_id):
         if game_id in self._under_instalation:
             return
