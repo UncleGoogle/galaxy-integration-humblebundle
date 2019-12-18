@@ -1,12 +1,13 @@
 import asyncio
 from contextlib import suppress
-from typing import Callable
+from typing import Callable, Union
 
 
-def double_click_effect(effect: Callable, timeout: float):
+def double_click_effect(timeout: float, effect: Union[Callable, str], *effect_args, **effect_kwargs):
     """
     Decorator of asynchronious function that allows to call synchonious `effect` 
     if the function was called second time within `timeout` seconds
+    To decorate methods of class instances, `effect` should be str matching that name
     """
     def _wrapper(fn):
         async def wrap(*args, **kwargs):
@@ -20,7 +21,10 @@ def double_click_effect(effect: Callable, timeout: float):
                     await wrap.task
             else:
                 wrap.task.cancel()
-                return effect(*args, **kwargs)
+                if type(effect) == str:  # for class methods
+                    return getattr(args[0], effect)(*effect_args[1:], **effect_kwargs)  # self attribute
+                else:
+                    return effect(*args, **kwargs)
 
         wrap.task = None
         return wrap

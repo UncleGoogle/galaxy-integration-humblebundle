@@ -71,6 +71,12 @@ class HumbleBundlePlugin(Plugin):
             data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
+    
+    def _open_config_file(self):
+        if self._settings:
+            self._settings.open_config_file()
+        else:
+            logging.warning('Opining config failed: settings are not initialized')
 
     def handshake_complete(self):
         self._settings = Settings(
@@ -107,8 +113,7 @@ class HumbleBundlePlugin(Plugin):
 
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
-        if self._settings:
-            self._settings.open_config_file()
+        self._open_config_file()
         return Authentication(user_id, user_id)
 
     async def get_owned_games(self):
@@ -124,7 +129,7 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
-    @double_click_effect(self._settings.open_config_file, timeout=1)
+    @double_click_effect(timeout=1, effect='_open_config_file')
     async def install_game(self, game_id):
         if game_id in self._under_instalation:
             return
