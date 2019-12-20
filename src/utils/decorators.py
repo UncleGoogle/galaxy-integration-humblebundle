@@ -1,5 +1,6 @@
 import asyncio
 from contextlib import suppress
+from functools import wraps
 from typing import Callable, Union
 
 
@@ -11,6 +12,7 @@ def double_click_effect(timeout: float, effect: Union[Callable, str], *effect_ar
     To decorate methods of class instances, `effect` should be str matching the method name.
     """
     def _wrapper(fn):
+        @wraps(fn)
         async def wrap(*args, **kwargs):
             async def delayed_fn():
                 await asyncio.sleep(timeout)

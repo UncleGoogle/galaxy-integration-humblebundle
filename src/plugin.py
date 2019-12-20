@@ -6,8 +6,8 @@ import webbrowser
 import pathlib
 import json
 from dataclasses import astuple
-from functools import partial, wraps
-from typing import Any, Optional, Callable
+from functools import partial
+from typing import Any, Optional
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 

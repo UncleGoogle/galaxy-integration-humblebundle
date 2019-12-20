@@ -14,8 +14,7 @@ def mock_dbclick():
 
 @pytest.fixture
 def mock_async_fn():
-    async def fn(): pass
-    return AsyncMock(spec=fn)
+    return AsyncMock()
 
 
 @pytest.fixture
