@@ -7,7 +7,8 @@ def double_click_effect(timeout: float, effect: Union[Callable, str], *effect_ar
     """
     Decorator of asynchronious function that allows to call synchonious `effect` 
     if the function was called second time within `timeout` seconds
-    To decorate methods of class instances, `effect` should be str matching that name
+    ---
+    To decorate methods of class instances, `effect` should be str matching the method name.
     """
     def _wrapper(fn):
         async def wrap(*args, **kwargs):
@@ -21,10 +22,10 @@ def double_click_effect(timeout: float, effect: Union[Callable, str], *effect_ar
                     await wrap.task
             else:
                 wrap.task.cancel()
-                if type(effect) == str:  # for class methods
-                    return getattr(args[0], effect)(*effect_args[1:], **effect_kwargs)  # self attribute
+                if isinstance(effect, str):  # for class methods args[0] is `self`
+                    return getattr(args[0], effect)(*effect_args, **effect_kwargs)
                 else:
-                    return effect(*args, **kwargs)
+                    return effect(*effect_args, **effect_kwargs)
 
         wrap.task = None
         return wrap
