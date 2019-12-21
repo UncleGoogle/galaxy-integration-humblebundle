@@ -159,8 +159,9 @@ def archive(c, zip_name=None, target=None):
 def create_tag(c, tag=None):
     if tag is None:
         tag = 'v' + __version__
+    branch = c.run("git rev-parse --abbrev-ref HEAD").stdout.strip()
 
-    print(f'New tag version for release will be: {tag}. is it OK?')
+    print(f'New tag version for release will be: [{tag}] on [{branch}] branch. is it OK?')
     if input('y/n').lower() != 'y':
         return
 
@@ -203,7 +204,7 @@ def release(c, automa=False):
 
     build(c, output='build')
     test(c, target='build')
-    asset_path = archive(c, target='build')
+    asset_path = archive(c, target='build', zip_name=f'humble_{tag}_{PLATFORM[:3].lower()}')
 
     print(f'Uploading asset for {PLATFORM}: {asset_path}')
-    draft_release.upload_asset(asset_path, label=PLATFORM)
+    draft_release.upload_asset(asset_path)
