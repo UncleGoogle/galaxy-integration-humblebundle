@@ -3,7 +3,6 @@ import pytest
 import asyncio
 
 from utils.decorators import double_click_effect
-from conftest import AsyncMock
 
 
 @pytest.fixture
@@ -14,7 +13,8 @@ def mock_dbclick():
 
 @pytest.fixture
 def mock_async_fn():
-    return AsyncMock()
+    async def async_fn(): pass
+    return mock.MagicMock(spec=async_fn)
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ async def test_fast_triple_click(mock_dbclick, mock_async_fn, delayed_fn):
     await asyncio.gather(
         decorated_fn(),
         delayed_fn(0.01, decorated_fn),
-        delayed_fn(0.03, decorated_fn)
+        delayed_fn(0.05, decorated_fn)
     )
-    assert mock_dbclick.call_count == 1
     assert mock_async_fn.call_count == 1
+    assert mock_dbclick.call_count == 1
