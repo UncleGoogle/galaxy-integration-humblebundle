@@ -1,10 +1,9 @@
-name: Routine build tests and linters check
+name: Build & test
 
 on:
   push:
     tag-ignore:  # only banches
       - '*'
-
 
 jobs:
   test:
