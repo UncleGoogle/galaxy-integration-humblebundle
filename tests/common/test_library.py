@@ -156,12 +156,12 @@ async def test_library_cache_period(plugin_mock, change_settings, orders_keys):
 # --------test fetching orders-------------------
 
 @pytest.mark.asyncio
-async def test_fetch_orders_filter_errors_ok(plugin_mock, create_resolver, caplog):
+async def test_fetch_orders_filter_errors_ok(plugin_mock, create_resolver):
     resolver = create_resolver(Mock())
     await resolver._fetch_orders([])
 
 @pytest.mark.asyncio
-async def test_fetch_orders_filter_errors_all_bad(plugin_mock, create_resolver, caplog):
+async def test_fetch_orders_filter_errors_all_bad(plugin_mock, create_resolver):
     resolver = create_resolver(Mock())
     plugin_mock._api.get_gamekeys.return_value = ['this_will_give_UnknownError', 'this_too']
     with pytest.raises(UnknownError):

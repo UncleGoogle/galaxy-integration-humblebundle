@@ -52,7 +52,7 @@ class HumbleBundlePlugin(Plugin):
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
         self._app_finder = AppFinder()
-        self._settings = None
+        self._settings = Settings()
         self._library_resolver = None
 
         self._owned_games = {}
@@ -73,16 +73,9 @@ class HumbleBundlePlugin(Plugin):
         self.push_cache()
     
     def _open_config_file(self):
-        if self._settings:
-            self._settings.open_config_file()
-        else:
-            logging.warning('Opining config failed: settings are not initialized')
+        self._settings.open_config_file()
 
     def handshake_complete(self):
-        self._settings = Settings(
-            cache=self.persistent_cache,
-            save_cache_callback=self.push_cache
-        )
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
@@ -227,7 +220,7 @@ class HumbleBundlePlugin(Plugin):
             in self._owned_games.items()
             if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
         }
-        if self._rescan_needed and self._settings is not None:
+        if self._rescan_needed:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning in: {self._settings.installed.search_dirs}')
             self._local_games = await self._app_finder(owned_title_id, self._settings.installed.search_dirs)
@@ -252,16 +245,13 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(0.5)
 
     def tick(self):
-        if self._settings is not None:  # in case tick called before handshake_complete
-            old_lib_settings = astuple(self._settings.library)
-            old_ins_settings = astuple(self._settings.installed)
-            if self._settings.reload_local_config_if_changed():
-                if old_lib_settings != astuple(self._settings.library):
-                    logging.info(f'Library settings has changed: {self._settings.library}')
-                    self.create_task(self._check_owned(), 'check owned')
-                if old_ins_settings != self._settings.installed:
-                    logging.info(f'Installed settings has changed: {self._settings.installed}')
-                    self._rescan_needed = True
+        if self._settings.reload_local_config_if_changed():
+            if self._settings.library.has_changed():
+                logging.info(f'Library settings has changed: {self._settings.library}')
+                self.create_task(self._check_owned(), 'check owned')
+            if self._settings.installed.has_changed():
+                logging.info(f'Installed settings has changed: {self._settings.installed}')
+                self._rescan_needed = True
 
         if self._check_installed_task.done():
             self._check_installed_task = self.create_task(self._check_installed(), 'check installed')
