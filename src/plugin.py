@@ -72,9 +72,6 @@ class HumbleBundlePlugin(Plugin):
         self.persistent_cache[key] = data
         self.push_cache()
     
-    def _open_config_file(self):
-        self._settings.open_config_file()
-
     def handshake_complete(self):
         self._library_resolver = LibraryResolver(
             api=self._api,
@@ -106,7 +103,7 @@ class HumbleBundlePlugin(Plugin):
 
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
-        self._open_config_file()
+        self._open_config()
         return Authentication(user_id, user_id)
 
     async def get_owned_games(self):
@@ -122,18 +119,21 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
-    @double_click_effect(timeout=1, effect='_open_config_file')
+    def _open_config(self):
+        self._settings.open_config_file()
+
+    @double_click_effect(timeout=1, effect='_open_config')
     async def install_game(self, game_id):
         if game_id in self._under_instalation:
             return
         self._under_instalation.add(game_id)
 
-        game = self._owned_games.get(game_id)
-        if game is None:
-            logging.error(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
-            return
-
         try:
+            game = self._owned_games.get(game_id)
+            if game is None:
+                logging.error(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
+                return
+
             if isinstance(game, Key):
                 args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
                     game.human_name, game.key_type_human_name, str(game.key_val)
