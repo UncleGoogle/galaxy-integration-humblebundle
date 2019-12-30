@@ -43,7 +43,7 @@ class PathFinder:
         matches = cast(List[str], matches_)  # as str is Sequence[str] - mypy/issues/5090
         try:
             best_match = matches[0]
-        except KeyError:
+        except IndexError:
             logging.error(f'Empty list returns from get_close_matches {pattern}, {executables}')
             return None
         else:
