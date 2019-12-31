@@ -19,7 +19,8 @@ class AuthorizedHumbleAPI:
     _ORDER_URL = "/api/v1/order/{}"
 
     TROVES_PER_CHUNK = 20
-    _TROVE_SUBSCRIBER = 'subscription/home'
+    _SUBSCRIPTION_HOME = 'subscription/home'
+    _SUBSCRIPTION_TROVE = 'subscription/trove'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
     _TROVE_DOWNLOAD_SIGN_URL = 'api/v1/user/download/sign'
     _TROVE_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
@@ -105,14 +106,47 @@ class AuthorizedHumbleAPI:
         """Based on current behavior of `humblebundle.com/subscription/home`
         that is accesable only by "current and former subscribers"
         """
-        res = await self._request('get', self._TROVE_SUBSCRIBER, allow_redirects=False)
+        res = await self._request('get', self._SUBSCRIPTION_HOME, allow_redirects=False)
         if res.status == 200:
             return True
         elif res.status == 302:
             return False
         else:
-            logging.warning(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status}')
+            logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
             return False
+    
+    async def get_trove_recently_added(self):
+        res = await self._request('get', self._SUBSCRIPTION_TROVE)
+
+        txt = await res.text()
+        search = '<script id="webpack-monthly-trove-data" type="application/json">'
+
+        json_start = txt.find(search) + len(search)
+        decoder = json.JSONDecoder()
+        # TODO how raw_decode works...?
+        parsed, _ = decoder.raw_decode('"webpack-monthly-trove-data:"' + txt[json_start+1:])
+        return parsed
+    
+
+# "recently added" games are already in chunks in chunk 0.
+
+# ```html
+# <script id="webpack-monthly-trove-data" type="application/json">
+#   {
+#     "countdownTimerOptions": {
+#       "currentTime": "2019-12-30T20:48:37.105434",
+#       "nextAdditionTime": "2020-01-10T18:00:00"
+#     },
+#     "displayItemData": null,
+#     "newlyAdded": <recent games goes here (json list)>,
+#         "allAccess": [],
+#     "downloadPlatformOrder": ["asmjs", "unitywasm", "windows", "mac", "linux"],
+#     "standardProducts": <content of chunk 0 goes here (json list)>,
+#     "chunks": 5,
+#     "gamesPerChunk": 20
+#   }
+# </script>
+# ```html
 
     async def get_trove_details(self, from_chunk: int=0):
         troves: List[str] = []
