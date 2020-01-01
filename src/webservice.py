@@ -115,39 +115,20 @@ class AuthorizedHumbleAPI:
             logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
             return False
     
-    async def get_trove_recently_added(self):
+    async def get_montly_trove_data(self) -> dict:
+        """Parses a subscription/trove page to find list of recently added games.
+        Returns json containing "newlyAdded" trove games and "standardProducts" that is 
+        the same like output from api/v1/trove/chunk/index=0
+        "standardProducts" may not contain "newlyAdded" sometimes
+        """
         res = await self._request('get', self._SUBSCRIPTION_TROVE)
-
         txt = await res.text()
         search = '<script id="webpack-monthly-trove-data" type="application/json">'
-
         json_start = txt.find(search) + len(search)
-        decoder = json.JSONDecoder()
-        # TODO how raw_decode works...?
-        parsed, _ = decoder.raw_decode('"webpack-monthly-trove-data:"' + txt[json_start+1:])
+        candidate = txt[json_start:].strip()
+        parsed, _ = json.JSONDecoder().raw_decode(candidate)
         return parsed
     
-
-# "recently added" games are already in chunks in chunk 0.
-
-# ```html
-# <script id="webpack-monthly-trove-data" type="application/json">
-#   {
-#     "countdownTimerOptions": {
-#       "currentTime": "2019-12-30T20:48:37.105434",
-#       "nextAdditionTime": "2020-01-10T18:00:00"
-#     },
-#     "displayItemData": null,
-#     "newlyAdded": <recent games goes here (json list)>,
-#         "allAccess": [],
-#     "downloadPlatformOrder": ["asmjs", "unitywasm", "windows", "mac", "linux"],
-#     "standardProducts": <content of chunk 0 goes here (json list)>,
-#     "chunks": 5,
-#     "gamesPerChunk": 20
-#   }
-# </script>
-# ```html
-
     async def get_trove_details(self, from_chunk: int=0):
         troves: List[str] = []
         index = from_chunk
