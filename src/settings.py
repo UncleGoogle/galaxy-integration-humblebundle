@@ -1,43 +1,45 @@
 import pathlib
 import logging
-import toml
 import os
 import subprocess
-import configparser
 import abc
 from dataclasses import dataclass, field, astuple
 from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
 
+import toml
+
 from consts import SOURCE, HP, CURRENT_SYSTEM
+
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateTracker(abc.ABC):
     """Base class to keep track of any change.
     Designed to be inherited by dataclasses."""
-    # __first_call = True
 
     def __serialize(self):
         return astuple(self)
 
     def __post_init__(self):
+        # self.__first_call = True
         self.__prev = self.__serialize()
     
     def has_changed(self) -> bool:
         curr = self.__serialize()
         if self.__prev != curr:
             self.__prev = curr
-            # if self.__first_call:
-            #     self.__first_call = False
-            #     return False
+            # return not self.__first_call
             return True
         return False
 
     def update(self, *args, **kwargs):
         """If any content validation error occurs: just logs and error and keep current state"""
+        # self.__first_call = False
         try:
             self._update(*args, **kwargs)
         except Exception as e:
-            logging.error(f"Parsing config error: {repr(e)}")
+            logger.error(f"Parsing config error: {repr(e)}")
     
     @abc.abstractmethod
     def _update(self, *args, **kwargs):
@@ -68,7 +70,7 @@ class LibrarySettings(UpdateTracker):
 class InstalledSettings(UpdateTracker):
     search_dirs: Set[pathlib.Path] = field(default_factory=set)
 
-    def _update(self, installed: dict):
+    def _update(self, installed):
         dirs = installed.get('search_dirs', [])
 
         if type(dirs) != list:
@@ -81,13 +83,14 @@ class InstalledSettings(UpdateTracker):
             if not path.exists():
                 raise ValueError(f'Path {path} does not exists')
             dirs_set.add(path)
-
         self.search_dirs = dirs_set
-        logging.info(f'Installed Settings: {self.search_dirs}')
 
 
 class Settings:
-    LOCAL_CONFIG_FILE = None # TODO: appdirs.user_config_dir(appname='galaxy_integration_humblebundle', appauthor=False)
+    if CURRENTSYSTEM == HP.WINDOW:
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/config.ini"
+    else:
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-hb-config.cfg"
     DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'default_config.ini'
     DEFAULT_CONFIG = {
         "library": {
@@ -105,6 +108,13 @@ class Settings:
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
         self.reload_local_config_if_changed(first_run=True)
+
+        try:
+            self._config = self._load_config_file(self.LOCAL_CONFIG_FILE)
+        except FileNotFoundError:
+            self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
+            self._update_user_config()
+
 
         # use configparser(?)
         # self._config = configparser.ConfigParser()
@@ -130,16 +140,17 @@ class Settings:
         self._library.update(self._config.get('library', {}))
         self._installed.update(self._config.get('installed', {}))
     
-    def _load_config_file(self) -> Mapping[str, Any]:
+    def _load_config_file(self, config_path) -> Mapping[str, Any]:
         try:
-            with open(self.LOCAL_CONFIG_FILE, 'r') as f:
+            with open(config_path, 'r') as f:
                 return toml.load(f)
         except Exception as e:
-            logging.error('Parsing config file has failed. Details:\n' + repr(e))
+            logger.error('Parsing config file has failed. Details:\n' + repr(e))
             return {}
 
     def _update_user_config(self):
-        logging.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
+        logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
+        self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         data = toml.dumps(self._config)
         with open(self.DEFAULT_CONFIG, 'r') as f:
             comment = ''
@@ -156,10 +167,10 @@ class Settings:
         try:
             stat = path.stat()
         except FileNotFoundError:
-            logging.exception(f'{path} not found.')
+            logger.exception(f'{path} not found.')
             # TODO what now? Redump default config? Do nothing? Reset to defaults?
         except Exception as e:
-            logging.exception(f'Stating {path} has failed: {repr(e)}')
+            logger.exception(f'Stating {path} has failed: {repr(e)}')
         else:
             if stat.st_mtime != self._last_modification_time:
                 self._last_modification_time = stat.st_mtime
@@ -172,7 +183,7 @@ class Settings:
 
         local_config = self._load_config_file(self.LOCAL_CONFIG_FILE)
         default_config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
-        logging.debug(f'local config: {local_config}')
+        logger.debug(f'local config: {local_config}')
 
         if first_run:
             # TODO config migrations here

@@ -245,12 +245,10 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(0.5)
 
     def tick(self):
-        if self._settings.reload_local_config_if_changed():
+        if self._settings.reload_config_if_changed():
             if self._settings.library.has_changed():
-                logging.info(f'Library settings has changed: {self._settings.library}')
                 self.create_task(self._check_owned(), 'check owned')
             if self._settings.installed.has_changed():
-                logging.info(f'Installed settings has changed: {self._settings.installed}')
                 self._rescan_needed = True
 
         if self._check_installed_task.done():
