@@ -108,35 +108,13 @@ class Settings:
 
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
-        self.reload_local_config_if_changed(first_run=True)
+        self.reload_config_if_changed(first_run=True)
 
         try:
             self._config = self._load_config_file(self.LOCAL_CONFIG_FILE)
         except FileNotFoundError:
             self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
             self._update_user_config()
-
-
-        # use configparser
-
-        # load default from code:
-        # p.read_dict(self.DEFAULT_CONFIG)
-
-        # load default from files:
-        # p.read(['config', 'default_config'])
-
-        # load:
-        # p = configparser.ConfigParser(allow_no_value=True)
-        # with open('config', 'r') as f:
-        #     p.read_file(f)
-        # for key, _ in p.items("installed_paths"):
-        #     path=pathlib.Path(key)
-        #     print(path)
-
-        # dump:
-        # p.set('installed_paths', str(pathlib.Path('path\four')))
-        # with open('config', 'w') as f:
-        #     p.write(f)
 
     @property
     def library(self) -> LibrarySettings:
@@ -206,7 +184,28 @@ class Settings:
         return True
 
 
-# logic:
+## configparser usage
+
+# load default from code:
+# p.read_dict(self.DEFAULT_CONFIG)
+
+# load default from files:
+# p.read(['config', 'default_config'])
+
+# load:
+# p = configparser.ConfigParser(allow_no_value=True)
+# with open('config', 'r') as f:
+#     p.read_file(f)
+# for key, _ in p.items("installed_paths"):
+#     path=pathlib.Path(key)
+#     print(path)
+
+# dump:
+# p.set('installed_paths', str(pathlib.Path('path\four')))
+# with open('config', 'w') as f:
+#     p.write(f)
+
+## logic:
 # case 1: no config
 # dump deafult config in home location 
 # open welcome page
