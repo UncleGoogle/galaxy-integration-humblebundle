@@ -87,7 +87,7 @@ class InstalledSettings(UpdateTracker):
 
 
 class Settings:
-    if CURRENTSYSTEM == HP.WINDOW:
+    if CURRENT_SYSTEM == HP.WINDOWS:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/config.ini"
     else:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-hb-config.cfg"
@@ -115,7 +115,6 @@ class Settings:
             self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
             self._update_user_config()
 
-
         # use configparser(?)
         # self._config = configparser.ConfigParser()
         # self._config.read_dict(self.DEFAULT_CONFIG)
@@ -134,7 +133,7 @@ class Settings:
         if CURRENT_SYSTEM == HP.WINDOWS:
             subprocess.run(['start', str(self.LOCAL_CONFIG_FILE.resolve())], shell=True)
         elif CURRENT_SYSTEM == HP.MAC:
-            subprocess.run(['/usr/bin/open', str(self.LOCAL_CONFIG_FILE.resolve())])
+            subprocess.run(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
 
     def _update_objects(self):
         self._library.update(self._config.get('library', {}))
