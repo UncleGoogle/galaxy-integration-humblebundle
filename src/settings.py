@@ -3,6 +3,7 @@ import logging
 import os
 import subprocess
 import abc
+import configparser
 from dataclasses import dataclass, field, astuple
 from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
 
@@ -88,9 +89,9 @@ class InstalledSettings(UpdateTracker):
 
 class Settings:
     if CURRENT_SYSTEM == HP.WINDOWS:
-        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/config.ini"
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-hb.cfg"
     else:
-        LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-hb-config.cfg"
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-hb.cfg"
     DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'default_config.ini'
     DEFAULT_CONFIG = {
         "library": {
@@ -115,11 +116,19 @@ class Settings:
             self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
             self._update_user_config()
 
-        # use configparser(?)
-        # self._config = configparser.ConfigParser()
+        # use configparser
+
+        # load:
+        # self._config = configparser.ConfigParser(allow_no_value=True)
         # self._config.read_dict(self.DEFAULT_CONFIG)
-        # >>> config = configparser.ConfigParser(allow_no_value=True)
-        # for options liek "skip_sth". then check: if "skip_sth" in section
+        # for key, _ in p.items("installed_paths"):
+        # ...:     path=pathlib.Path(key)
+        # ...:     print(path)
+
+        # dump:
+        # p.set('installed_paths', str(pathlib.Path('path\four')))
+        # with open('config', 'w') as f:
+        #     p.write(f)
 
     @property
     def library(self) -> LibrarySettings:
