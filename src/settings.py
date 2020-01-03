@@ -116,14 +116,22 @@ class Settings:
             self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
             self._update_user_config()
 
+
         # use configparser
 
+        # load default from code:
+        # p.read_dict(self.DEFAULT_CONFIG)
+
+        # load default from files:
+        # p.read(['config', 'default_config'])
+
         # load:
-        # self._config = configparser.ConfigParser(allow_no_value=True)
-        # self._config.read_dict(self.DEFAULT_CONFIG)
+        # p = configparser.ConfigParser(allow_no_value=True)
+        # with open('config', 'r') as f:
+        #     p.read_file(f)
         # for key, _ in p.items("installed_paths"):
-        # ...:     path=pathlib.Path(key)
-        # ...:     print(path)
+        #     path=pathlib.Path(key)
+        #     print(path)
 
         # dump:
         # p.set('installed_paths', str(pathlib.Path('path\four')))
@@ -175,8 +183,9 @@ class Settings:
         try:
             stat = path.stat()
         except FileNotFoundError:
-            logger.exception(f'{path} not found.')
-            # TODO what now? Redump default config? Do nothing? Reset to defaults?
+            if self._last_modification_time is not None:
+                logger.warning(f'Config at {path} were deleted')
+                self._last_modification_time = None
         except Exception as e:
             logger.exception(f'Stating {path} has failed: {repr(e)}')
         else:
@@ -185,26 +194,16 @@ class Settings:
                 return True
         return False
 
-    def reload_local_config_if_changed(self, first_run=False) -> bool:
+    def reload_config_if_changed(self, first_run=False) -> bool:
         if not self.has_config_changed():
             return False
-
-        local_config = self._load_config_file(self.LOCAL_CONFIG_FILE)
-        default_config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
-        logger.debug(f'local config: {local_config}')
-
-        if first_run:
-            # TODO config migrations here
-            self._config = {**local_config, **default_config}
-            if local_config != self._cached_config:
-                self._update_user_config()
-            self._cache['version'] = self._curr_ver
-        else:
-            self._config.update(local_config)
-
+        try:
+            self._config = self._load_config_file(self.LOCAL_CONFIG_FILE)
+        except FileNotFoundError:
+            self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
+        logger.debug(f'config: {self._config}')
         self._update_objects()
         return True
-
 
 
 # logic:
@@ -216,31 +215,11 @@ class Settings:
 # stat it on tick - reparse if needed
 # -> parse_config
 
-# try:
-#   parsed_raw = read()
-# except ParseError as e:
-#   log err
-#   return
-
-# try:
-#   load_installed = load_installed(parsed_raw) 
-# except LoadError:
-#   log err
-
-# try:
-#   load_library = load_lib(parsed_raw)
-# except LoadError:
-#   log err
-   
-# what if installed-game_paths has changed: 
-# parse it before matching heuristics, then redo all previous matching(?)
+# case 3: config deleted
+# log warning
+# load default config
 
 # for tests:
 # parser.read_string("""
 # ... [DEFAULT]
 # ... hash = #
-
-# def _getlist_converter(x: str):
-#     return [i.strip() for i in x.split(',')]
-
-# _CONVERTERS = {'list': _getlist_converter}
