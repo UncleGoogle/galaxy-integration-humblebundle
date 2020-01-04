@@ -60,8 +60,8 @@ class HumbleBundlePlugin(Plugin):
         self._cached_game_states = {}
 
         self._getting_owned_games = asyncio.Lock()
-        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
-        self._check_statuses_task = asyncio.create_task(asyncio.sleep(3))
+        self._statuses_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
+        self._installed_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
 
         self._rescan_needed = True
         self._under_instalation = set()
@@ -124,6 +124,7 @@ class HumbleBundlePlugin(Plugin):
 
     @double_click_effect(timeout=1, effect='_open_config')
     async def install_game(self, game_id):
+
         if game_id in self._under_instalation:
             return
         self._under_instalation.add(game_id)
@@ -251,13 +252,15 @@ class HumbleBundlePlugin(Plugin):
             if self._settings.installed.has_changed():
                 self._rescan_needed = True
 
-        if self._check_installed_task.done():
-            self._check_installed_task = self.create_task(self._check_installed(), 'check installed')
+        if self._installed_check.done():
+            self._installed_check = asyncio.create_task(self._check_installed())
 
-        if self._check_statuses_task.done():
-            self._check_statuses_task = self.create_task(self._check_statuses(), 'check statuses')
+        if self._statuses_check.done():
+            self._statuses_check = asyncio.create_task(self._check_statuses())
 
     async def shutdown(self):
+        self._statuses_check.cancel()
+        self._installed_check.cancel()
         self.create_task(self._api.close_session(), 'closing session')
 
 
