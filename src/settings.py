@@ -72,6 +72,7 @@ class InstalledSettings(UpdateTracker):
     search_dirs: Set[pathlib.Path] = field(default_factory=set)
 
     def _update(self, installed):
+    # def _update(self, config: configparser.ConfigParser())
         dirs = installed.get('search_dirs', [])
 
         if type(dirs) != list:
@@ -89,7 +90,7 @@ class InstalledSettings(UpdateTracker):
 
 class Settings:
     if CURRENT_SYSTEM == HP.WINDOWS:
-        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-hb.cfg"
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-hb.ini"
     else:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-hb.cfg"
     DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'default_config.ini'
@@ -113,7 +114,6 @@ class Settings:
         try:
             self._config = self._load_config_file(self.LOCAL_CONFIG_FILE)
         except FileNotFoundError:
-            self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
             self._update_user_config()
 
     @property
@@ -125,10 +125,11 @@ class Settings:
         return self._installed
     
     def open_config_file(self):
+        logger.info('Opening config file')
         if CURRENT_SYSTEM == HP.WINDOWS:
-            subprocess.run(['start', str(self.LOCAL_CONFIG_FILE.resolve())], shell=True)
+            subprocess.Popen(['start', str(self.LOCAL_CONFIG_FILE.resolve())], shell=True)
         elif CURRENT_SYSTEM == HP.MAC:
-            subprocess.run(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
+            subprocess.Popen(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
 
     def _update_objects(self):
         self._library.update(self._config.get('library', {}))
@@ -138,6 +139,8 @@ class Settings:
         try:
             with open(config_path, 'r') as f:
                 return toml.load(f)
+        except FileNotFoundError:
+            raise
         except Exception as e:
             logger.error('Parsing config file has failed. Details:\n' + repr(e))
             return {}
@@ -146,7 +149,7 @@ class Settings:
         logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
         self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         data = toml.dumps(self._config)
-        with open(self.DEFAULT_CONFIG, 'r') as f:
+        with open(self.DEFAULT_CONFIG_FILE, 'r') as f:
             comment = ''
             for line in f.readlines():
                 comment += line
