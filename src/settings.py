@@ -93,7 +93,7 @@ class Settings:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-hb.ini"
     else:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-hb.cfg"
-    DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'default_config.ini'
+    DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'
     DEFAULT_CONFIG = {
         "library": {
             "sources": ["drm-free", "keys"],
@@ -109,12 +109,9 @@ class Settings:
 
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
-        self.reload_config_if_changed(first_run=True)
 
-        try:
-            self._config = self._load_config_file(self.LOCAL_CONFIG_FILE)
-        except FileNotFoundError:
-            self._update_user_config()
+        self._update_user_config()  # initial creation & migrations
+        self.reload_config_if_changed()
 
     @property
     def library(self) -> LibrarySettings:
@@ -123,7 +120,7 @@ class Settings:
     @property
     def installed(self) -> InstalledSettings:
         return self._installed
-    
+
     def open_config_file(self):
         logger.info('Opening config file')
         if CURRENT_SYSTEM == HP.WINDOWS:
@@ -135,15 +132,14 @@ class Settings:
         self._library.update(self._config.get('library', {}))
         self._installed.update(self._config.get('installed', {}))
     
-    def _load_config_file(self, config_path) -> Mapping[str, Any]:
+    def _load_config_file(self):
         try:
-            with open(config_path, 'r') as f:
-                return toml.load(f)
+            with open(self.LOCAL_CONFIG_FILE, 'r') as f:
+                self._config = toml.load(f)
         except FileNotFoundError:
-            raise
+            self._config = self.DEFAULT_CONFIG.copy()
         except Exception as e:
             logger.error('Parsing config file has failed. Details:\n' + repr(e))
-            return {}
 
     def _update_user_config(self):
         logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
@@ -159,7 +155,7 @@ class Settings:
             f.write(comment)
             f.write(data)
     
-    def has_config_changed(self) -> bool:
+    def _has_config_changed(self) -> bool:
         path = self.LOCAL_CONFIG_FILE
         try:
             stat = path.stat()
@@ -175,13 +171,10 @@ class Settings:
                 return True
         return False
 
-    def reload_config_if_changed(self, first_run=False) -> bool:
-        if not self.has_config_changed():
+    def reload_config_if_changed(self) -> bool:
+        if not self._has_config_changed():
             return False
-        try:
-            self._config = self._load_config_file(self.LOCAL_CONFIG_FILE)
-        except FileNotFoundError:
-            self._config = self._load_config_file(self.DEFAULT_CONFIG_FILE)
+        self._load_config_file()
         logger.debug(f'config: {self._config}')
         self._update_objects()
         return True
