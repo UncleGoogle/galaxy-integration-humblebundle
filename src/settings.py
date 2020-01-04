@@ -23,20 +23,17 @@ class UpdateTracker(abc.ABC):
         return astuple(self)
 
     def __post_init__(self):
-        # self.__first_call = True
         self.__prev = self.__serialize()
     
     def has_changed(self) -> bool:
         curr = self.__serialize()
         if self.__prev != curr:
             self.__prev = curr
-            # return not self.__first_call
             return True
         return False
 
     def update(self, *args, **kwargs):
         """If any content validation error occurs: just logs and error and keep current state"""
-        # self.__first_call = False
         try:
             self._update(*args, **kwargs)
         except Exception as e:
@@ -72,7 +69,6 @@ class InstalledSettings(UpdateTracker):
     search_dirs: Set[pathlib.Path] = field(default_factory=set)
 
     def _update(self, installed):
-    # def _update(self, config: configparser.ConfigParser())
         dirs = installed.get('search_dirs', [])
 
         if type(dirs) != list:
@@ -89,11 +85,11 @@ class InstalledSettings(UpdateTracker):
 
 
 class Settings:
+    DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'  # deprecated
     if CURRENT_SYSTEM == HP.WINDOWS:
-        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-hb.ini"
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-humble-config.ini"
     else:
-        LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-hb.cfg"
-    DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-humble.cfg"
     DEFAULT_CONFIG = {
         "library": {
             "sources": ["drm-free", "keys"],
@@ -110,8 +106,8 @@ class Settings:
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
 
+        self._load_config_file()
         self._update_user_config()  # initial creation & migrations
-        self.reload_config_if_changed()
 
     @property
     def library(self) -> LibrarySettings:
@@ -128,19 +124,30 @@ class Settings:
         elif CURRENT_SYSTEM == HP.MAC:
             subprocess.Popen(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
 
-    def _update_objects(self):
-        self._library.update(self._config.get('library', {}))
-        self._installed.update(self._config.get('installed', {}))
-    
+    def reload_config_if_changed(self) -> bool:
+        if not self._has_config_changed():
+            return False
+        self._load_config_file()
+        return True
+
     def _load_config_file(self):
         try:
             with open(self.LOCAL_CONFIG_FILE, 'r') as f:
                 self._config = toml.load(f)
         except FileNotFoundError:
             self._config = self.DEFAULT_CONFIG.copy()
+            logger.info(f'Config not found. Loaded default')
         except Exception as e:
-            logger.error('Parsing config file has failed. Details:\n' + repr(e))
+            logger.error('Parsing config file has failed:\n' + repr(e))
+            return
+        else:
+            logger.info(f'Loaded config: {self._config}')
+        self._update_objects()
 
+    def _update_objects(self):
+        self._library.update(self._config.get('library', {}))
+        self._installed.update(self._config.get('installed', {}))
+    
     def _update_user_config(self):
         logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
         self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -170,15 +177,6 @@ class Settings:
                 self._last_modification_time = stat.st_mtime
                 return True
         return False
-
-    def reload_config_if_changed(self) -> bool:
-        if not self._has_config_changed():
-            return False
-        self._load_config_file()
-        logger.debug(f'config: {self._config}')
-        self._update_objects()
-        return True
-
 
 ## configparser usage
 
