@@ -104,7 +104,6 @@ class Settings:
         self._installed = InstalledSettings()
 
         self._load_config_file()
-        self.dump_config()
 
     @property
     def library(self) -> LibrarySettings:

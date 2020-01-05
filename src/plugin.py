@@ -66,6 +66,8 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         self._under_instalation = set()
 
+        self._settings.dump_config()
+
     def _save_cache(self, key: str, data: Any):
         if type(data) != str:
             data = json.dumps(data)

@@ -63,14 +63,9 @@ def test_ut_update_error(caplog):
 
 @pytest.fixture
 def settings():
-    """
-    :returns:     patched Settings instance just after init
-    """
-    with patch.object(Settings, 'dump_config'):
-        # initialization without dumping config on local machine
-        setts = Settings()
-        setts.dump_config = Mock()  # reset mock
-        yield setts
+    setts = Settings()
+    setts.dump_config = Mock()
+    return setts
 
 
 @pytest.fixture
