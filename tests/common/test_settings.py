@@ -23,6 +23,12 @@ def test_ut_has_changed_on_init():
     assert sec.has_changed() == True
 
 
+def test_ut_has_changed_check_twice():
+    sec = MockSection(key=False)
+    assert sec.has_changed() == True
+    assert sec.has_changed() == False
+
+
 def test_ut_has_not_changed():
     sec = MockSection(key=False); sec.has_changed()
     sec.key = False
@@ -39,12 +45,6 @@ def test_ut_has_changed_quickly():
     sec = MockSection(key=False); sec.has_changed()
     sec.key = True
     sec.key = False
-    assert sec.has_changed() == False
-
-
-def test_ut_has_changed_check_twice():
-    sec = MockSection(key=False); sec.has_changed()
-    assert sec.has_changed() == True
     assert sec.has_changed() == False
 
 
@@ -66,10 +66,10 @@ def settings():
     """
     :returns:     patched Settings instance just after init
     """
-    with patch.object(Settings, '_update_user_config'):
+    with patch.object(Settings, 'dump_config'):
         # initialization without dumping config on local machine
         setts = Settings()
-        setts._update_user_config = Mock()  # reset mock
+        setts.dump_config = Mock()  # reset mock
         yield setts
 
 
@@ -95,7 +95,7 @@ def test_migrate_from_cache(settings):
     }
     settings.migration_from_cache(cache, save_cache)
     assert settings._config == user_cached_config
-    settings._update_user_config.assert_called_once()
+    settings.dump_config.assert_called_once()
     assert 'config' not in cache  # cleanup
     save_cache.assert_called_once()
 
