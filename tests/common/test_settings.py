@@ -1,10 +1,10 @@
-from unittest.mock import Mock, mock_open
+from unittest.mock import Mock, mock_open, patch, MagicMock
 from pathlib import Path
 from dataclasses import dataclass
 import pytest
 import toml
 
-from settings import UpdateTracker, Settings
+from settings import UpdateTracker, Settings, InstalledSettings
 
 # -------- UpdateTracker ----------
 
@@ -18,28 +18,35 @@ class MockSection(UpdateTracker):
         self.key = key
 
 
-def test_ut_has_not_changed():
+def test_ut_has_changed_on_init():
     sec = MockSection(key=False)
+    assert sec.has_changed() == True
+
+
+def test_ut_has_not_changed():
+    sec = MockSection(key=False); sec.has_changed()
     sec.key = False
     assert sec.has_changed() == False
-    assert sec.has_changed() == False
+
 
 def test_ut_has_changed():
-    sec = MockSection(key=False)
+    sec = MockSection(key=False); sec.has_changed()
     sec.key = True
     assert sec.has_changed() == True
 
+
 def test_ut_has_changed_quickly():
-    sec = MockSection(key=False)
+    sec = MockSection(key=False); sec.has_changed()
     sec.key = True
     sec.key = False
     assert sec.has_changed() == False
 
+
 def test_ut_has_changed_check_twice():
-    sec = MockSection(key=False)
-    sec.key = True
+    sec = MockSection(key=False); sec.has_changed()
     assert sec.has_changed() == True
     assert sec.has_changed() == False
+
 
 def test_ut_update_error(caplog):
     sec = MockSection(key=False)
@@ -55,34 +62,47 @@ def test_ut_update_error(caplog):
 
 
 @pytest.fixture
-def current_config():
-    with open(Path(__file__).parents[2] / 'src' / 'config.ini', 'r') as f:
-        raw = f.read()
-    as_dict = toml.loads(raw)
+def settings():
+    """
+    :returns:     patched Settings instance just after init
+    """
+    with patch.object(Settings, '_update_user_config'):
+        # initialization without dumping config on local machine
+        setts = Settings()
+        setts._update_user_config = Mock()  # reset mock
+        yield setts
+
+
+@pytest.fixture
+def default_config():
+    as_dict = Settings.DEFAULT_CONFIG
     as_string = toml.dumps(as_dict)
-    return raw, as_dict, as_string
+    return as_dict, as_string
 
 
-# def test_migration_none_current(mocker, current_config):
-#     """Acutally no migrations; curr version and curr config should be stored"""
-#     mocker.patch('builtins.open', mock_open(read_data=current_config[0]))
-#     save_cache = Mock()
-#     cache = {}
-#     settings = Settings()
-#         cache=cache,
-#         save_cache_callback=save_cache
-#     )
-#     assert cache['config'] == current_config[2]
-#     assert cache['version'] == settings._curr_ver
-#     save_cache.assert_called_once()
+def test_migrate_from_cache(settings):
+    save_cache = Mock()
+    user_cached_config = {
+            "library": {
+                "sources": ["drm-free", "trove", "keys"],
+            }, "installed": {
+                "search_dirs": [str(Path("C:/Games/Humble"))]
+            }
+        }
+    cache = {
+        "version": 1,
+        "config": user_cached_config
+    }
+    settings.migration_from_cache(cache, save_cache)
+    assert settings._config == user_cached_config
+    settings._update_user_config.assert_called_once()
+    assert 'config' not in cache  # cleanup
+    save_cache.assert_called_once()
 
 
-def test_load_config_installed_paths(mocker, current_config):
-    home_dir = Path.home()
-    config = current_config[1]
-    config['installed']['search_dirs'] = [str(home_dir)]
-    raw_conf = toml.dumps(config)
+# --------- Installed --------
 
-    mocker.patch('builtins.open', mock_open(read_data=raw_conf))
-    settings = Settings()
-    assert settings.installed.search_dirs == set([home_dir])
+def test_installed_defaults():
+    installed = InstalledSettings()
+    assert installed.has_changed() == True
+    assert installed.search_dirs == set()

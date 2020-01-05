@@ -3,7 +3,6 @@ import logging
 import os
 import subprocess
 import abc
-import configparser
 from dataclasses import dataclass, field, astuple
 from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
 
@@ -16,15 +15,13 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateTracker(abc.ABC):
-    """Base class to keep track of any change.
-    Designed to be inherited by dataclasses."""
+    """Keeps track of any changes in a subclass.
+    Default _serialize designed for dataclasses"""
+    __prev = None
 
     def __serialize(self):
         return astuple(self)
 
-    def __post_init__(self):
-        self.__prev = self.__serialize()
-    
     def has_changed(self) -> bool:
         curr = self.__serialize()
         if self.__prev != curr:
@@ -33,7 +30,7 @@ class UpdateTracker(abc.ABC):
         return False
 
     def update(self, *args, **kwargs):
-        """If any content validation error occurs: just logs and error and keep current state"""
+        """If any content validation error occurs: just logs an error and keep current state"""
         try:
             self._update(*args, **kwargs)
         except Exception as e:
@@ -46,7 +43,7 @@ class UpdateTracker(abc.ABC):
 
 @dataclass
 class LibrarySettings(UpdateTracker):
-    sources: Tuple[SOURCE, ...] = (SOURCE.DRM_FREE, SOURCE.TROVE, SOURCE.KEYS)
+    sources: Tuple[SOURCE, ...] = tuple()
     show_revealed_keys: bool = False
 
     def _update(self, library):
@@ -86,10 +83,6 @@ class InstalledSettings(UpdateTracker):
 
 class Settings:
     DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'  # deprecated
-    if CURRENT_SYSTEM == HP.WINDOWS:
-        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-humble-config.ini"
-    else:
-        LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-humble.cfg"
     DEFAULT_CONFIG = {
         "library": {
             "sources": ["drm-free", "keys"],
@@ -98,16 +91,20 @@ class Settings:
             "search_dirs": []
         }
     }
+    if CURRENT_SYSTEM == HP.WINDOWS:
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-humble-config.ini"
+    else:
+        LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-humble.cfg"
 
     def __init__(self):
-        self._config: Dict[str, Any] = {}
         self._last_modification_time: Optional[float] = None
 
+        self._config: Dict[str, Any] = {}
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
 
         self._load_config_file()
-        self._update_user_config()  # initial creation & migrations
+        self.dump_config()
 
     @property
     def library(self) -> LibrarySettings:
@@ -129,7 +126,7 @@ class Settings:
             return False
         self._load_config_file()
         return True
-
+    
     def _load_config_file(self):
         try:
             with open(self.LOCAL_CONFIG_FILE, 'r') as f:
@@ -148,7 +145,8 @@ class Settings:
         self._library.update(self._config.get('library', {}))
         self._installed.update(self._config.get('installed', {}))
     
-    def _update_user_config(self):
+    def dump_config(self):
+        """Dumps content of self._config to config file, creating it if not exists."""
         logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
         self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         data = toml.dumps(self._config)
@@ -177,3 +175,12 @@ class Settings:
                 self._last_modification_time = stat.st_mtime
                 return True
         return False
+    
+    def migration_from_cache(self, cache: Dict[str, Any], save_cache_callback: Callable):
+        """Copy cached config to new location"""
+        if not cache.get('config'):
+            return
+        self._config = cache.get('config')
+        self.dump_config()
+        cache.pop('config', None)
+        save_cache_callback()
