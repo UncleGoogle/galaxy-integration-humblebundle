@@ -36,6 +36,7 @@ class HP(enum.Enum):
     AUDIO = 'audio'
     EBOOK = 'ebook'
     ASMJS = 'asmjs'
+    UNITYWASM = 'unitywasm'
     VIDEO = 'video'
     COMEDY = 'comedy'
 
