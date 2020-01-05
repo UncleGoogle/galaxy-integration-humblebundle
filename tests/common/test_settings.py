@@ -1,10 +1,11 @@
-from unittest.mock import Mock, mock_open, patch, MagicMock
+from unittest.mock import Mock, mock_open, MagicMock, patch
 from pathlib import Path
 from dataclasses import dataclass
 import pytest
 import toml
 
-from settings import UpdateTracker, Settings, InstalledSettings
+from settings import UpdateTracker, Settings, InstalledSettings, LibrarySettings
+from consts import IS_WINDOWS
 
 # -------- UpdateTracker ----------
 
@@ -91,7 +92,10 @@ def test_migrate_from_cache(settings):
     settings.migration_from_cache(cache, save_cache)
     assert settings._config == user_cached_config
     settings.dump_config.assert_called_once()
-    assert 'config' not in cache  # cleanup
+    # settings are available just after migrations
+    settings.library == LibrarySettings(user_cached_config['library'])
+    # cleanup
+    assert 'config' not in cache
     save_cache.assert_called_once()
 
 
@@ -101,3 +105,29 @@ def test_installed_defaults():
     installed = InstalledSettings()
     assert installed.has_changed() == True
     assert installed.search_dirs == set()
+
+
+@pytest.mark.skipif(not IS_WINDOWS, reason="test windows paths")
+def test_installed_from_raw_file_allowed_paths(mocker):
+    """Integration test starting from the raw file
+    Note: single tick 'path\here' allows for raw interpretation in uses perser (toml)
+    For "path\\here" there will be error throwned (handled and ignored in the code)
+    """
+    config_content = r"""
+    [library]
+        sources = ["drm-free", "keys"]
+    [installed]
+        search_dirs = [
+            'C:\Program Files(x86)\Humble',
+            'D:\\Games',
+            "E:\\Games",
+        ]
+    """
+    mocker.patch.object(Path, 'exists', return_value=True)
+    with patch('builtins.open', mock_open(read_data=config_content)):
+        settings = Settings()
+        assert settings.installed.search_dirs == {
+            Path("C:\\Program Files(x86)\\Humble"),
+            Path("D:\\Games"),
+            Path("E:\\Games")
+        }

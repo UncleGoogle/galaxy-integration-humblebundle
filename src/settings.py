@@ -175,11 +175,10 @@ class Settings:
                 return True
         return False
     
-    def migration_from_cache(self, cache: Dict[str, Any], save_cache_callback: Callable):
-        """Copy cached config to new location"""
-        if not cache.get('config'):
-            return
-        self._config = cache.get('config')
+    def migration_from_cache(self, cache: Dict[str, Any], push_cache: Callable):
+        """Copy cached config to new location."""
+        if cache.get('config'):
+            self._config = cache['config'].copy()
+            cache.pop('config', None)
+            push_cache()
         self.dump_config()
-        cache.pop('config', None)
-        save_cache_callback()

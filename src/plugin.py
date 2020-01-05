@@ -66,8 +66,6 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         self._under_instalation = set()
 
-        self._settings.dump_config()
-
     def _save_cache(self, key: str, data: Any):
         if type(data) != str:
             data = json.dumps(data)
@@ -75,6 +73,7 @@ class HumbleBundlePlugin(Plugin):
         self.push_cache()
     
     def handshake_complete(self):
+        self._settings.migration_from_cache(self.persistent_cache, self.push_cache)
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
