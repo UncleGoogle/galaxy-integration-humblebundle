@@ -52,7 +52,7 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
 
 
 @pytest.fixture
-async def plugin_mock(api_mock, settings_mocked, mocker):
+async def plugin_mock(api_mock, mocker):
     mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
     mocker.patch.object(Settings, 'dump_config')
     plugin = HumbleBundlePlugin(MagicMock(), MagicMock(), "handshake_token")
