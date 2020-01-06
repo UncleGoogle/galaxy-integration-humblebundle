@@ -27,6 +27,7 @@ from library import LibraryResolver
 from local import AppFinder
 from privacy import SensitiveFilter
 from utils.decorators import double_click_effect
+import guirunner
 
 
 with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
@@ -137,13 +138,10 @@ class HumbleBundlePlugin(Plugin):
                 return
 
             if isinstance(game, Key):
-                args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
-                    game.human_name, game.key_type_human_name, str(game.key_val)
-                ]
-                process = await asyncio.create_subprocess_exec(sys.executable, *args, stderr=asyncio.subprocess.PIPE)
-                _, stderr_data = await process.communicate()
-                if stderr_data:
-                    logging.error(f'Error for keygui: {stderr_data}', extra={'guiargs': args[:-1]})
+                try:
+                    await guirunner.open('keys',
+                        game.human_name, game.key_type_human_name, sensitive_args=[str(game.key_val)])
+                except Exception:  # fallback
                     webbrowser.open('https://www.humblebundle.com/home/keys')
                 return
 
@@ -155,7 +153,7 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
                 except AuthenticationRequired:
-                    logging.info('Looks like your Humble Monthly subscription has expired. Refer to config.ini to manage showed games.')
+                    logging.info('Looks like your Humble Monthly subscription has expired.')
                     webbrowser.open('https://www.humblebundle.com/subscription/home')
                 else:
                     webbrowser.open(url['signed_url'])
