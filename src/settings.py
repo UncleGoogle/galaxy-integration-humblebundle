@@ -26,6 +26,7 @@ class UpdateTracker(abc.ABC):
         curr = self.__serialize()
         if self.__prev != curr:
             self.__prev = curr
+            logger.info(f"{self.__class__.__name__} has changed: {curr}")
             return True
         return False
 
@@ -103,7 +104,7 @@ class Settings:
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
 
-        self._load_config_file()
+        self.reload_config_if_changed(initial=True)
 
     @property
     def library(self) -> LibrarySettings:
@@ -120,7 +121,13 @@ class Settings:
         elif CURRENT_SYSTEM == HP.MAC:
             subprocess.Popen(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
 
-    def reload_config_if_changed(self) -> bool:
+    def reload_config_if_changed(self, initial=False) -> bool:
+        if self._has_config_changed() or initial:
+            self._load_config_file()
+            return True
+        return False
+
+    def _has_config_changed(self) -> bool:
         path = self.LOCAL_CONFIG_FILE
         try:
             stat = path.stat()
@@ -128,12 +135,12 @@ class Settings:
             if self._last_modification_time is not None:
                 logger.warning(f'Config at {path} were deleted')
                 self._last_modification_time = None
+                return True
         except Exception as e:
             logger.exception(f'Stating {path} has failed: {repr(e)}')
         else:
             if stat.st_mtime != self._last_modification_time:
                 self._last_modification_time = stat.st_mtime
-                self._load_config_file()
                 return True
         return False
 
@@ -145,7 +152,7 @@ class Settings:
             self._config = self.DEFAULT_CONFIG.copy()
             logger.info(f'Config not found. Loaded default')
         except Exception as e:
-            logger.error('Parsing config file has failed:\n' + repr(e))
+            logger.error(f'Parsing config file at {self.LOCAL_CONFIG_FILE} has failed: {repr(e)}')
             return
         else:
             logger.info(f'Loaded config: {self._config}')
@@ -174,7 +181,7 @@ class Settings:
         """Copy cached config to new location."""
         cached_config = cache.get('config')
         if cached_config:
-            logger.info(f'Migrating cached config: {cached_config}')
+            logger.info(f'Migrating cached config:\n{cached_config}')
             self._config = toml.loads(cached_config)
             cache.pop('config', None)
             push_cache()

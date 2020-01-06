@@ -247,11 +247,13 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(0.5)
 
     def tick(self):
-        if self._settings.reload_config_if_changed():
-            if self._settings.library.has_changed():
-                self.create_task(self._check_owned(), 'check owned')
-            if self._settings.installed.has_changed():
-                self._rescan_needed = True
+        self._settings.reload_config_if_changed()
+
+        if self._settings.library.has_changed():
+            self.create_task(self._check_owned(), 'check owned')
+
+        if self._settings.installed.has_changed():
+            self._rescan_needed = True
 
         if self._installed_check.done():
             self._installed_check = asyncio.create_task(self._check_installed())
