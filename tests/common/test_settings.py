@@ -69,14 +69,7 @@ def settings():
     return setts
 
 
-@pytest.fixture
-def default_config():
-    as_dict = Settings.DEFAULT_CONFIG
-    as_string = toml.dumps(as_dict)
-    return as_dict, as_string
-
-
-def test_migrate_from_cache(settings):
+def test_migrate_from_toml_cache(settings):
     save_cache = Mock()
     user_cached_config = {
             "library": {
@@ -87,7 +80,7 @@ def test_migrate_from_cache(settings):
         }
     cache = {
         "version": 1,
-        "config": user_cached_config
+        "config": toml.dumps(user_cached_config)
     }
     settings.migration_from_cache(cache, save_cache)
     assert settings._config == user_cached_config

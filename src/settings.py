@@ -121,11 +121,22 @@ class Settings:
             subprocess.Popen(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
 
     def reload_config_if_changed(self) -> bool:
-        if not self._has_config_changed():
-            return False
-        self._load_config_file()
-        return True
-    
+        path = self.LOCAL_CONFIG_FILE
+        try:
+            stat = path.stat()
+        except FileNotFoundError:
+            if self._last_modification_time is not None:
+                logger.warning(f'Config at {path} were deleted')
+                self._last_modification_time = None
+        except Exception as e:
+            logger.exception(f'Stating {path} has failed: {repr(e)}')
+        else:
+            if stat.st_mtime != self._last_modification_time:
+                self._last_modification_time = stat.st_mtime
+                self._load_config_file()
+                return True
+        return False
+
     def _load_config_file(self):
         try:
             with open(self.LOCAL_CONFIG_FILE, 'r') as f:
@@ -158,27 +169,13 @@ class Settings:
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             f.write(comment)
             f.write(data)
-    
-    def _has_config_changed(self) -> bool:
-        path = self.LOCAL_CONFIG_FILE
-        try:
-            stat = path.stat()
-        except FileNotFoundError:
-            if self._last_modification_time is not None:
-                logger.warning(f'Config at {path} were deleted')
-                self._last_modification_time = None
-        except Exception as e:
-            logger.exception(f'Stating {path} has failed: {repr(e)}')
-        else:
-            if stat.st_mtime != self._last_modification_time:
-                self._last_modification_time = stat.st_mtime
-                return True
-        return False
-    
+
     def migration_from_cache(self, cache: Dict[str, Any], push_cache: Callable):
         """Copy cached config to new location."""
-        if cache.get('config'):
-            self._config = cache['config'].copy()
+        cached_config = cache.get('config')
+        if cached_config:
+            logger.info(f'Migrating cached config: {cached_config}')
+            self._config = toml.loads(cached_config)
             cache.pop('config', None)
             push_cache()
         self.dump_config()
