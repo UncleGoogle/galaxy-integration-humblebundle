@@ -5,7 +5,6 @@ from typing import Optional
 
 modules = pathlib.Path(__file__).parent / 'modules'
 sys.path.insert(0, str(modules))
-sys.path.insert(0, str(modules.parent))  # FriendsOfGalaxy structure
 
 import toga
 
