@@ -14,7 +14,14 @@
                 "sdfaf",
                 "7994"
             ],
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+        },
+        {
+        "name": "Debug Tests",
+        "type": "python",
+        "request": "test",
+        "console": "integratedTerminal",
+        "justMyCode": false
         }
     ]
 }

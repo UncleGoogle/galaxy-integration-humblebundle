@@ -52,7 +52,7 @@ class HumbleBundlePlugin(Plugin):
         self._api = AuthorizedHumbleAPI()
         self._download_resolver = HumbleDownloadResolver()
         self._app_finder = AppFinder()
-        self._settings = None
+        self._settings = Settings()
         self._library_resolver = None
 
         self._owned_games = {}
@@ -60,8 +60,8 @@ class HumbleBundlePlugin(Plugin):
         self._cached_game_states = {}
 
         self._getting_owned_games = asyncio.Lock()
-        self._check_installed_task = asyncio.create_task(asyncio.sleep(5))
-        self._check_statuses_task = asyncio.create_task(asyncio.sleep(3))
+        self._statuses_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
+        self._installed_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
 
         self._rescan_needed = True
         self._under_instalation = set()
@@ -72,17 +72,8 @@ class HumbleBundlePlugin(Plugin):
         self.persistent_cache[key] = data
         self.push_cache()
     
-    def _open_config_file(self):
-        if self._settings:
-            self._settings.open_config_file()
-        else:
-            logging.warning('Opining config failed: settings are not initialized')
-
     def handshake_complete(self):
-        self._settings = Settings(
-            cache=self.persistent_cache,
-            save_cache_callback=self.push_cache
-        )
+        self._settings.migration_from_cache(self.persistent_cache, self.push_cache)
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
@@ -113,7 +104,7 @@ class HumbleBundlePlugin(Plugin):
 
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
-        self._open_config_file()
+        self._open_config()
         return Authentication(user_id, user_id)
 
     async def get_owned_games(self):
@@ -129,18 +120,22 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
-    @double_click_effect(timeout=1, effect='_open_config_file')
+    def _open_config(self):
+        self._settings.open_config_file()
+
+    @double_click_effect(timeout=1, effect='_open_config')
     async def install_game(self, game_id):
+
         if game_id in self._under_instalation:
             return
         self._under_instalation.add(game_id)
 
-        game = self._owned_games.get(game_id)
-        if game is None:
-            logging.error(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
-            return
-
         try:
+            game = self._owned_games.get(game_id)
+            if game is None:
+                logging.error(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
+                return
+
             if isinstance(game, Key):
                 args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
                     game.human_name, game.key_type_human_name, str(game.key_val)
@@ -227,7 +222,7 @@ class HumbleBundlePlugin(Plugin):
             in self._owned_games.items()
             if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
         }
-        if self._rescan_needed and self._settings is not None:
+        if self._rescan_needed:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning in: {self._settings.installed.search_dirs}')
             self._local_games = await self._app_finder(owned_title_id, self._settings.installed.search_dirs)
@@ -252,24 +247,23 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(0.5)
 
     def tick(self):
-        if self._settings is not None:  # in case tick called before handshake_complete
-            old_lib_settings = astuple(self._settings.library)
-            old_ins_settings = astuple(self._settings.installed)
-            if self._settings.reload_local_config_if_changed():
-                if old_lib_settings != astuple(self._settings.library):
-                    logging.info(f'Library settings has changed: {self._settings.library}')
-                    self.create_task(self._check_owned(), 'check owned')
-                if old_ins_settings != self._settings.installed:
-                    logging.info(f'Installed settings has changed: {self._settings.installed}')
-                    self._rescan_needed = True
+        self._settings.reload_config_if_changed()
 
-        if self._check_installed_task.done():
-            self._check_installed_task = self.create_task(self._check_installed(), 'check installed')
+        if self._settings.library.has_changed():
+            self.create_task(self._check_owned(), 'check owned')
 
-        if self._check_statuses_task.done():
-            self._check_statuses_task = self.create_task(self._check_statuses(), 'check statuses')
+        if self._settings.installed.has_changed():
+            self._rescan_needed = True
+
+        if self._installed_check.done():
+            self._installed_check = asyncio.create_task(self._check_installed())
+
+        if self._statuses_check.done():
+            self._statuses_check = asyncio.create_task(self._check_statuses())
 
     async def shutdown(self):
+        self._statuses_check.cancel()
+        self._installed_check.cancel()
         self.create_task(self._api.close_session(), 'closing session')
 
 

@@ -9,6 +9,7 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'src'))
 
 from galaxy.api.errors import UnknownError
 from plugin import HumbleBundlePlugin
+from settings import Settings
 
 
 class AsyncMock(MagicMock):
@@ -53,11 +54,12 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
 @pytest.fixture
 async def plugin_mock(api_mock, mocker):
     mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
+    mocker.patch.object(Settings, 'dump_config')
     plugin = HumbleBundlePlugin(MagicMock(), MagicMock(), "handshake_token")
     plugin.push_cache = MagicMock(spec=())
 
-    plugin._check_installed_task.cancel()
-    plugin._check_statuses_task.cancel()
+    plugin._installed_check.cancel()
+    plugin._statuses_check.cancel()
     plugin.handshake_complete()
 
     yield plugin
