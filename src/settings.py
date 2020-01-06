@@ -99,7 +99,7 @@ class Settings:
     def __init__(self):
         self._last_modification_time: Optional[float] = None
 
-        self._config: Dict[str, Any] = {}
+        self._config: Dict[str, Any] = self.DEFAULT_CONFIG.copy()
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
 
