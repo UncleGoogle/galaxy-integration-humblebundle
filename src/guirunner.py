@@ -55,9 +55,7 @@ if __name__ == '__main__':
     
     option = PAGE(sys.argv[1])
     if option == PAGE.KEYS:
-        human_name = sys.argv[2]
-        key_type = sys.argv[3]
-        key_val = sys.argv[4]
+        human_name, key_type, key_val = sys.argv[2:]  # pylint: disable=unbalanced-tuple-unpacking
         if key_val == 'None':
             key_val = None
         ShowKey(human_name, key_type, key_val).main_loop()
