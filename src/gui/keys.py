@@ -1,10 +1,6 @@
 import pathlib
 import webbrowser
-import sys
 from typing import Optional
-
-modules = pathlib.Path(__file__).parent / 'modules'
-sys.path.insert(0, str(modules))
 
 import toga
 
@@ -54,15 +50,6 @@ class ShowKey(toga.App):
         return factory_app(interface=self)
 
 
-def main():
-    human_name = sys.argv[1]
-    key_type = sys.argv[2]
-    key_val = sys.argv[3]
-    if key_val == 'None':
-        key_val = None
-    ShowKey(human_name, key_type, key_val).main_loop()
-
-
 def test():
     key_data = {"machine_name": "jumbo_machinarium_steam", "key_type": "steam", "key_type_human_name": "Steam", "human_name": "Machinarium", "redeemed_key_val": "DXLVR-XXXXX-XXXXX"}
     human_name = key_data['human_name']
@@ -74,4 +61,4 @@ def test():
 
 
 if __name__ == "__main__":
-    main()
+    test()

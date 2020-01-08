@@ -36,7 +36,7 @@ if __name__ == '__main__':
     sys.path.insert(0, str(parent_dir))  # our code
     sys.path.insert(0, str(parent_dir / 'modules'))  # third party
 
-    from keysgui import ShowKey
+    from gui import ShowKey
 
     
     option = sys.argv[1]
