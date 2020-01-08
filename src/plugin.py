@@ -1,4 +1,5 @@
 import sys
+import platform
 import asyncio
 import logging
 import re
@@ -139,9 +140,9 @@ class HumbleBundlePlugin(Plugin):
 
             if isinstance(game, Key):
                 try:
-                    await guirunner.open('keys',
-                        game.human_name, game.key_type_human_name, sensitive_args=[str(game.key_val)])
-                except Exception:  # fallback
+                    await guirunner.show_key(game)
+                except Exception as e:
+                    logging.error(e, extra={'platform_info': platform.uname()})
                     webbrowser.open('https://www.humblebundle.com/home/keys')
                 return
 
@@ -192,8 +193,8 @@ class HumbleBundlePlugin(Plugin):
                 HP.LINUX: OSCompatibility.Linux
             }
             osc = OSCompatibility(0)
-            for platform in game.downloads:
-                osc |= HP_OS_MAP.get(platform, OSCompatibility(0))
+            for humble_platform in game.downloads:
+                osc |= HP_OS_MAP.get(humble_platform, OSCompatibility(0))
             return osc if osc else None
 
     async def _check_owned(self):

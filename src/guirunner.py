@@ -1,21 +1,27 @@
 import sys
-from typing import Callable, Optional, Iterable
+import enum
+from typing import Optional, Iterable
+
+
+class PAGE(enum.Enum):
+    KEYS = 'keys'
+    SETTINGS = 'settings'
 
 
 class GUIError(Exception):
     pass
 
 
-async def open(gui: str, *args, sensitive_args: Optional[Iterable]=None):
+async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
     import asyncio
     import logging
     logger = logging.getLogger(__name__)
 
-    logger.info(f'Running GUI [{gui}] with args: {args}')
+    logger.info(f'Running [{gui}] with args: {args}')
 
     all_args = []
     if sensitive_args is not None:
-        all_args = [gui] + list(args) + list(sensitive_args)
+        all_args = [gui.value] + list(args) + list(sensitive_args)
 
     process = await asyncio.create_subprocess_exec(
         sys.executable,
@@ -25,8 +31,16 @@ async def open(gui: str, *args, sensitive_args: Optional[Iterable]=None):
     )
     _, stderr_data = await process.communicate()
     if stderr_data:
-        logger.error(f'Error on running [{gui}]: {stderr_data}')
-        raise GUIError(stderr_data)
+        raise GUIError(f'Error on running [{gui}]: {stderr_data}')
+
+
+async def show_key(game: 'LocalGame'):
+    await _open(
+        PAGE.KEYS,
+        game.human_name,
+        game.key_type_human_name,
+        sensitive_args=[str(game.key_val)]
+    )
 
 
 if __name__ == '__main__':
@@ -39,8 +53,8 @@ if __name__ == '__main__':
     from gui import ShowKey
 
     
-    option = sys.argv[1]
-    if option == 'keys':
+    option = PAGE(sys.argv[1])
+    if option == PAGE.KEYS:
         human_name = sys.argv[2]
         key_type = sys.argv[3]
         key_val = sys.argv[4]
