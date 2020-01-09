@@ -12,20 +12,20 @@ class GUIError(Exception):
     pass
 
 
-async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
+async def open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
     import asyncio
     import logging
     logger = logging.getLogger(__name__)
 
     logger.info(f'Running [{gui}] with args: {args}')
 
-    all_args = []
+    all_args = [gui.value] + list(args)
     if sensitive_args is not None:
-        all_args = [gui.value] + list(args) + list(sensitive_args)
+        all_args += list(sensitive_args)
 
     process = await asyncio.create_subprocess_exec(
         sys.executable,
-        __file__,  # self call
+        __file__,  # the same file for convenience
         *all_args,
         stderr=asyncio.subprocess.PIPE
     )
@@ -35,7 +35,7 @@ async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
 
 
 async def show_key(game: 'LocalGame'):
-    await _open(
+    await open(
         PAGE.KEYS,
         game.human_name,
         game.key_type_human_name,
@@ -50,9 +50,10 @@ if __name__ == '__main__':
     sys.path.insert(0, str(parent_dir))  # our code
     sys.path.insert(0, str(parent_dir / 'modules'))  # third party
 
-    from gui import ShowKey
+    from gui.keys import ShowKey
+    from gui.options import Options
 
-    
+
     option = PAGE(sys.argv[1])
     if option == PAGE.KEYS:
         human_name, key_type, key_val = sys.argv[2:]  # pylint: disable=unbalanced-tuple-unpacking
@@ -60,4 +61,6 @@ if __name__ == '__main__':
             key_val = None
         ShowKey(human_name, key_type, key_val).main_loop()
     elif option == PAGE.OPTIONS:
+        Options().main_loop()
+
 

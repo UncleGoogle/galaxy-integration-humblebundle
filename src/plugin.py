@@ -73,7 +73,7 @@ class HumbleBundlePlugin(Plugin):
             data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
-    
+
     def handshake_complete(self):
         self._settings.migration_from_cache(self.persistent_cache, self.push_cache)
         self._library_resolver = LibraryResolver(
@@ -122,8 +122,15 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
+    async def __open_config(self):
+        try:
+            await guirunner.open(guirunner.PAGE.OPTIONS)
+        except Exception as e:
+            logging.exception(e)
+            self._settings.open_config_file()
+
     def _open_config(self):
-        self._settings.open_config_file()
+        self.create_task(self.__open_config(), 'opening config')
 
     @double_click_effect(timeout=0.5, effect='_open_config')
     async def install_game(self, game_id):

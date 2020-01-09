@@ -2,7 +2,7 @@ import pathlib
 import webbrowser
 from typing import Optional
 
-from gui._base import BaseApp
+from gui.baseapp import BaseApp
 import toga
 
 
