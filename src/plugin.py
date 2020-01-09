@@ -125,7 +125,7 @@ class HumbleBundlePlugin(Plugin):
     def _open_config(self):
         self._settings.open_config_file()
 
-    @double_click_effect(timeout=1, effect='_open_config')
+    @double_click_effect(timeout=0.5, effect='_open_config')
     async def install_game(self, game_id):
 
         if game_id in self._under_instalation:
