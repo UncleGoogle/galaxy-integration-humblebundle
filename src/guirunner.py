@@ -5,7 +5,7 @@ from typing import Optional, Iterable
 
 class PAGE(enum.Enum):
     KEYS = 'keys'
-    SETTINGS = 'settings'
+    OPTIONS = 'options'
 
 
 class GUIError(Exception):
@@ -59,3 +59,5 @@ if __name__ == '__main__':
         if key_val == 'None':
             key_val = None
         ShowKey(human_name, key_type, key_val).main_loop()
+    elif option == PAGE.OPTIONS:
+
