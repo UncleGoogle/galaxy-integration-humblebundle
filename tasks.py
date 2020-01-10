@@ -86,7 +86,7 @@ def dist(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH, no_deps=False):
         c.run(f'inv build -o {output}')
 
     print(f'Reopening Galaxy from {galaxy_path}')
-    subprocess.run([galaxy_path])
+    subprocess.Popen([galaxy_path])
 
 
 @task
