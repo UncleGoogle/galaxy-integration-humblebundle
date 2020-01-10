@@ -19,7 +19,8 @@ class AuthorizedHumbleAPI:
     _ORDER_URL = "/api/v1/order/{}"
 
     TROVES_PER_CHUNK = 20
-    _TROVE_SUBSCRIBER = 'subscription/home'
+    _SUBSCRIPTION_HOME = 'subscription/home'
+    _SUBSCRIPTION_TROVE = 'subscription/trove'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
     _TROVE_DOWNLOAD_SIGN_URL = 'api/v1/user/download/sign'
     _TROVE_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
@@ -105,15 +106,29 @@ class AuthorizedHumbleAPI:
         """Based on current behavior of `humblebundle.com/subscription/home`
         that is accesable only by "current and former subscribers"
         """
-        res = await self._request('get', self._TROVE_SUBSCRIBER, allow_redirects=False)
+        res = await self._request('get', self._SUBSCRIPTION_HOME, allow_redirects=False)
         if res.status == 200:
             return True
         elif res.status == 302:
             return False
         else:
-            logging.warning(f'{self._TROVE_SUBSCRIBER}, Status code: {res.status}')
+            logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
             return False
-
+    
+    async def get_montly_trove_data(self) -> dict:
+        """Parses a subscription/trove page to find list of recently added games.
+        Returns json containing "newlyAdded" trove games and "standardProducts" that is 
+        the same like output from api/v1/trove/chunk/index=0
+        "standardProducts" may not contain "newlyAdded" sometimes
+        """
+        res = await self._request('get', self._SUBSCRIPTION_TROVE)
+        txt = await res.text()
+        search = '<script id="webpack-monthly-trove-data" type="application/json">'
+        json_start = txt.find(search) + len(search)
+        candidate = txt[json_start:].strip()
+        parsed, _ = json.JSONDecoder().raw_decode(candidate)
+        return parsed
+    
     async def get_trove_details(self, from_chunk: int=0):
         troves: List[str] = []
         index = from_chunk

@@ -30,7 +30,9 @@ class LibraryResolver:
             if source == SOURCE.DRM_FREE:
                 all_games.extend(self._get_subproducts(orders))
             elif source == SOURCE.TROVE:
-                all_games.extend(self._get_trove_games(self._cache.get('troves', [])))
+                all_games.extend(self._get_trove_games(
+                    self._cache.get('troves', []) + self._cache.get('troves_recent', [])
+                ))
             elif source == SOURCE.KEYS:
                 all_games.extend(self._get_keys(orders, self._settings.show_revealed_keys))
 
@@ -73,6 +75,14 @@ class LibraryResolver:
                 updated_troves = await self._fetch_troves(cached_troves)
                 if updated_troves:
                     self._cache['troves'] = updated_troves
+
+            try:  # scrap for newest games as sometimes they are not in standard API yet
+                recently_added = (await self._api.get_montly_trove_data())['newlyAdded']
+            except Exception as e:
+                logging.error(e)
+            else:
+                if recently_added:
+                    self._cache['troves_recent'] = recently_added
 
         self._save_cache(self._cache)
 
