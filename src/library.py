@@ -64,7 +64,7 @@ class LibraryResolver:
                 }
                 self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
-        if SOURCE.TROVE in sources: # and await self._api.had_trove_subscription():
+        if SOURCE.TROVE in sources and await self._api.had_trove_subscription():
             next_fetch_troves = self._cache.get('next_fetch_troves')
             if next_fetch_troves is None or time.time() > next_fetch_troves:
                 logging.info('Refreshing all troves')
