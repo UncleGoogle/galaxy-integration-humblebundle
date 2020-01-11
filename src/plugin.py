@@ -122,7 +122,7 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
-    async def __open_config(self):
+    async def _open_config_async(self):
         try:
             await guirunner.open(guirunner.PAGE.OPTIONS)
         except Exception as e:
@@ -130,7 +130,8 @@ class HumbleBundlePlugin(Plugin):
             self._settings.open_config_file()
 
     def _open_config(self):
-        self.create_task(self.__open_config(), 'opening config')
+        """Synchonious wrapper for self.__open_config"""
+        self.create_task(self._open_config_async(), 'opening config')
 
     @double_click_effect(timeout=0.5, effect='_open_config')
     async def install_game(self, game_id):
@@ -237,11 +238,11 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(4)
 
     async def _check_statuses(self):
-        """Checks satuses of local games. Detects events when game is:
-        - installed (local games list updated in _check_installed)
-        - uninstalled
-        - launched (via Galaxy)
-        - stopped
+        """Checks satuses of local games. Detects changes in local games when the game is:
+        - installed (local games list appended in _check_installed)
+        - uninstalled (exe no longer exists)
+        - launched (via Galaxy - pid tracking started)
+        - stopped (process no longer running/is zombie)
         """
         freezed_locals = list(self._local_games.values())
         for game in freezed_locals:
