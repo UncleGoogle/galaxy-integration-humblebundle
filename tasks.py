@@ -204,7 +204,7 @@ def release(c, automa=False):
 
     build(c, output='build')
     test(c, target='build')
-    asset_path = archive(c, target='build', zip_name=f'humble_{tag}_{PLATFORM[:3].lower()}')
+    asset_path = archive(c, target='build', zip_name=f'humble_{tag}_{PLATFORM[:3].lower()}.zip')
 
     print(f'Uploading asset for {PLATFORM}: {asset_path}')
     draft_release.upload_asset(asset_path)
