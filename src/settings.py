@@ -3,8 +3,8 @@ import logging
 import os
 import subprocess
 import abc
-from dataclasses import dataclass, field, astuple
-from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
+from dataclasses import dataclass, field
+from typing import Any, Dict, Callable, Mapping, Optional, Set
 
 import toml
 
@@ -15,15 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateTracker(abc.ABC):
-    """Keeps track of any changes in a subclass.
-    Default _serialize designed for dataclasses"""
+    """Keeps track of any changes in a subclass."""
     __prev = None
 
-    def __serialize(self):
-        return astuple(self)
-
     def has_changed(self) -> bool:
-        curr = self.__serialize()
+        curr = self.serialize()
         if self.__prev != curr:
             self.__prev = curr
             logger.info(f"{self.__class__.__name__} has changed: {curr}")
@@ -40,11 +36,15 @@ class UpdateTracker(abc.ABC):
     @abc.abstractmethod
     def _update(self, *args, **kwargs):
         """Validates and updates section"""
+    
+    @abc.abstractmethod
+    def serialize(self) -> Dict[str, Any]:
+        """Serialize to "ready to dump" dictionary. Should be compatibile with _update"""
 
 
 @dataclass
 class LibrarySettings(UpdateTracker):
-    sources: Tuple[SOURCE, ...] = tuple()
+    sources: Set[SOURCE] = field(default_factory=set)
     show_revealed_keys: bool = False
 
     def _update(self, library):
@@ -57,9 +57,15 @@ class LibrarySettings(UpdateTracker):
             raise TypeError(f'revealed_keys should be boolean (true or false), got {show_keys}')
 
         if sources is not None:
-            self.sources = tuple([SOURCE(s) for s in sources])
+            self.sources = set([SOURCE(s) for s in sources])
         if show_keys is not None:
             self.show_revealed_keys = show_keys
+    
+    def serialize(self) -> Dict[str, Any]:
+        return {
+            "sources": [s.value for s in self.sources],
+            "show_revealed_keys": self.show_revealed_keys
+        }
 
 
 @dataclass
@@ -80,6 +86,11 @@ class InstalledSettings(UpdateTracker):
                 raise ValueError(f'Path {path} does not exists')
             dirs_set.add(path)
         self.search_dirs = dirs_set
+
+    def serialize(self) -> Dict[str, Any]:
+        return {
+            "search_dirs": [str(i) for i in self.search_dirs]
+        }
 
 
 class Settings:
@@ -163,7 +174,9 @@ class Settings:
         self._installed.update(self._config.get('installed', {}))
     
     def dump_config(self):
-        """Dumps content of self._config to config file, creating it if not exists."""
+        """Dumps content of self._config to config file, creating it if not exists.
+        TODO Deprecated - remove
+        """
         logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
         self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
         data = toml.dumps(self._config)
@@ -176,6 +189,16 @@ class Settings:
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             f.write(comment)
             f.write(data)
+    
+    def save_config(self):
+        logger.info(f'Dumping user config in {self.LOCAL_CONFIG_FILE}')
+        self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "library": self.library.serialize(),
+            "installed": self.installed.serialize()
+        }
+        with open(self.DEFAULT_CONFIG_FILE, 'w') as f:
+            toml.dump(data, f)
 
     def migration_from_cache(self, cache: Dict[str, Any], push_cache: Callable):
         """Copy cached config to new location."""

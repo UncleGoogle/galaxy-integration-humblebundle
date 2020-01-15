@@ -94,6 +94,8 @@ def test_migrate_from_toml_cache(settings):
 
 # --------- Installed --------
 
+# TODO: serialization and bidirectional tests for library and isntalled
+
 def test_installed_defaults():
     installed = InstalledSettings()
     assert installed.has_changed() == True
