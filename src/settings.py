@@ -197,7 +197,7 @@ class Settings:
             "library": self.library.serialize(),
             "installed": self.installed.serialize()
         }
-        with open(self.DEFAULT_CONFIG_FILE, 'w') as f:
+        with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             toml.dump(data, f)
 
     def migration_from_cache(self, cache: Dict[str, Any], push_cache: Callable):
