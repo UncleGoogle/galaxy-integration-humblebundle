@@ -53,9 +53,9 @@ if __name__ == '__main__':
     from gui.keys import ShowKey
     from gui.options import Options
 
-    # new logger
+    # new root logger
     import logging
-    logger = logging.getLogger('GUI')
+    logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
     # print to stdout for debug
