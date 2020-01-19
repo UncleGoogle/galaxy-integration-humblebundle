@@ -53,6 +53,23 @@ if __name__ == '__main__':
     from gui.keys import ShowKey
     from gui.options import Options
 
+    # new logger
+    import logging
+    logger = logging.getLogger('GUI')
+    logger.setLevel(logging.DEBUG)
+
+    # print to stdout for debug
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    # log to file
+    fh = logging.FileHandler(pathlib.Path(__file__).resolve().parents[1] / 'debug_log.log')
+    fh.setLevel(logging.DEBUG)
+    logger.addHandler(fh)
+
 
     option = PAGE(sys.argv[1])
     if option == PAGE.KEYS:
@@ -62,5 +79,4 @@ if __name__ == '__main__':
         ShowKey(human_name, key_type, key_val).main_loop()
     elif option == PAGE.OPTIONS:
         Options().main_loop()
-
 
