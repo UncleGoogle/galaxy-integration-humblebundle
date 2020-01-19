@@ -30,7 +30,8 @@ class BaseApp(toga.App):
     def _create_impl(self):
         """Overwritten to remove menubar based on self._hb_menu"""
         if self._has_menu:
-            super()._create_impl()
+            print('create impl')
+            return super()._create_impl()
         else:
             factory_app = self.factory.App
             factory_app.create_menus = lambda _: None
