@@ -23,6 +23,7 @@
                 "7994"
             ],
             "console": "integratedTerminal",
+            "justMyCode": false
         },
         {
             "name": "Debug Tests",
