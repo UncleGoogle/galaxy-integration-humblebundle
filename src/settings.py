@@ -95,14 +95,7 @@ class InstalledSettings(UpdateTracker):
 
 class Settings:
     DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'  # deprecated
-    DEFAULT_CONFIG = {
-        "library": {
-            "sources": ["drm-free", "keys"],
-            "show_revealed_keys": True
-        }, "installed": {
-            "search_dirs": []
-        }
-    }
+
     if CURRENT_SYSTEM == HP.WINDOWS:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-humble-config.ini"
     else:
@@ -111,7 +104,7 @@ class Settings:
     def __init__(self):
         self._last_modification_time: Optional[float] = None
 
-        self._config: Dict[str, Any] = self.DEFAULT_CONFIG.copy()
+        self._config: Dict[str, Any] = self.get_config()
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
 
@@ -189,14 +182,17 @@ class Settings:
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             f.write(comment)
             f.write(data)
+        
+    def get_config(self):
+        return {
+            "library": self.library.serialize(),
+            "installed": self.installed.serialize()
+        }
     
     def save_config(self):
         logger.info(f'Dumping user config in {self.LOCAL_CONFIG_FILE}')
         self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        data = {
-            "library": self.library.serialize(),
-            "installed": self.installed.serialize()
-        }
+        data = self.get_config()
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
             toml.dump(data, f)
 
