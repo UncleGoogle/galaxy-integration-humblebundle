@@ -1,4 +1,4 @@
-from unittest.mock import Mock, mock_open, MagicMock, patch
+from unittest.mock import Mock, mock_open, patch
 from pathlib import Path
 from dataclasses import dataclass
 import pytest
@@ -17,6 +17,9 @@ class MockSection(UpdateTracker):
         if type(self.key) != type(key):
             raise TypeError
         self.key = key
+    
+    def serialize(self):
+        return self.key
 
 
 def test_ut_has_changed_on_init():
@@ -94,12 +97,24 @@ def test_migrate_from_toml_cache(settings):
 
 # --------- Installed --------
 
-# TODO: serialization and bidirectional tests for library and isntalled
-
 def test_installed_defaults():
     installed = InstalledSettings()
     assert installed.has_changed() == True
     assert installed.search_dirs == set()
+
+
+def test_installed_update_serialize(mocker):
+    mocker.patch.object(Path, 'exists', return_value=True)
+    if IS_WINDOWS:
+        path = R"C:\Games\Humble Bundle"
+    else:
+        path = "/mnt/Games Drive/"
+    raw = {
+        "search_dirs": [path]
+    }
+    installed = InstalledSettings()
+    installed.update(raw)
+    assert raw == installed.serialize()
 
 
 @pytest.mark.skipif(not IS_WINDOWS, reason="test windows paths")
@@ -126,3 +141,11 @@ def test_installed_from_raw_file_allowed_paths(mocker):
             Path("D:\\Games"),
             Path("E:\\Games")
         }
+
+
+def test_settings_default_config():
+    """Default values comes directly from specific settings classes"""
+    Settings()._config == {
+        'library': LibrarySettings().serialize(),
+        'installed': InstalledSettings().serialize()
+    }

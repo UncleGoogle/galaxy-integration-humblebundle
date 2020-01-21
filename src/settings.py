@@ -44,7 +44,7 @@ class UpdateTracker(abc.ABC):
 
 @dataclass
 class LibrarySettings(UpdateTracker):
-    sources: Set[SOURCE] = field(default_factory=set)
+    sources: Set[SOURCE] = field(default_factory=lambda: set([SOURCE.DRM_FREE, SOURCE.KEYS]))
     show_revealed_keys: bool = False
 
     def _update(self, library):
@@ -104,9 +104,10 @@ class Settings:
     def __init__(self):
         self._last_modification_time: Optional[float] = None
 
-        self._config: Dict[str, Any] = self.get_config()
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
+
+        self._config: Dict[str, Any] = self.get_config()
 
         self.reload_config_if_changed(initial=True)
 
