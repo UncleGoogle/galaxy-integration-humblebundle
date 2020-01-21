@@ -161,7 +161,7 @@ def create_tag(c, tag=None):
         tag = 'v' + __version__
     branch = c.run("git rev-parse --abbrev-ref HEAD").stdout.strip()
 
-    print(f'New tag version for release will be: [{tag}] on [{branch}] branch. is it OK?')
+    print(f'New tag version will be: [{tag}] on [{branch}] branch. Is it OK? (make sure new version is committed)')
     if input('y/n').lower() != 'y':
         return
 
