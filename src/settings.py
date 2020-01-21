@@ -36,7 +36,7 @@ class UpdateTracker(abc.ABC):
             self._update(*args, **kwargs)
         except Exception as e:
             logger.error(f"Parsing config error: {repr(e)}")
-    
+
     @abc.abstractmethod
     def _update(self, *args, **kwargs):
         """Validates and updates section"""
@@ -109,7 +109,7 @@ class Settings:
     @property
     def library(self) -> LibrarySettings:
         return self._library
-    
+
     @property
     def installed(self) -> InstalledSettings:
         return self._installed
@@ -117,7 +117,7 @@ class Settings:
     def open_config_file(self):
         logger.info('Opening config file')
         if CURRENT_SYSTEM == HP.WINDOWS:
-            subprocess.Popen(['start', str(self.LOCAL_CONFIG_FILE.resolve())], shell=True)
+            os.startfile(self.LOCAL_CONFIG_FILE)
         elif CURRENT_SYSTEM == HP.MAC:
             subprocess.Popen(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
 
@@ -161,7 +161,7 @@ class Settings:
     def _update_objects(self):
         self._library.update(self._config.get('library', {}))
         self._installed.update(self._config.get('installed', {}))
-    
+
     def dump_config(self):
         """Dumps content of self._config to config file, creating it if not exists."""
         logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
