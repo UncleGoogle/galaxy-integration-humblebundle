@@ -14,7 +14,7 @@ from gui.baseapp import BaseApp
 # Imports from base level (sys.path is extended with the file parent)
 # Yes, I know it's bad practise but it is not reusable package, only local code organiser
 from settings import Settings
-from consts import SOURCE
+from consts import SOURCE, IS_WINDOWS
 
 
 logger = logging.getLogger(__name__)
@@ -50,21 +50,45 @@ class Options(BaseApp):
         self._cfg.library.show_revealed_keys = el.is_on
         if self._cfg.library.has_changed():
             self._cfg.save_config()
-
-    def select_path(self, box: toga.Box, el: toga.Button):
-        logger.debug(f'{box} {el}')
+    
+    def add_path(self, el: toga.Button):
         try:
             paths = self.main_window.select_folder_dialog('Choose humblebundle directory', multiselect=True)
-        except ValueError:  # No folder provided in the select folder dialog
+        except ValueError:
+            logger.debug('No folder provided in the select folder dialog')
             return
-        for path in paths:
-            lbl = toga.Label(path)
-            lbl.style.flex = 1
-            lbl.style.width = self.SIZE[0]
-            logger.debug(f'adding {lbl} to {box}')
-            box.add(lbl)
-        box.refresh()
-        # self.main_window.content.refresh()
+        for raw_path in paths:
+            path = pathlib.Path(raw_path).resolve()
+            if str(path) in [row.path for row in self.paths_table.data]:
+                logger.info('Path already added. Skipping')
+                continue
+            logger.info(f'Adding path {str(path)}')
+            self.paths_table.data.append(str(path))
+            self._cfg.installed.search_dirs.add(path)
+            self._cfg.save_config()
+
+    def _remove_path(self, raw_path: str):
+        path = pathlib.Path(raw_path).resolve()
+        try:
+            self._cfg.installed.search_dirs.remove(path)
+        except KeyError:  # should not happen; sanity check
+            logger.error(f'Removing non existent path {path} from {self._cfg.installed.search_dirs}')
+        else:
+            self._cfg.save_config()
+
+    def remove_path(self, el: toga.Button):
+        row = self.paths_table.selection
+        if row is None:
+            ''' if nothing is selected, remove last element from the list
+            this is also fallback for winforms because Table.set_on_select() is not implemented
+            '''
+            try:
+                row = self.paths_table.data[-1]
+            except IndexError:
+                print('no more data in table')
+                return  # no elements in table  # TODO just make it gray
+        self.paths_table.data.remove(row.path)
+        self._remove_path(row.path)
 
     def startup_method(self):
         # main container
@@ -92,19 +116,26 @@ class Options(BaseApp):
         box.add(lib_box)
 
         # local games section
-        left_panel = toga.Box()
+        paths_container = toga.SplitContainer()
+
+        self.paths_table = toga.Table(['Path'], data=[str(p) for p in self._cfg.installed.search_dirs])
+        if IS_WINDOWS:
+            # table_size = 250
+            # self.paths_table.style.width = table_size
+            # self.paths_table._impl.native.Columns[0].set_Width(table_size)
+            self.paths_table._impl.native.Columns[0].AutoResize(2)  # 2 - autoresize based on content
+
+        select_btn = toga.Button('Add path', on_press=self.add_path)
+        select_btn.style.flex = 1
+        remove_btn = toga.Button('Remove', on_press=self.remove_path)
+        select_btn.style.flex = 1
+
+        left_panel = toga.Box(children=[select_btn, remove_btn])
         left_panel.style.direction = 'column'
 
-        paths_box = toga.Box()
-        paths_box.style.height = 40
-        paths_box.style.padding = 10
-        paths_box.style.background_color = rgb(240, 240, 200)
+        paths_container.content = [left_panel, self.paths_table]
+        box.add(paths_container)
 
-        select_btn = toga.Button('Select path', on_press=partial(self.select_path, paths_box))
-        select_btn.style.flex = 2
-
-        box.add(select_btn)
-        box.add(paths_box)
 
         # down_containter = toga.ScrollContainer(horizontal=False, content=paths_box)
         # box.add(down_containter)
