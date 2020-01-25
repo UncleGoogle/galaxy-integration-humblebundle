@@ -12,7 +12,7 @@ from toga.style import Pack
 
 from gui.baseapp import BaseApp
 # Imports from base level (sys.path is extended with the file parent)
-# Yes, I know it's bad practise but it is not reusable package, only local code organiser
+# Yes, I know it's bad practise but it is not reusable package, only code organiser
 from settings import Settings
 from consts import SOURCE, IS_WINDOWS
 
@@ -35,6 +35,10 @@ class OneColumnTable(toga.Table):
             self._impl.native.Columns[0].set_Width(width * 2)
     
     @property
+    def not_empty(self):
+        return len(self.data) > 0
+    
+    @property
     def selection(self):
         """Dummy addition for lacking toga implementation"""
         if IS_WINDOWS:  # winforms assumed
@@ -51,7 +55,7 @@ class OneColumnTable(toga.Table):
 
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle - Options'
-    SIZE = (400, 300)
+    SIZE = (550, 250)
 
     def __init__(self):
         self._cfg = Settings()
@@ -84,7 +88,7 @@ class Options(BaseApp):
         """Adds path to config file and returns its normalized form"""
         path = pathlib.Path(raw_path).resolve()
         logger.info(f'Adding search_path {path}')
-        if str(path) in [row.path for row in self.paths_table.data]:
+        if str(path) in [row.path for row in self._paths_table.data]:
             logger.info('Path already added. Skipping')
             return None
         self._cfg.installed.search_dirs.add(path)
@@ -101,8 +105,8 @@ class Options(BaseApp):
             path = self.__cfg_add_path(raw_path)
             if path is None:
                 continue
-            self.paths_table.data.append(path)
-        self._remove_btn.enabled = bool(len(self.paths_table.data))
+            self._paths_table.data.append(path)
+        self._remove_btn.enabled = self._paths_table.not_empty
 
     def __cfg_remove_path(self, raw_path: str):
         path = pathlib.Path(raw_path).resolve()
@@ -115,25 +119,19 @@ class Options(BaseApp):
             self._cfg.save_config()
 
     def _remove_paths(self, _: toga.Button):
-        rows = self.paths_table.selection
+        rows = self._paths_table.selection
         if rows is None:
             try:
-                rows = [self.paths_table.data[-1]]
+                rows = [self._paths_table.data[-1]]
             except KeyError:
                 logger.error('Removing when no data in table. Rm btn should be disabled at this point.')
                 return
         for row in rows:
             self.__cfg_remove_path(row.path)
-            self.paths_table.data.remove(row)
-        self._remove_btn.enabled = bool(len(self.paths_table.data))
-
-    def startup_method(self):
-        # main container
-        box = toga.Box()
-        box.style.direction = 'column'
-        box.style.padding = 15
-
-        # library section
+            self._paths_table.data.remove(row)
+        self._remove_btn.enabled = self._paths_table.not_empty
+    
+    def _library_section(self) -> toga.Widget:
         self.show_revealed_sw = toga.Switch(
             'show_revealed_keys',
             on_toggle=self._on_revealed_switch, 
@@ -142,47 +140,63 @@ class Options(BaseApp):
             style=Pack(padding_left=20, padding_top=2)
         )
         sources_sw = [
-            toga.Switch(s.value, on_toggle=self._on_source_switch, is_on=(s in self._cfg.library.sources))
+            toga.Switch(s.value,on_toggle=self._on_source_switch, is_on=(s in self._cfg.library.sources))
             for s in SOURCE
-        ] + [self.show_revealed_sw]
-
-        lib_box = toga.Box(id='lib_box', children=sources_sw)
+        ]
+        lib_box = toga.Box(children=sources_sw + [self.show_revealed_sw])
         lib_box.style.direction = 'column'
-        lib_box.style.flex = 1
+        lib_box.style.padding_bottom = 15
+        return lib_box
 
-        box.add(lib_box)
-
-        # local games section
-        paths_container = toga.SplitContainer()
-
-        self.paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
-        if IS_WINDOWS:
-            width = self.paths_table._impl.native.get_Width()
-            self.paths_table._impl.native.Columns[0].set_Width(width * 2)
+    def _installed_section(self) -> toga.Widget:
+        self._paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
 
         select_btn = toga.Button('Add path', on_press=self._add_path)
         select_btn.style.flex = 1
-        self._remove_btn = toga.Button('Remove', on_press=self._remove_paths, enabled=bool(len(self.paths_table.data)))
-        select_btn.style.flex = 1
+        select_btn.style.padding_bottom = 4
+        self._remove_btn = toga.Button('Remove', on_press=self._remove_paths, enabled=self._paths_table.not_empty)
+        self._remove_btn.style.flex = 1
 
         left_panel = toga.Box(children=[select_btn, self._remove_btn])
         left_panel.style.direction = 'column'
 
-        paths_container.content = [left_panel, self.paths_table]
-        box.add(paths_container)
-
-        # down_containter = toga.ScrollContainer(horizontal=False, content=paths_box)
-        # box.add(down_containter)
-
-        # # options containter
-        # container = toga.OptionContainer() 
-        # config_box = toga.Box(children=library_opts + [paths_box, select_btn])
-        # about_box = toga.Box()
-        # container.add('Config', config_box)
-        # container.add('About', about_box)
-        # box.add(container)
-
+        paths_container = toga.SplitContainer()
+        paths_container.content = [left_panel, self._paths_table]
+        paths_container.style.padding_bottom = 15
+        return paths_container
+    
+    def _about_section(self) -> toga.Widget:
+        box = toga.Box()
+        box.style.padding = 15
+        lbl = toga.Label(
+        '''
+        Galaxy integration for HumbleBundle
+        reporting issues:
+        https://github.com/UncleGoogle/galaxy-integration-humblebundle
+        Copyright (C) UncleGoogle
+        '''
+        )
+        lbl.style.font_size=10
+        lbl.style.text_align="center"
+        box.add(lbl)
         return box
+
+    def startup_method(self) -> toga.Widget:
+        config_box = toga.Box()
+        config_box.style.direction = 'column'
+        config_box.style.padding = 15
+        config_box.add(self._library_section())
+        config_box.add(self._installed_section())
+
+        about_box = toga.Box()
+        about_box.style.padding = 15
+        about_box.add(self._about_section())
+
+        main_container = toga.OptionContainer() 
+        main_container.add('Settings', config_box)
+        main_container.add('About', about_box)
+
+        return main_container
 
 
 if __name__ == '__main__':
