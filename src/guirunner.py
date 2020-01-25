@@ -1,3 +1,21 @@
+"""
+This module serves for two things:
+1) spawning GUI written in `gui` package (see __main__)
+2) simple asyncio handler for 1) that cares about communication with GUI process
+
+So handler 2) called from outside spawns separate python process that run 1).
+
+Why? Because GUIs don't want to be spawn as not-main thread.
+And also used `toga` toolkit cannot be pickled by `multiprocessing`
+https://github.com/beeware/toga/issues/734
+
+Toga is in developement stage and lacks many features especially for Windows. So why using it?
+- it is OS native so is small in size (below 2MB) comparing to dozens/hundreds of MB for Qt/Wx
+- Tkinter is not shipped by python preinstalled with Galaxy
+- Galaxy allows to run webbrowser (chromium) only for user authentication. And to open local html file you need to setup local server
+- Toga its nice, active project that needs support!
+"""
+
 import sys
 import enum
 from typing import Optional, Iterable
@@ -58,17 +76,12 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    # print to stdout for debug
+    # print also to stdout for better debugging
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-    # log to file
-    fh = logging.FileHandler(pathlib.Path(__file__).resolve().parents[1] / 'debug_log.log')
-    fh.setLevel(logging.DEBUG)
-    logger.addHandler(fh)
 
 
     option = PAGE(sys.argv[1])
