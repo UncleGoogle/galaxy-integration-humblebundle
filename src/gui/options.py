@@ -20,6 +20,48 @@ from consts import SOURCE, IS_WINDOWS
 logger = logging.getLogger(__name__)
 
 
+# ---------- LinkLabel implementation -----------
+
+from toga_winforms.libs import WinForms
+from toga_winforms.widgets.label import Label as WinFormsLabel
+
+
+class WinformsLinkLabel(WinFormsLabel):
+    def create(self):
+        self.native = WinForms.LinkLabel()
+        self.native.LinkClicked += WinForms.LinkLabelLinkClickedEventHandler(
+            self.interface._link_clicked
+        )
+    
+
+class LinkLabel(toga.Label):
+    def __init__(self, text, link=None, id=None, style=None, factory=None):
+        toga.Widget.__init__(self, id=id, style=style, factory=factory)
+
+        if IS_WINDOWS:
+            self._impl = WinformsLinkLabel(interface=self)
+        else:
+            self._impl = self.factory.Label(interface=self)
+
+        self.link = link
+        self.text = text
+    
+    @property
+    def link(self):
+        if self._link is None:
+            return self.text
+        return self._link
+    
+    @link.setter
+    def link(self, link):
+        self._link = link
+    
+    def _link_clicked(self, el, _):
+        webbrowser.open(self.link)
+
+# -----------------------------------------------
+
+
 class OneColumnTable(toga.Table):
     """One column table"""
     def __init__(self, header: str, *args, **kwargs):
@@ -54,7 +96,7 @@ class OneColumnTable(toga.Table):
 
 
 class Options(BaseApp):
-    NAME = 'Galaxy HumbleBundle - Options'
+    NAME = 'Galaxy HumbleBundle Options'
     SIZE = (550, 250)
 
     def __init__(self):
@@ -166,19 +208,16 @@ class Options(BaseApp):
         return paths_container
     
     def _about_section(self) -> toga.Widget:
-        box = toga.Box()
+        lbl_style = Pack(font_size=10, text_align="center")
+        labels = [
+            toga.Label("Galaxy integration for HumbleBundle", style=lbl_style),
+            LinkLabel("https://github.com/UncleGoogle/galaxy-integration-humblebundle", style=lbl_style),
+            toga.Label("Copyright (C) UncleGoogle", style=lbl_style)
+        ]
+        
+        box = toga.Box(children=labels)
         box.style.padding = 15
-        lbl = toga.Label(
-        '''
-        Galaxy integration for HumbleBundle
-        reporting issues:
-        https://github.com/UncleGoogle/galaxy-integration-humblebundle
-        Copyright (C) UncleGoogle
-        '''
-        )
-        lbl.style.font_size=10
-        lbl.style.text_align="center"
-        box.add(lbl)
+        box.style.direction = 'column'
         return box
 
     def startup_method(self) -> toga.Widget:
