@@ -13,7 +13,7 @@ from gui.baseapp import BaseApp
 # Imports from base level (sys.path is extended with the file parent)
 # Yes, I know it's bad practise but it is not reusable package, only code organiser
 from settings import Settings
-from consts import SOURCE, IS_WINDOWS
+from consts import SOURCE, IS_WINDOWS, IS_MAC
 
 
 logger = logging.getLogger(__name__)
@@ -21,26 +21,30 @@ logger = logging.getLogger(__name__)
 
 # ---------- LinkLabel implementation -----------
 
-from toga_winforms.libs import WinForms
-from toga_winforms.widgets.label import Label as WinFormsLabel
+if IS_WINDOWS:
+    from toga_winforms.libs import WinForms
+    from toga_winforms.widgets.label import Label as WinFormsLabel
 
 
-class WinformsLinkLabel(WinFormsLabel):
-    def create(self):
-        self.native = WinForms.LinkLabel()
-        self.native.LinkClicked += WinForms.LinkLabelLinkClickedEventHandler(
-            self.interface._link_clicked
-        )
+    class WinformsLinkLabel(WinFormsLabel):
+        def create(self):
+            self.native = WinForms.LinkLabel()
+            self.native.LinkClicked += WinForms.LinkLabelLinkClickedEventHandler(
+                self.interface._link_clicked
+            )
+
     
-
 class LinkLabel(toga.Label):
     def __init__(self, text, link=None, id=None, style=None, factory=None):
         toga.Widget.__init__(self, id=id, style=style, factory=factory)
 
         if IS_WINDOWS:
             self._impl = WinformsLinkLabel(interface=self)
-        else:
+        elif IS_MAC:
             self._impl = self.factory.Label(interface=self)
+            # no time for digging into cocoa NSTextField click handler
+            # good enough workaournd for now
+            self._impl.native.selectable = True
 
         self.link = link
         self.text = text
