@@ -7,7 +7,6 @@ from typing import Optional
 import toga
 from toga.colors import rgb
 from toga.style import Pack
-# from toga.style.COLUMN import COLUMN
 
 
 from gui.baseapp import BaseApp

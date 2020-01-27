@@ -1,10 +1,11 @@
 import pathlib
+import abc
 from typing import Tuple
 
 import toga
 
 
-class BaseApp(toga.App):
+class BaseApp(toga.App, abc.ABC):
     APP_ID = 'org.galaxy-hb.plugin'
     H_ICON = str(pathlib.Path(__file__).resolve().parent / 'static' / 'h_icon.png')
 
@@ -24,7 +25,8 @@ class BaseApp(toga.App):
         self.main_window.content = self.startup_method()
         self.main_window.show()
 
-    def startup_method(self):
+    @abc.abstractmethod
+    def startup_method(self) -> toga.Widget:
         """Implements startup method. Returns content object to be assign to self.main_window.content"""
 
     def _create_impl(self):
