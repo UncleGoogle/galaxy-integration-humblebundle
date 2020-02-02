@@ -64,6 +64,8 @@ async def show_key(game: 'LocalGame'):
 if __name__ == '__main__':
     import pathlib
 
+    # Allow for imports from base level (sys.path is extended with the file parent).
+    # Yes, I know it's not the best practise but `gui` is not reusable package, only code organiser
     parent_dir = pathlib.Path(__file__).parent
     sys.path.insert(0, str(parent_dir))  # our code
     sys.path.insert(0, str(parent_dir / 'modules'))  # third party
@@ -83,7 +85,6 @@ if __name__ == '__main__':
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-
     option = PAGE(sys.argv[1])
     if option == PAGE.KEYS:
         human_name, key_type, key_val = sys.argv[2:]  # pylint: disable=unbalanced-tuple-unpacking
@@ -92,4 +93,3 @@ if __name__ == '__main__':
         ShowKey(human_name, key_type, key_val).main_loop()
     elif option == PAGE.OPTIONS:
         Options().main_loop()
-
