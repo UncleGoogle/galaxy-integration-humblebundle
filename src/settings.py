@@ -101,11 +101,14 @@ class Settings:
     else:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-humble.cfg"
 
-    def __init__(self):
+    def __init__(self, suppress_initial_change=False):
         self._last_modification_time: Optional[float] = None
 
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
+        if suppress_initial_change:
+            self._library.has_changed()
+            self._installed.has_changed()
 
         self._config: Dict[str, Any] = self.get_config()
 

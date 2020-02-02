@@ -8,7 +8,6 @@ import toga
 from toga.colors import rgb
 from toga.style import Pack
 
-
 from gui.baseapp import BaseApp
 # Imports from base level (sys.path is extended with the file parent)
 # Yes, I know it's bad practise but it is not reusable package, only code organiser
@@ -19,16 +18,31 @@ from consts import SOURCE, IS_WINDOWS, IS_MAC
 logger = logging.getLogger(__name__)
 
 
-# ---------- LinkLabel implementation -----------
+# ---------- Tooltip implementation -------------
 
 if IS_WINDOWS:
     from toga_winforms.libs import WinForms
+
+def set_tooltip(el: toga.Label, text):
+    if IS_WINDOWS:
+        tl = WinForms.ToolTip()
+        tl.set_IsBalloon(True)
+        tl.SetToolTip(el._impl.native, text)
+    elif IS_MAC:
+        pass  # TODO
+
+
+# ---------- LinkLabel implementation -----------
+
+if IS_WINDOWS:
+    from toga_winforms.libs import WinForms, Color
     from toga_winforms.widgets.label import Label as WinFormsLabel
 
 
     class WinformsLinkLabel(WinFormsLabel):
         def create(self):
             self.native = WinForms.LinkLabel()
+            self.native.LinkColor = Color.Black
             self.native.LinkClicked += WinForms.LinkLabelLinkClickedEventHandler(
                 self.interface._link_clicked
             )
@@ -100,15 +114,12 @@ class OneColumnTable(toga.Table):
 
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle Options'
-    SIZE = (550, 250)
+    SIZE = (600, 280)
+    TEXT_SIZE = 9
+    TEXT_SIZE_BIG = 10
 
     def __init__(self):
-        self._cfg = Settings()
-
-        # dummy check to supress inital "change"
-        self._cfg.library.has_changed()
-        self._cfg.installed.has_changed()
-
+        self._cfg = Settings(suppress_initial_change=True)
         super().__init__(self.NAME, self.SIZE, has_menu=False)
 
     def _on_source_switch(self, el):
@@ -177,6 +188,17 @@ class Options(BaseApp):
         self._remove_btn.enabled = self._paths_table.not_empty
     
     def _library_section(self) -> toga.Widget:
+        desc = "Choose your HumbelBundle game types that will be shown in your GOG Galaxy library."
+        source_help = {
+            SOURCE.DRM_FREE: "Games that have direct download for Windows/Mac/Linux visible in www.humblebundle.com/home/library",
+            SOURCE.KEYS: "Games defined as keys to be redeem in foreign services (Steam/Origin/Uplay/Epic/Battle.net/...)",
+            SOURCE.TROVE: "HumbleTrove games (Requires to be active or past subscriber)."
+        }
+        show_revealed_help = 'Check to show all game keys as separate games.\n' \
+            'Uncheck to show only game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
+        
+        description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
+        rows = [description]
         self.show_revealed_sw = toga.Switch(
             'show_revealed_keys',
             on_toggle=self._on_revealed_switch, 
@@ -184,16 +206,25 @@ class Options(BaseApp):
             enabled=SOURCE.KEYS in self._cfg.library.sources,
             style=Pack(padding_left=20, padding_top=2)
         )
-        sources_sw = [
-            toga.Switch(s.value,on_toggle=self._on_source_switch, is_on=(s in self._cfg.library.sources))
-            for s in SOURCE
-        ]
-        lib_box = toga.Box(children=sources_sw + [self.show_revealed_sw])
+        for s in SOURCE:
+            sw = toga.Switch(s.value, on_toggle=self._on_source_switch, is_on=(s in self._cfg.library.sources))
+            set_tooltip(sw, source_help[s])
+            rows.append(sw)
+        set_tooltip(self.show_revealed_sw, show_revealed_help)
+        rows.append(self.show_revealed_sw)
+
+        lib_box = toga.Box(children=rows)
         lib_box.style.direction = 'column'
         lib_box.style.padding_bottom = 15
         return lib_box
 
     def _installed_section(self) -> toga.Widget:
+        desc = "Set list of directories for installed games lookup."
+        description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
+
+        installed_section = toga.Box(children=[description])
+        installed_section.style.direction = 'column'
+
         self._paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
 
         select_btn = toga.Button('Add path', on_press=self._add_path)
@@ -201,23 +232,23 @@ class Options(BaseApp):
         select_btn.style.padding_bottom = 4
         self._remove_btn = toga.Button('Remove', on_press=self._remove_paths, enabled=self._paths_table.not_empty)
         self._remove_btn.style.flex = 1
-
         left_panel = toga.Box(children=[select_btn, self._remove_btn])
         left_panel.style.direction = 'column'
 
         paths_container = toga.SplitContainer()
         paths_container.content = [left_panel, self._paths_table]
         paths_container.style.padding_bottom = 15
-        return paths_container
-    
+
+        installed_section.add(paths_container)
+        return installed_section
+
     def _about_section(self) -> toga.Widget:
-        lbl_style = Pack(font_size=10, text_align="center")
+        lbl_style = Pack(font_size=self.TEXT_SIZE_BIG, text_align="center", padding_bottom=3)
         labels = [
             toga.Label("Galaxy integration for HumbleBundle", style=lbl_style),
             LinkLabel("https://github.com/UncleGoogle/galaxy-integration-humblebundle", style=lbl_style),
             toga.Label("Copyright (C) 2019 UncleGoogle", style=lbl_style)
         ]
-        
         box = toga.Box(children=labels)
         box.style.padding = (self.SIZE[1] // 4, self.SIZE[1] // 4)
         box.style.direction = 'column'
