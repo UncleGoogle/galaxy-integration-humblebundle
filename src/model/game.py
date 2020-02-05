@@ -130,3 +130,20 @@ class Key(HumbleGame):
     def key_val(self) -> Optional[str]:
         """If returned value is None - the key was not revealed yet"""
         return self._data.get('redeemed_key_val')
+    
+    @property
+    def key_games(self) -> List['KeyGame']:
+        names = self.human_name.split(', ')
+        return [KeyGame(self, name) for name in names]
+
+
+class KeyGame(Key):
+    """One key can represent multiple games listed in key.human_name"""
+    def __init__(self, key: Key, game_human_name: str):
+        self._game_human_name = game_human_name
+        super().__init__(key._data)
+    
+    @property
+    def human_name(self):
+        return self._game_human_name
+

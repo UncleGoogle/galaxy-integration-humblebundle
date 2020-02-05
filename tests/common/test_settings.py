@@ -1,4 +1,4 @@
-from unittest.mock import Mock, mock_open, MagicMock, patch
+from unittest.mock import Mock, mock_open, patch
 from pathlib import Path
 from dataclasses import dataclass
 import pytest

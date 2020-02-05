@@ -96,7 +96,7 @@ async def test_library_cache_orders(plugin_mock, get_torchlight, change_settings
 
     change_settings(plugin_mock, {'sources': ['keys']})
     result = await plugin_mock._library_resolver(only_cache=True)
-    assert result[key.machine_name] == key
+    assert result[key.machine_name] == key.key_games[0]
     assert drm_free.machine_name not in result
     # no api calls if cache used
     assert plugin_mock._api.get_gamekeys.call_count == 0
