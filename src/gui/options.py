@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle Options'
-    SIZE = (600, 280)
+    SIZE = (630, 280)
     TEXT_SIZE = 9
     TEXT_SIZE_BIG = 10
 
@@ -91,11 +91,11 @@ class Options(BaseApp):
         self._remove_btn.enabled = self._paths_table.not_empty
     
     def _library_section(self) -> toga.Widget:
-        desc = "Choose your HumbelBundle game types that will be shown in your GOG Galaxy library."
+        desc = "Choose HumbleBundle game types to be shown in your GOG Galaxy library."
         source_help = {
-            SOURCE.DRM_FREE: "Games that have direct download for Windows/Mac/Linux visible in www.humblebundle.com/home/library",
-            SOURCE.KEYS: "Games defined as keys to be redeem in foreign services (Steam/Origin/Uplay/Epic/Battle.net/...)",
-            SOURCE.TROVE: "HumbleTrove games (Requires to be active or past subscriber)."
+            SOURCE.DRM_FREE: "Those from www.humblebundle.com/home/library that has direct download for Windows/Mac/Linux",
+            SOURCE.TROVE: "Games from Humble Trove games (Requires to be active or past subscriber).",
+            SOURCE.KEYS: "Game keys to be redeem in foreign services: Steam/Origin/Epic/ etc."
         }
         show_revealed_help = 'Check to show all game keys as separate games.\n' \
             'Uncheck to show only game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
@@ -122,7 +122,7 @@ class Options(BaseApp):
         return lib_box
 
     def _installed_section(self) -> toga.Widget:
-        desc = "Set list of directories for installed games lookup."
+        desc = "Set directories for installed games lookup e.g. C:/humble to find C:/humble/Samorost/Samorost.exe"
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
 
         installed_section = toga.Box(children=[description])
