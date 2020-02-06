@@ -133,17 +133,30 @@ class Key(HumbleGame):
     
     @property
     def key_games(self) -> List['KeyGame']:
+        """One key can represent multiple games listed in human_name.
+        This property split those games and returns list of KeyGame objects with incremental id.
+        """
         names = self.human_name.split(', ')
-        return [KeyGame(self, name) for name in names]
+        if len(names) == 1:
+            return [KeyGame(self, self.machine_name, self.human_name)]
+        else:
+            return [
+                KeyGame(self, f'{self.machine_name}_{i}', name)
+                for i, name in enumerate(names)
+            ]
 
 
 class KeyGame(Key):
     """One key can represent multiple games listed in key.human_name"""
-    def __init__(self, key: Key, game_human_name: str):
-        self._game_human_name = game_human_name
+    def __init__(self, key: Key, game_id: str, game_name: str):
+        self._game_name = game_name
+        self._game_id = game_id
         super().__init__(key._data)
     
     @property
     def human_name(self):
-        return self._game_human_name
+        return self._game_name
 
+    @property
+    def machine_name(self):
+        return self._game_id

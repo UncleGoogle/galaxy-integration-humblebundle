@@ -42,20 +42,22 @@ def test_key_properties(origin_bundle_order):
         key.in_galaxy_format()
 
 
-def test_key_key_games_simple():
+def test_key_key_games_one_game():
+    """Most common case where 1 key == 1 game"""
     key = Key({
         "machine_name": "ww",
         "human_name": "The Witcher"
     })
-    assert key.key_games == [KeyGame(key, "The Witcher")]
+    assert key.key_games == [KeyGame(key, "ww", "The Witcher")]
 
 
-def test_key_key_games_key_data():
-    key = Key({
+def test_key_key_game_data():
+    tpks = {
         "machine_name": "ww",
         "human_name": "The Witcher, The Witcher 2"
-    })
-    assert key._data == KeyGame(key, 'sth')._data
+    }
+    key = Key(tpks)
+    assert tpks == KeyGame(key, 'ww', 'sth')._data
 
 
 def test_key_split_key_games():
@@ -65,8 +67,8 @@ def test_key_split_key_games():
     }
     key = Key(tpks)
     assert key.key_games == [
-        KeyGame(key, "Alpha Protocol"),
-        KeyGame(key, "Company of Heroes"),
-        KeyGame(key, "Rome: Total War"),
-        KeyGame(key, "Hell Yeah! Wrath of the Dead Rabbit")
+        KeyGame(key, "sega_0", "Alpha Protocol"),
+        KeyGame(key, "sega_1", "Company of Heroes"),
+        KeyGame(key, "sega_2", "Rome: Total War"),
+        KeyGame(key, "sega_3", "Hell Yeah! Wrath of the Dead Rabbit")
     ]
