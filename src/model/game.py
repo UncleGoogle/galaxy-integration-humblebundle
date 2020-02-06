@@ -134,7 +134,7 @@ class Key(HumbleGame):
     @property
     def key_games(self) -> List['KeyGame']:
         """One key can represent multiple games listed in human_name.
-        This property split those games and returns list of KeyGame objects with incremental id.
+        This property splits those games and returns list of KeyGame objects with incremental id.
         """
         names = self.human_name.split(', ')
         if len(names) == 1:
