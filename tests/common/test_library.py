@@ -58,7 +58,7 @@ async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, 
     result = await plugin_mock._library_resolver()
     assert result[drm_free.machine_name] == drm_free
     # deduplication of the same title game
-    assert key.machine_name not in result
+    # keys won't be deduplicated as they are forced to have additional info in name like "Steam Key"
     assert trove.machine_name not in result
 
     # cache and calls to api

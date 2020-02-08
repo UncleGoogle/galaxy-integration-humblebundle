@@ -124,7 +124,8 @@ class Key(HumbleGame):
 
     @property
     def key_type_human_name(self) -> str:
-        return self._data['key_type_human_name']
+        extra_safety_default = 'Key'
+        return self._data.get('key_type_human_name', extra_safety_default)
 
     @property
     def key_val(self) -> Optional[str]:
@@ -155,7 +156,13 @@ class KeyGame(Key):
     
     @property
     def human_name(self):
-        return self._game_name
+        """Adds key identity if not already present"""
+        key_type = super().key_type_human_name 
+        keywords = [" Key", key_type]
+        for keyword in keywords:
+            if keyword in self._game_name or key_type in self._game_name:
+                return self._game_name
+        return f'{self._game_name} ({key_type})'
 
     @property
     def machine_name(self):

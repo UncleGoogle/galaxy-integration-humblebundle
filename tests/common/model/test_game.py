@@ -46,9 +46,10 @@ def test_key_key_games_one_game():
     """Most common case where 1 key == 1 game"""
     key = Key({
         "machine_name": "ww",
-        "human_name": "The Witcher"
+        "human_name": "The Witcher",
+        "key_type_human_name": "Steam Key"
     })
-    assert key.key_games == [KeyGame(key, "ww", "The Witcher")]
+    assert key.key_games == [KeyGame(key, "ww", "The Witcher (Steam Key)")]
 
 
 def test_key_key_game_data():
@@ -72,3 +73,22 @@ def test_key_split_key_games():
         KeyGame(key, "sega_2", "Rome: Total War"),
         KeyGame(key, "sega_3", "Hell Yeah! Wrath of the Dead Rabbit")
     ]
+
+
+def test_key_game_human_name_changed():
+    tpks = {
+        'machine_name': 'tor',
+        'human_name': 'Tor',
+        'key_type_human_name': 'Steam Key'
+    }
+    assert KeyGame(Key(tpks), 'tor', 'Tor').human_name == 'Tor (Steam Key)'
+
+
+def test_key_game_human_name_not_changed():
+    tpks = {
+        'machine_name': 'tor',
+        'human_name': 'Tor Steam',
+        'key_type_human_name': 'Steam'
+    }
+    assert KeyGame(Key(tpks), 'tor', 'Tor Steam').human_name == 'Tor Steam'
+
