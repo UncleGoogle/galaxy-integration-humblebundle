@@ -31,6 +31,13 @@ or build from source code (requires `python3.6` or higher):
 
 Edit your local [config.ini](src/config.ini)
 
+## Tags
+
+You can import predefined tags: `Key`, `Unrevealed` and `Trove` to your library manually by going to
+`Settings` -> `Features` -> `Import` button under "HUMBLE BUNDLE".
+
+Warning: this will not automatically add tags for newly added games. You will have to import tags again.
+
 #### Defaults:
 - Library: List DRM-free games and unrevealed third party keys
 - Installed games: use only Windows registry scan; edit `search_paths` to enable directory scaning feature
