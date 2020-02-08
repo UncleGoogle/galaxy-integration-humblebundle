@@ -50,7 +50,7 @@ def get_torchlight(orders_keys):
 
 @pytest.mark.asyncio
 async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, change_settings, orders_keys):
-    torchlight_data, drm_free, key = get_torchlight
+    torchlight_data, drm_free, _ = get_torchlight
     _, trove = get_torchlight_trove
 
     plugin_mock.push_cache.reset_mock()  # reset initial settings push
