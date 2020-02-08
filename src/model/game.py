@@ -156,7 +156,8 @@ class KeyGame(Key):
     
     @property
     def human_name(self):
-        """Adds key identity if not already present"""
+        """Uses heuristics to add key identity if not already present.
+        The heuristics may be wrong but it is not very harmfull."""
         key_type = super().key_type_human_name 
         keywords = [" Key", key_type]
         for keyword in keywords:
