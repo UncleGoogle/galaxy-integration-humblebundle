@@ -7,7 +7,6 @@ from unittest.mock import Mock
 from galaxy.api.errors import UnknownError
 
 from library import LibraryResolver
-from model.game import Subproduct, Key, TroveGame
 
 
 @pytest.fixture
@@ -27,25 +26,6 @@ def change_settings():
     def fn(plugin_mock, lib_config):
         plugin_mock._library_resolver._settings.update(lib_config)
     return fn
-
-
-@pytest.fixture
-def get_torchlight_trove(get_troves):
-    troves_data = get_troves(from_index=0)
-    for i in troves_data:
-        if i['machine_name'] == 'torchlight_trove':
-            trove_torchlight = i
-    return trove_torchlight, TroveGame(trove_torchlight)
-
-
-@pytest.fixture
-def get_torchlight(orders_keys):
-    for i in orders_keys:
-        if i['product']['machine_name'] == 'torchlight_storefront':
-            torchlight_order = i
-    drm_free = Subproduct(torchlight_order['subproducts'][0])
-    key = Key(torchlight_order['tpkd_dict']['all_tpks'][0])
-    return torchlight_order, drm_free, key
 
 
 @pytest.mark.asyncio

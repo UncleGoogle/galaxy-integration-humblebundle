@@ -73,3 +73,8 @@ async def test_get_os_compatibility(plugin_mock, overgrowth):
     ctx = await plugin_mock.prepare_os_compatibility_context([ovg_id, no_downloads_id])
     await plugin_mock.get_os_compatibility(no_downloads_id, ctx) == None
     await plugin_mock.get_os_compatibility(ovg_id, ctx) == OSC.Windows | OSC.MacOS | OSC.Linux
+
+
+@pytest.mark.asyncio
+async def test_library_settings(plugin_mock, get_torchlight_trove, get_torchlight):
+    pass
