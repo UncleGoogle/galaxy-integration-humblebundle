@@ -160,7 +160,7 @@ class KeyGame(Key):
         key_type = super().key_type_human_name 
         keywords = [" Key", key_type]
         for keyword in keywords:
-            if keyword in self._game_name or key_type in self._game_name:
+            if keyword in self._game_name:
                 return self._game_name
         return f'{self._game_name} ({key_type})'
 
