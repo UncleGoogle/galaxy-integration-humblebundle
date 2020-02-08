@@ -124,9 +124,47 @@ class Key(HumbleGame):
 
     @property
     def key_type_human_name(self) -> str:
-        return self._data['key_type_human_name']
+        extra_safety_default = 'Key'
+        return self._data.get('key_type_human_name', extra_safety_default)
 
     @property
     def key_val(self) -> Optional[str]:
         """If returned value is None - the key was not revealed yet"""
         return self._data.get('redeemed_key_val')
+    
+    @property
+    def key_games(self) -> List['KeyGame']:
+        """One key can represent multiple games listed in human_name.
+        This property splits those games and returns list of KeyGame objects with incremental id.
+        """
+        names = self.human_name.split(', ')
+        if len(names) == 1:
+            return [KeyGame(self, self.machine_name, self.human_name)]
+        else:
+            return [
+                KeyGame(self, f'{self.machine_name}_{i}', name)
+                for i, name in enumerate(names)
+            ]
+
+
+class KeyGame(Key):
+    """One key can represent multiple games listed in key.human_name"""
+    def __init__(self, key: Key, game_id: str, game_name: str):
+        self._game_name = game_name
+        self._game_id = game_id
+        super().__init__(key._data)
+    
+    @property
+    def human_name(self):
+        """Uses heuristics to add key identity if not already present.
+        The heuristics may be wrong but it is not very harmfull."""
+        key_type = super().key_type_human_name 
+        keywords = [" Key", key_type]
+        for keyword in keywords:
+            if keyword in self._game_name:
+                return self._game_name
+        return f'{self._game_name} ({key_type})'
+
+    @property
+    def machine_name(self):
+        return self._game_id
