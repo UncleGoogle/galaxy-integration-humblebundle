@@ -1,4 +1,5 @@
 import sys
+import time
 import psutil
 import json
 import os
@@ -52,11 +53,19 @@ def build(c, output=DIST_PLUGIN):
     output = Path(output).resolve()
     print('Removing', output)
     if os.path.exists(output):
-        shutil.rmtree(output)
+        try:
+            shutil.rmtree(output)
+        except OSError as e:
+            if hasattr(e, 'winerror') and e.winerror == 145:
+                # something e.g. antivirus check holds a file. Try to wait to be released for a moment
+                time.sleep(3)
+                shutil.rmtree(output)
+            else:
+                raise
 
     print('Copying source code to ', str(output))
     shutil.copytree('src', output, ignore=shutil.ignore_patterns(
-        '__pycache__', '.mypy_cache', 'galaxy'))
+        '__pycache__', '.mypy_cache', 'tests'))
 
     args = [
         PYTHON, "-m", "pip", "install",
