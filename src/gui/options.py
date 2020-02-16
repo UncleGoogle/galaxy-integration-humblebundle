@@ -6,7 +6,8 @@ import toga
 from toga.style import Pack
 
 from gui.baseapp import BaseApp
-from gui.toga_helpers import set_tooltip, LinkLabel, OneColumnTable
+from gui.toga_helpers import set_tooltip, \
+    LinkLabel, OneColumnTable, OptionContainer, MultilineLabel, RichTextLabel
 
 from settings import Settings
 from consts import SOURCE
@@ -21,7 +22,8 @@ class Options(BaseApp):
     TEXT_SIZE = 9
     TEXT_SIZE_BIG = 10
 
-    def __init__(self):
+    def __init__(self, show_news=False):
+        self._show_news = show_news
         self._cfg = Settings(suppress_initial_change=True)
         super().__init__(self.NAME, self.SIZE, has_menu=False)
 
@@ -158,6 +160,32 @@ class Options(BaseApp):
         box.style.alignment = 'center'
         return box
 
+    def _news_section(self) -> toga.Widget:
+        margin = 15
+        box = toga.Box()
+        box.style.padding_bottom = margin
+
+        with open('CHANGELOG.md', 'r') as f:
+            changelog = f.read()
+        text_box = toga.MultilineTextInput(readonly=True)
+        text_box.MIN_WIDTH = self.SIZE[0] - (2 * margin)
+        text_box.value = changelog
+
+        box.add(text_box)
+        return box
+
+        # option2
+        with open('CHANGELOG.rtf', 'r') as f:
+            rtf = f.read()
+        rtf_label = RichTextLabel(rtf)
+        rtf_label.MIN_HEIGHT = self.SIZE[1]  # does not work!
+        return rtf_label
+
+        # option3
+        changelog_lines = changelog.splitlines()
+        style = Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=2)
+        return MultilineLabel(*changelog_lines, line_style=style)
+
     def startup_method(self) -> toga.Widget:
         config_box = toga.Box()
         config_box.style.direction = 'column'
@@ -169,7 +197,14 @@ class Options(BaseApp):
         about_box.style.padding = 15
         about_box.add(self._about_section())
 
-        main_container = toga.OptionContainer() 
+        news_box = toga.Box()
+        news_box.style.padding = 15
+        news_box.add(self._news_section())
+
+        main_container = OptionContainer() 
         main_container.add('Settings', config_box)
+        main_container.add('Changelog', news_box)
         main_container.add('About', about_box)
+        if self._show_news:
+            main_container._impl.native.SelectTab(1)
         return main_container

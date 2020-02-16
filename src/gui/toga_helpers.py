@@ -20,6 +20,36 @@ def set_tooltip(el: toga.Label, text):
         pass  # TODO
 
 
+
+# ---------- MultilineLabel workaround ----------
+
+class MultilineLabel(toga.Box):
+    def __init__(self, *lines, line_style=None, **kwargs):
+        kwargs['children'] = [toga.Label(line, style=line_style) for line in lines]
+        super().__init__(**kwargs)
+        self.style.direction = 'column'
+
+# ---------- Rich text label implementation -----
+
+if IS_WINDOWS:
+    class WinformsRichLabel(WinFormsLabel):
+        def create(self):
+            self.native = WinForms.RichTextBox()
+            # self.native.set_BorderStyle(0)
+            self.native.ReadOnly = True
+
+
+class RichTextLabel(toga.Widget):
+    def __init__(self, text, id=None, style=None, factory=None):
+        toga.Widget.__init__(self, id=id, style=style, factory=factory)
+        if IS_WINDOWS:
+            self._impl = WinformsRichLabel(interface=self)
+            self._impl.native.Rtf = text
+            # self._impl.native.LoadFile(text)
+        elif IS_MAC:
+            pass  # TODO
+
+
 # ---------- LinkLabel implementation -----------
 
 if IS_WINDOWS:
@@ -94,3 +124,13 @@ class OneColumnTable(toga.Table):
             return selected_rows
         else:
             return super().selection
+
+
+# -------------- Enhanced OptionsContainter -------------
+
+class OptionContainer(toga.OptionContainer):
+    def open_tab(self, index: int):
+        if IS_WINDOWS:
+            self._impl.native.SelectTab(index)
+        elif IS_MAC:
+            pass # TODO

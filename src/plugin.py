@@ -73,13 +73,18 @@ class HumbleBundlePlugin(Plugin):
             data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
+    
+    def _load_cache(self, key: str, default: Any=None) -> Any:
+        if key in self.persistent_cache:
+            return json.loads(self.persistent_cache[key])
+        return default
 
     def handshake_complete(self):
         self._settings.migration_from_cache(self.persistent_cache, self.push_cache)
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
-            cache=json.loads(self.persistent_cache.get('library', '{}')),
+            cache=self._load_cache('library', {}),
             save_cache_callback=partial(self._save_cache, 'library')
         )
 
@@ -123,11 +128,14 @@ class HumbleBundlePlugin(Plugin):
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
     async def _open_config_async(self):
+        show_news = self._load_cache('show_news', True)
         try:
-            await guirunner.open(guirunner.PAGE.OPTIONS)
+            await guirunner.show_options(show_news)
         except Exception as e:
             logging.exception(e)
             self._settings.open_config_file()
+        else:
+            self._save_cache('show_news', False)
 
     def _open_config(self):
         """Synchonious wrapper for self.__open_config"""

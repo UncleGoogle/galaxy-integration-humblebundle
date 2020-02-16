@@ -56,7 +56,7 @@ def build(c, output=DIST_PLUGIN):
         try:
             shutil.rmtree(output)
         except OSError as e:
-            if hasattr(e, 'winerror') and e.winerror == 145:
+            if hasattr(e, 'winerror') and e.winerror in [145, 5]:
                 # something e.g. antivirus check holds a file. Try to wait to be released for a moment
                 time.sleep(3)
                 shutil.rmtree(output)
@@ -64,6 +64,7 @@ def build(c, output=DIST_PLUGIN):
                 raise
 
     print('Copying source code to ', str(output))
+    shutil.copy('CHANGELOG.md', output)
     shutil.copytree('src', output, ignore=shutil.ignore_patterns(
         '__pycache__', '.mypy_cache', 'tests'))
 
@@ -121,8 +122,11 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
         shutil.copy(file_, output)
     for file_ in glob("src/local/*.py"):
         shutil.copy(file_, Path(output) / 'local')
+    for file_ in glob("src/gui/*.py"):
+        shutil.copy(file_, Path(output) / 'gui')
     for file_ in glob("src/*.ini"):
         shutil.copy(file_, output)
+    shutil.copy('CHANGELOG.md', output)
 
 
 @task

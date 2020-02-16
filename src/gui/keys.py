@@ -10,7 +10,7 @@ class ShowKey(BaseApp):
     SIZE = (40, 40)
     KEYS_URL = 'https://www.humblebundle.com/home/keys'
 
-    def __init__(self, human_name: str, key_type: str, key_val: Optional[str]):
+    def __init__(self, human_name: str, key_type: str, key_val: Optional[str]=None):
         self._key_type = key_type
         self._key_val = key_val
         revealed_info = ' (not revealed yet)' if self._key_val is None else ''

@@ -30,7 +30,7 @@ class GUIError(Exception):
     pass
 
 
-async def open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
+async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
     import asyncio
     import logging
     logger = logging.getLogger(__name__)
@@ -43,26 +43,39 @@ async def open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
 
     process = await asyncio.create_subprocess_exec(
         sys.executable,
-        __file__,  # the same file for convenience
+        __file__,  # this file for convenience
         *all_args,
         stderr=asyncio.subprocess.PIPE
     )
     _, stderr_data = await process.communicate()
     if stderr_data:
+        if type(stderr_data) == bytes:
+            try:
+                stderr_data = stderr_data.decode('utf-8')
+            except UnicodeDecodeError:
+                pass
         raise GUIError(f'Error on running [{gui}]: {stderr_data}')
 
 
 async def show_key(game: 'LocalGame'):
-    await open(
+    await _open(
         PAGE.KEYS,
         game.human_name,
         game.key_type_human_name,
-        sensitive_args=[str(game.key_val)]
+        sensitive_args=[game.key_val] if game.key_val is not None else []
     )
+
+
+async def show_options(show_news: bool=False):
+    args = [PAGE.OPTIONS]
+    if show_news:
+        args.append('--show_news')
+    await _open(*args)
 
 
 if __name__ == '__main__':
     import pathlib
+    import argparse
 
     # Allow for imports from base level (sys.path is extended with the file parent).
     # Yes, I know it's not the best practise but `gui` is not reusable package, only code organiser
@@ -85,11 +98,21 @@ if __name__ == '__main__':
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    option = PAGE(sys.argv[1])
-    if option == PAGE.KEYS:
-        human_name, key_type, key_val = sys.argv[2:]  # pylint: disable=unbalanced-tuple-unpacking
-        if key_val == 'None':
-            key_val = None
-        ShowKey(human_name, key_type, key_val).main_loop()
-    elif option == PAGE.OPTIONS:
-        Options().main_loop()
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(dest='page')
+
+    options_parser = subparsers.add_parser(PAGE.OPTIONS.value)
+    options_parser.add_argument('--show_news', action='store_true')
+
+    keys_parser = subparsers.add_parser(PAGE.KEYS.value)
+    keys_parser.add_argument('human_name')
+    keys_parser.add_argument('key_type')
+    keys_parser.add_argument('key_val', nargs='?', default=None)
+
+    args = parser.parse_args()
+    option = PAGE(args.page)
+
+    if option == PAGE.OPTIONS:
+        Options(args.show_news).main_loop()
+    elif option == PAGE.KEYS:
+        ShowKey(args.human_name, args.key_type, args.key_val).main_loop()
