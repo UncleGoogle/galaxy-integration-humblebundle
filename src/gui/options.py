@@ -90,6 +90,8 @@ class Options(BaseApp):
             except KeyError:
                 logger.error('Removing when no data in table. Rm btn should be disabled at this point.')
                 return
+        elif type(rows) != list:  # singular selection on macos
+            rows = [rows]
         for row in rows:
             self.__cfg_remove_path(row.path)
             self._paths_table.data.remove(row)
@@ -139,7 +141,7 @@ class Options(BaseApp):
         desc = "List of directories for installed games lookup. The lookup is based on child directory names."
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
         if IS_MAC:
-            desc_os = "If nothing selected '/Applications' will be used."
+            desc_os = "If nothing selected, '/Applications' will be used."
         if IS_WINDOWS:
             desc_os = "For example select C:/Humble/Samorost for find C:/Humble/Samorost/samorost.exe"
         description_os = toga.Label(desc_os, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
