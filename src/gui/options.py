@@ -9,7 +9,7 @@ from gui.baseapp import BaseApp
 from gui.toga_helpers import set_tooltip, LinkLabel, OneColumnTable
 
 from settings import Settings
-from consts import SOURCE
+from consts import SOURCE, IS_MAC, IS_WINDOWS
 
 
 logger = logging.getLogger(__name__)
@@ -18,8 +18,13 @@ logger = logging.getLogger(__name__)
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle Options'
     SIZE = (600, 280)
-    TEXT_SIZE = 9
-    TEXT_SIZE_BIG = 10
+    if IS_WINDOWS:
+        TEXT_SIZE = 9
+        TEXT_SIZE_BIG = 10
+    elif IS_MAC:
+        TEXT_SIZE = 11
+        TEXT_SIZE_BIG = 12
+
 
     def __init__(self):
         self._cfg = Settings(suppress_initial_change=True)
@@ -99,7 +104,7 @@ class Options(BaseApp):
         }
         show_revealed_help = 'Check to show all game keys as separate games.\n' \
             'Uncheck to show only game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
-        
+
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
         rows = [description]
         self.show_revealed_sw = toga.Switch(
@@ -125,25 +130,25 @@ class Options(BaseApp):
         desc = "Set list of directories for installed games lookup."
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
 
-        installed_section = toga.Box(children=[description])
-        installed_section.style.direction = 'column'
-
         self._paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
 
         select_btn = toga.Button('Add path', on_press=self._add_path)
         select_btn.style.flex = 1
         select_btn.style.padding_bottom = 4
         self._remove_btn = toga.Button('Remove', on_press=self._remove_paths, enabled=self._paths_table.not_empty)
-        self._remove_btn.style.flex = 1
-        left_panel = toga.Box(children=[select_btn, self._remove_btn])
-        left_panel.style.direction = 'column'
+        self._remove_btn.style.flex = 2
+        config_panel = toga.Box(children=[select_btn, self._remove_btn])
+        config_panel.style.direction = 'row'
+        config_panel.style.padding_top = 15
 
-        paths_container = toga.SplitContainer()
-        paths_container.content = [left_panel, self._paths_table]
-        paths_container.style.padding_bottom = 15
+        paths_container = toga.Box(children=[self._paths_table, config_panel])
+        paths_container.style.direction = 'column'
 
-        installed_section.add(paths_container)
-        return installed_section
+        # paths_container = toga.SplitContainer()
+        # paths_container.content = [self._paths_table, config_panel]
+        # paths_container.style.padding_bottom = 15
+
+        return paths_container
 
     def _about_section(self) -> toga.Widget:
         lbl_style = Pack(font_size=self.TEXT_SIZE_BIG, text_align="center", padding_bottom=3)
@@ -159,17 +164,17 @@ class Options(BaseApp):
         return box
 
     def startup_method(self) -> toga.Widget:
-        config_box = toga.Box()
-        config_box.style.direction = 'column'
-        config_box.style.padding = 15
-        config_box.add(self._library_section())
-        config_box.add(self._installed_section())
-
-        about_box = toga.Box()
-        about_box.style.padding = 15
-        about_box.add(self._about_section())
-
         main_container = toga.OptionContainer() 
-        main_container.add('Settings', config_box)
-        main_container.add('About', about_box)
+
+        sections = {
+            'Library': self._library_section,
+            'Installed': self._installed_section,
+            'About': self._about_section
+        }
+        for name, create_tab_content in sections.items():
+            section = toga.Box()
+            section.style.padding = 15
+            section.add(create_tab_content())
+            main_container.add(name, section)
+
         return main_container
