@@ -102,8 +102,8 @@ class Options(BaseApp):
             SOURCE.KEYS: "Games defined as keys to be redeem in foreign services (Steam/Origin/Uplay/Epic/Battle.net/...)",
             SOURCE.TROVE: "HumbleTrove games (Requires to be active or past subscriber)."
         }
-        show_revealed_help = 'Check to show all game keys as separate games.\n' \
-            'Uncheck to show only game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
+        show_revealed_help = 'Check to show all game keys as separate games. Uncheck to show only\n' \
+            'game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
 
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
         rows = [description]
@@ -116,10 +116,19 @@ class Options(BaseApp):
         )
         for s in SOURCE:
             sw = toga.Switch(s.value, on_toggle=self._on_source_switch, is_on=(s in self._cfg.library.sources))
+            sw.style.padding_bottom = 2
             set_tooltip(sw, source_help[s])
             rows.append(sw)
         set_tooltip(self.show_revealed_sw, show_revealed_help)
         rows.append(self.show_revealed_sw)
+
+        if IS_MAC:  # workaround for not working tooltip
+            inp = toga.MultilineTextInput(readonly=True, style=Pack(padding_top=10))
+            inp.MIN_WIDTH = self.SIZE[0] - 50
+            for k, v in source_help.items():
+                inp.value += f'{k.value}: {v}\n'
+            inp.value += f'show_revealed_help: {show_revealed_help}'
+            rows.append(inp)
 
         lib_box = toga.Box(children=rows)
         lib_box.style.direction = 'column'

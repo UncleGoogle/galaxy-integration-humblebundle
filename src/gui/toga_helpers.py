@@ -17,7 +17,10 @@ def set_tooltip(el: toga.Label, text):
         tl.set_IsBalloon(True)
         tl.SetToolTip(el._impl.native, text)
     elif IS_MAC:
-        pass  # TODO
+        pass
+        # TODO, below does not work
+        # el._impl.native.toolTip = text
+        # el._impl.native.setToolTip(text)
 
 
 # ---------- LinkLabel implementation -----------
