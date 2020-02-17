@@ -127,8 +127,13 @@ class Options(BaseApp):
         return lib_box
 
     def _installed_section(self) -> toga.Widget:
-        desc = "Set list of directories for installed games lookup."
+        desc = "List of directories for installed games lookup. The lookup is based on child directory names."
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
+        if IS_MAC:
+            desc_os = "If nothing selected '/Applications' will be used."
+        if IS_WINDOWS:
+            desc_os = "For example select C:/Humble/Samorost for find C:/Humble/Samorost/samorost.exe"
+        description_os = toga.Label(desc_os, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
 
         self._paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
 
@@ -141,13 +146,8 @@ class Options(BaseApp):
         config_panel.style.direction = 'row'
         config_panel.style.padding_top = 15
 
-        paths_container = toga.Box(children=[self._paths_table, config_panel])
+        paths_container = toga.Box(children=[description, description_os, self._paths_table, config_panel])
         paths_container.style.direction = 'column'
-
-        # paths_container = toga.SplitContainer()
-        # paths_container.content = [self._paths_table, config_panel]
-        # paths_container.style.padding_bottom = 15
-
         return paths_container
 
     def _about_section(self) -> toga.Widget:

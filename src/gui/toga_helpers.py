@@ -65,7 +65,7 @@ class LinkLabel(toga.Label):
 
 class OneColumnTable(toga.Table):
     """One column table"""
-    MIN_WIDTH = 400
+    MIN_WIDTH = 500
 
     def __init__(self, header: str, *args, **kwargs):
         super().__init__([header], *args, **kwargs)
