@@ -26,6 +26,12 @@ class PAGE(enum.Enum):
     OPTIONS = 'options'
 
 
+class OPTIONS_MODE(enum.Enum):
+    NORMAL = 'normal'
+    WELCOME = 'welcome'
+    NEWS = 'news'
+
+
 class GUIError(Exception):
     pass
 
@@ -66,10 +72,8 @@ async def show_key(game: 'LocalGame'):
     )
 
 
-async def show_options(show_news: bool=False):
-    args = [PAGE.OPTIONS]
-    if show_news:
-        args.append('--show_news')
+async def show_options(mode: OPTIONS_MODE=OPTIONS_MODE.NORMAL):
+    args = [PAGE.OPTIONS, mode.value]
     await _open(*args)
 
 
@@ -102,7 +106,7 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(dest='page')
 
     options_parser = subparsers.add_parser(PAGE.OPTIONS.value)
-    options_parser.add_argument('--show_news', action='store_true')
+    options_parser.add_argument('mode', choices=[m.value for m in OPTIONS_MODE])
 
     keys_parser = subparsers.add_parser(PAGE.KEYS.value)
     keys_parser.add_argument('human_name')
@@ -113,6 +117,6 @@ if __name__ == '__main__':
     option = PAGE(args.page)
 
     if option == PAGE.OPTIONS:
-        Options(args.show_news).main_loop()
+        Options(args.mode).main_loop()
     elif option == PAGE.KEYS:
         ShowKey(args.human_name, args.key_type, args.key_val).main_loop()

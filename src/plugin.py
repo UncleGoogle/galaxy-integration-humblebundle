@@ -9,6 +9,7 @@ import json
 from dataclasses import astuple
 from functools import partial
 from typing import Any, Optional
+from packaging import version
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
@@ -28,7 +29,7 @@ from library import LibraryResolver
 from local import AppFinder
 from privacy import SensitiveFilter
 from utils.decorators import double_click_effect
-import guirunner
+import guirunner as gui
 
 
 with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
@@ -81,6 +82,7 @@ class HumbleBundlePlugin(Plugin):
 
     def handshake_complete(self):
         self._settings.migration_from_cache(self.persistent_cache, self.push_cache)
+        self._last_version = self._load_cache('last_version', default=None)
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
@@ -102,8 +104,8 @@ class HumbleBundlePlugin(Plugin):
         logging.info('Stored credentials found')
         user_id = await self._api.authenticate(stored_credentials)
         if user_id is None:
-            logging.debug('invalid creds')
             raise InvalidCredentials()
+        self._open_config(gui.OPTIONS_MODE.WELCOME)
         return Authentication(user_id, user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
@@ -111,8 +113,17 @@ class HumbleBundlePlugin(Plugin):
 
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
-        self._open_config()
+        if self.__check_if_is_after_minor_update():
+            self._open_config(gui.OPTIONS_MODE.NEWS)
         return Authentication(user_id, user_id)
+    
+    def __check_if_is_after_minor_update(self) -> bool:
+        def to_minor(ver: str) -> version.Version:
+            """3 part version assumed"""
+            return version.parse(ver.rsplit('.', 1)[0])
+        is_after_udpate = self._last_version is None or to_minor(__version__) > to_minor(self._last_version)
+        self._save_cache('last_version', __version__)
+        return is_after_udpate
 
     async def get_owned_games(self):
         if not self._api.is_authenticated:
@@ -127,19 +138,16 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
-    async def _open_config_async(self):
-        show_news = self._load_cache('show_news', True)
+    def _open_config(self, mode: gui.OPTIONS_MODE=gui.OPTIONS_MODE.NORMAL):
+        """Synchonious wrapper for self._open_config_async"""
+        self.create_task(self._open_config_async(mode), 'opening config')
+    
+    async def _open_config_async(self, mode: gui.OPTIONS_MODE):
         try:
-            await guirunner.show_options(show_news)
+            await gui.show_options(mode)
         except Exception as e:
             logging.exception(e)
             self._settings.open_config_file()
-        else:
-            self._save_cache('show_news', False)
-
-    def _open_config(self):
-        """Synchonious wrapper for self.__open_config"""
-        self.create_task(self._open_config_async(), 'opening config')
 
     @double_click_effect(timeout=0.5, effect='_open_config')
     async def install_game(self, game_id):
@@ -156,7 +164,7 @@ class HumbleBundlePlugin(Plugin):
 
             if isinstance(game, Key):
                 try:
-                    await guirunner.show_key(game)
+                    await gui.show_key(game)
                 except Exception as e:
                     logging.error(e, extra={'platform_info': platform.uname()})
                     webbrowser.open('https://www.humblebundle.com/home/keys')
@@ -225,8 +233,8 @@ class HumbleBundlePlugin(Plugin):
     async def _check_installed(self):
         """
         Owned games are needed to local games search. Galaxy methods call order is:
-        get_local_games -> authenticate -> get_local_games -> get_owned_games (at the end!)
-        That is why plugin sets all logic of getting local games in perdiodic checks
+        get_local_games -> authenticate -> get_local_games -> get_owned_games (at the end!).
+        That is why the plugin sets all logic of getting local games in perdiodic checks like this one.
         """
         if not self._owned_games:
             logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
@@ -279,7 +287,7 @@ class HumbleBundlePlugin(Plugin):
     async def shutdown(self):
         self._statuses_check.cancel()
         self._installed_check.cancel()
-        self.create_task(self._api.close_session(), 'closing session')
+        await self._api.close_session()
 
 
 def main():
