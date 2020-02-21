@@ -9,7 +9,7 @@ Why? Because GUIs don't want to be spawn as not-main thread.
 And also used `toga` toolkit cannot be pickled by `multiprocessing`
 https://github.com/beeware/toga/issues/734
 
-Toga is in developement stage and lacks many features especially for Windows. So why using it?
+Toga is in developement stage and lacks many features. So why using it?
 - it is OS native so is small in size (below 2MB) comparing to dozens/hundreds of MB for Qt/Wx
 - Tkinter is not shipped by python preinstalled with Galaxy
 - Galaxy allows to run webbrowser (chromium) only for user authentication. And to open local html file you need to setup local server
