@@ -17,7 +17,10 @@ def set_tooltip(el: toga.Label, text):
         tl.set_IsBalloon(True)
         tl.SetToolTip(el._impl.native, text)
     elif IS_MAC:
-        pass  # TODO
+        pass
+        # TODO, below does not work
+        # el._impl.native.toolTip = text
+        # el._impl.native.setToolTip(text)
 
 
 
@@ -95,6 +98,8 @@ class LinkLabel(toga.Label):
 
 class OneColumnTable(toga.Table):
     """One column table"""
+    MIN_WIDTH = 500
+
     def __init__(self, header: str, *args, **kwargs):
         super().__init__([header], *args, **kwargs)
         self.__set_full_width_one_column()
@@ -106,6 +111,8 @@ class OneColumnTable(toga.Table):
             width = self._impl.native.get_Width()
             # for some reason `width` is exactly half of the whole table
             self._impl.native.Columns[0].set_Width(width * 2)
+        elif IS_MAC:
+            pass  # TODO
     
     @property
     def not_empty(self):

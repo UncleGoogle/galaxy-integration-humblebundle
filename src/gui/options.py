@@ -10,7 +10,7 @@ from gui.toga_helpers import set_tooltip, \
     LinkLabel, OneColumnTable, OptionContainer, MultilineLabel, RichTextLabel
 
 from settings import Settings
-from consts import SOURCE
+from consts import SOURCE, IS_MAC, IS_WINDOWS
 
 
 logger = logging.getLogger(__name__)
@@ -18,9 +18,14 @@ logger = logging.getLogger(__name__)
 
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle Options'
-    SIZE = (630, 280)
-    TEXT_SIZE = 9
-    TEXT_SIZE_BIG = 10
+    SIZE = (600, 280)
+    if IS_WINDOWS:
+        TEXT_SIZE = 9
+        TEXT_SIZE_BIG = 10
+    elif IS_MAC:
+        TEXT_SIZE = 11
+        TEXT_SIZE_BIG = 12
+
 
     def __init__(self, show_news=False):
         self._show_news = show_news
@@ -87,6 +92,8 @@ class Options(BaseApp):
             except KeyError:
                 logger.error('Removing when no data in table. Rm btn should be disabled at this point.')
                 return
+        elif type(rows) != list:  # singular selection on macos
+            rows = [rows]
         for row in rows:
             self.__cfg_remove_path(row.path)
             self._paths_table.data.remove(row)
@@ -99,9 +106,9 @@ class Options(BaseApp):
             SOURCE.TROVE: "Games from Humble Trove games (Requires to be active or past subscriber).",
             SOURCE.KEYS: "Game keys to be redeem in foreign services: Steam/Origin/Epic/ etc."
         }
-        show_revealed_help = 'Check to show all game keys as separate games.\n' \
-            'Uncheck to show only game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
-        
+        show_revealed_help = 'Check to show all game keys as separate games. Uncheck to show only\n' \
+            'game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
+
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
         rows = [description]
         self.show_revealed_sw = toga.Switch(
@@ -113,10 +120,19 @@ class Options(BaseApp):
         )
         for s in SOURCE:
             sw = toga.Switch(s.value, on_toggle=self._on_source_switch, is_on=(s in self._cfg.library.sources))
+            sw.style.padding_bottom = 2
             set_tooltip(sw, source_help[s])
             rows.append(sw)
         set_tooltip(self.show_revealed_sw, show_revealed_help)
         rows.append(self.show_revealed_sw)
+
+        if IS_MAC:  # workaround for not working tooltip
+            inp = toga.MultilineTextInput(readonly=True, style=Pack(padding_top=10))
+            inp.MIN_WIDTH = self.SIZE[0] - 50
+            for k, v in source_help.items():
+                inp.value += f'{k.value}: {v}\n'
+            inp.value += f'show_revealed_help: {show_revealed_help}'
+            rows.append(inp)
 
         lib_box = toga.Box(children=rows)
         lib_box.style.direction = 'column'
@@ -124,11 +140,13 @@ class Options(BaseApp):
         return lib_box
 
     def _installed_section(self) -> toga.Widget:
-        desc = "Set directories for installed games lookup e.g. C:/humble to find C:/humble/Samorost/Samorost.exe"
+        desc = "List of directories for installed games lookup. The lookup is based on child directory names."
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
-
-        installed_section = toga.Box(children=[description])
-        installed_section.style.direction = 'column'
+        if IS_MAC:
+            desc_os = "If nothing selected, '/Applications' will be used."
+        if IS_WINDOWS:
+            desc_os = "For example select C:/Humble/Samorost for find C:/Humble/Samorost/samorost.exe"
+        description_os = toga.Label(desc_os, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
 
         self._paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
 
@@ -136,16 +154,14 @@ class Options(BaseApp):
         select_btn.style.flex = 1
         select_btn.style.padding_bottom = 4
         self._remove_btn = toga.Button('Remove', on_press=self._remove_paths, enabled=self._paths_table.not_empty)
-        self._remove_btn.style.flex = 1
-        left_panel = toga.Box(children=[select_btn, self._remove_btn])
-        left_panel.style.direction = 'column'
+        self._remove_btn.style.flex = 2
+        config_panel = toga.Box(children=[select_btn, self._remove_btn])
+        config_panel.style.direction = 'row'
+        config_panel.style.padding_top = 15
 
-        paths_container = toga.SplitContainer()
-        paths_container.content = [left_panel, self._paths_table]
-        paths_container.style.padding_bottom = 15
-
-        installed_section.add(paths_container)
-        return installed_section
+        paths_container = toga.Box(children=[description, description_os, self._paths_table, config_panel])
+        paths_container.style.direction = 'column'
+        return paths_container
 
     def _about_section(self) -> toga.Widget:
         lbl_style = Pack(font_size=self.TEXT_SIZE_BIG, text_align="center", padding_bottom=3)
@@ -187,24 +203,21 @@ class Options(BaseApp):
         return MultilineLabel(*changelog_lines, line_style=style)
 
     def startup_method(self) -> toga.Widget:
-        config_box = toga.Box()
-        config_box.style.direction = 'column'
-        config_box.style.padding = 15
-        config_box.add(self._library_section())
-        config_box.add(self._installed_section())
+        main_container = toga.OptionContainer() 
 
-        about_box = toga.Box()
-        about_box.style.padding = 15
-        about_box.add(self._about_section())
+        sections = {
+            'Library': self._library_section,
+            'Installed': self._installed_section,
+            'Changelog': self._news_section,
+            'About': self._about_section
+        }
+        for name, create_tab_content in sections.items():
+            section = toga.Box()
+            section.style.padding = 15
+            section.add(create_tab_content())
+            main_container.add(name, section)
 
-        news_box = toga.Box()
-        news_box.style.padding = 15
-        news_box.add(self._news_section())
-
-        main_container = OptionContainer() 
-        main_container.add('Settings', config_box)
-        main_container.add('Changelog', news_box)
-        main_container.add('About', about_box)
         if self._show_news:
-            main_container._impl.native.SelectTab(1)
+            main_container._impl.native.SelectTab(2)
+
         return main_container
