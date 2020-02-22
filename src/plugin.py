@@ -17,7 +17,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility
-from galaxy.api.types import Authentication, NextStep, LocalGame
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
 from consts import HP, CURRENT_SYSTEM
@@ -187,6 +187,17 @@ class HumbleBundlePlugin(Plugin):
             logging.exception(e, extra={'game': game})
         finally:
             self._under_instalation.remove(game_id)
+    
+    async def get_game_library_settings(self, game_id: str, context: Any) -> GameLibrarySettings:
+        gls = GameLibrarySettings(game_id, None, None)
+        game = self._owned_games[game_id]
+        if isinstance(game, Key):
+            gls.tags = ['Key']
+            if game.key_val is None:
+                gls.tags.append('Unrevealed')
+        if isinstance(game, TroveGame):
+            gls.tags = ['Trove']
+        return gls
 
     async def launch_game(self, game_id):
         try:

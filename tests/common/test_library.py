@@ -50,7 +50,7 @@ def get_torchlight(orders_keys):
 
 @pytest.mark.asyncio
 async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, change_settings, orders_keys):
-    torchlight_data, drm_free, key = get_torchlight
+    torchlight_data, drm_free, _ = get_torchlight
     _, trove = get_torchlight_trove
 
     plugin_mock.push_cache.reset_mock()  # reset initial settings push
@@ -58,7 +58,7 @@ async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, 
     result = await plugin_mock._library_resolver()
     assert result[drm_free.machine_name] == drm_free
     # deduplication of the same title game
-    assert key.machine_name not in result
+    # keys won't be deduplicated as they are forced to have additional info in name like "Steam Key"
     assert trove.machine_name not in result
 
     # cache and calls to api
@@ -96,7 +96,7 @@ async def test_library_cache_orders(plugin_mock, get_torchlight, change_settings
 
     change_settings(plugin_mock, {'sources': ['keys']})
     result = await plugin_mock._library_resolver(only_cache=True)
-    assert result[key.machine_name] == key
+    assert result[key.machine_name] == key.key_games[0]
     assert drm_free.machine_name not in result
     # no api calls if cache used
     assert plugin_mock._api.get_gamekeys.call_count == 0
