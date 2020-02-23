@@ -102,12 +102,13 @@ class Options(BaseApp):
     def _library_section(self) -> toga.Widget:
         desc = "Choose HumbleBundle game types to be shown in your GOG Galaxy library."
         source_help = {
-            SOURCE.DRM_FREE: "Those from www.humblebundle.com/home/library that has direct download for Windows/Mac/Linux",
-            SOURCE.TROVE: "Games from Humble Trove games (Requires to be active or past subscriber).",
-            SOURCE.KEYS: "Game keys to be redeem in foreign services: Steam/Origin/Epic/ etc."
+            SOURCE.DRM_FREE: "Games from www.humblebundle.com/home/library that have direct download for Windows, Mac or Linux",
+            SOURCE.TROVE: "Games from Humble Trove games (requires to be an active or past subscriber).",
+            SOURCE.KEYS: "Game keys to be redeemed in foreign services like Steam or Origin."
         }
-        show_revealed_help = 'Check to show all game keys as separate games. Uncheck to show only\n' \
-            'game keys that are already revealed (redeemend keys are usually reported by other Galaxy plugins)'
+        show_revealed_help = 'Check to show all game keys as separate games.\n' \
+            'Uncheck to show only game keys that are already revealed\n' \
+            '(redeemend keys are usually reported by other Galaxy plugins).'
 
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
         rows = [description]
@@ -145,7 +146,7 @@ class Options(BaseApp):
         if IS_MAC:
             desc_os = "If nothing selected, '/Applications' will be used."
         if IS_WINDOWS:
-            desc_os = "For example select C:/Humble/Samorost for find C:/Humble/Samorost/samorost.exe"
+            desc_os = "e.g. 'C:/Humble' to detect 'C:/Humble/Game Title II/gt2.exe'"
         description_os = toga.Label(desc_os, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
 
         self._paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
@@ -153,8 +154,8 @@ class Options(BaseApp):
         select_btn = toga.Button('Add path', on_press=self._add_path)
         select_btn.style.flex = 1
         select_btn.style.padding_bottom = 4
-        self._remove_btn = toga.Button('Remove', on_press=self._remove_paths, enabled=self._paths_table.not_empty)
-        self._remove_btn.style.flex = 2
+        self._remove_btn = toga.Button('Remove path', on_press=self._remove_paths, enabled=self._paths_table.not_empty)
+        self._remove_btn.style.flex = 1
         config_panel = toga.Box(children=[select_btn, self._remove_btn])
         config_panel.style.direction = 'row'
         config_panel.style.padding_top = 15
@@ -189,18 +190,6 @@ class Options(BaseApp):
 
         box.add(text_box)
         return box
-
-        # option2
-        with open('CHANGELOG.rtf', 'r') as f:
-            rtf = f.read()
-        rtf_label = RichTextLabel(rtf)
-        rtf_label.MIN_HEIGHT = self.SIZE[1]  # does not work!
-        return rtf_label
-
-        # option3
-        changelog_lines = changelog.splitlines()
-        style = Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=2)
-        return MultilineLabel(*changelog_lines, line_style=style)
 
     def startup_method(self) -> toga.Widget:
         main_container = toga.OptionContainer() 
