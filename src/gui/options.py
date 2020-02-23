@@ -6,8 +6,7 @@ import toga
 from toga.style import Pack
 
 from gui.baseapp import BaseApp
-from gui.toga_helpers import set_tooltip, \
-    LinkLabel, OneColumnTable, OptionContainer, MultilineLabel, RichTextLabel
+from gui.toga_helpers import set_tooltip, LinkLabel, OneColumnTable, OptionContainer
 
 from settings import Settings
 from consts import SOURCE, IS_MAC, IS_WINDOWS
@@ -108,7 +107,7 @@ class Options(BaseApp):
         }
         show_revealed_help = 'Check to show all game keys as separate games.\n' \
             'Uncheck to show only game keys that are already revealed\n' \
-            '(redeemend keys are usually reported by other Galaxy plugins).'
+            '(redeemed keys are usually reported by other Galaxy plugins).'
 
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
         rows = [description]
@@ -192,7 +191,7 @@ class Options(BaseApp):
         return box
 
     def startup_method(self) -> toga.Widget:
-        main_container = toga.OptionContainer() 
+        main_container = OptionContainer() 
 
         sections = {
             'Library': self._library_section,
@@ -207,6 +206,6 @@ class Options(BaseApp):
             main_container.add(name, section)
 
         if self._show_news:
-            main_container._impl.native.SelectTab(2)
+            main_container.open_tab(2)
 
         return main_container

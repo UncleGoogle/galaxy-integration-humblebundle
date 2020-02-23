@@ -13,44 +13,16 @@ if IS_WINDOWS:
 
 def set_tooltip(el: toga.Label, text):
     if IS_WINDOWS:
-        tl = WinForms.ToolTip()
-        tl.set_IsBalloon(True)
-        tl.SetToolTip(el._impl.native, text)
+        tt = WinForms.ToolTip()
+        tt.IsBalloon = True
+        tt.InitialDelay = 500
+        tt.ReshowDelay = 800
+        tt.AutoPopDelay = 15000
+        tt.SetToolTip(el._impl.native, text)
     elif IS_MAC:
-        pass
-        # TODO, below does not work
+        pass  # TODO, below snipets does not work
         # el._impl.native.toolTip = text
         # el._impl.native.setToolTip(text)
-
-
-
-# ---------- MultilineLabel workaround ----------
-
-class MultilineLabel(toga.Box):
-    def __init__(self, *lines, line_style=None, **kwargs):
-        kwargs['children'] = [toga.Label(line, style=line_style) for line in lines]
-        super().__init__(**kwargs)
-        self.style.direction = 'column'
-
-# ---------- Rich text label implementation -----
-
-if IS_WINDOWS:
-    class WinformsRichLabel(WinFormsLabel):
-        def create(self):
-            self.native = WinForms.RichTextBox()
-            # self.native.set_BorderStyle(0)
-            self.native.ReadOnly = True
-
-
-class RichTextLabel(toga.Widget):
-    def __init__(self, text, id=None, style=None, factory=None):
-        toga.Widget.__init__(self, id=id, style=style, factory=factory)
-        if IS_WINDOWS:
-            self._impl = WinformsRichLabel(interface=self)
-            self._impl.native.Rtf = text
-            # self._impl.native.LoadFile(text)
-        elif IS_MAC:
-            pass  # TODO
 
 
 # ---------- LinkLabel implementation -----------
