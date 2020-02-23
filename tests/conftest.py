@@ -1,4 +1,5 @@
 import pytest
+import asyncio
 import pathlib
 import json
 from unittest.mock import MagicMock
@@ -9,12 +10,19 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'src'))
 
 from galaxy.api.errors import UnknownError
 from plugin import HumbleBundlePlugin
-from settings import Settings
 
 
 class AsyncMock(MagicMock):
     async def __call__(self, *args, **kwargs):
         return super(AsyncMock, self).__call__(*args, **kwargs)
+
+
+@pytest.fixture
+def delayed_fn():
+    async def fn(delay, awaitable, *args, **kwargs):
+        await asyncio.sleep(delay)
+        await awaitable(*args, **kwargs)
+    return fn
 
 
 @pytest.fixture
@@ -54,7 +62,7 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
 @pytest.fixture
 async def plugin_mock(api_mock, mocker):
     mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
-    mocker.patch.object(Settings, 'dump_config')
+    mocker.patch('settings.Settings', return_value=MagicMock())
     plugin = HumbleBundlePlugin(MagicMock(), MagicMock(), "handshake_token")
     plugin.push_cache = MagicMock(spec=())
 
