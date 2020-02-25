@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import enum
 from typing import Optional
 
 import toga
@@ -15,6 +16,12 @@ from consts import SOURCE, IS_MAC, IS_WINDOWS
 logger = logging.getLogger(__name__)
 
 
+class OPTIONS_MODE(enum.Enum):
+    NORMAL = 'normal'
+    WELCOME = 'welcome'
+    NEWS = 'news'
+
+
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle Options'
     SIZE = (600, 280)
@@ -26,8 +33,8 @@ class Options(BaseApp):
         TEXT_SIZE_BIG = 12
 
 
-    def __init__(self, show_news=False):
-        self._show_news = show_news
+    def __init__(self, mode: OPTIONS_MODE):
+        self._mode = mode
         self._cfg = Settings(suppress_initial_change=True)
         super().__init__(self.NAME, self.SIZE, has_menu=False)
 
@@ -91,8 +98,6 @@ class Options(BaseApp):
             except KeyError:
                 logger.error('Removing when no data in table. Rm btn should be disabled at this point.')
                 return
-        elif type(rows) != list:  # singular selection on macos
-            rows = [rows]
         for row in rows:
             self.__cfg_remove_path(row.path)
             self._paths_table.data.remove(row)
@@ -140,7 +145,7 @@ class Options(BaseApp):
         return lib_box
 
     def _installed_section(self) -> toga.Widget:
-        desc = "List of directories for installed games lookup. The lookup is based on child directory names."
+        desc = "Choose directories for installed games lookup. The lookup is based on child directory names."
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
         if IS_MAC:
             desc_os = "If nothing selected, '/Applications' will be used."
@@ -205,7 +210,9 @@ class Options(BaseApp):
             section.add(create_tab_content())
             main_container.add(name, section)
 
-        if self._show_news:
+        if self._mode is OPTIONS_MODE.WELCOME:
+            main_container.open_tab(0)
+        if self._mode == OPTIONS_MODE.NEWS:
             main_container.open_tab(2)
-
+        
         return main_container

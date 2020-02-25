@@ -3,10 +3,10 @@
 [Added]
 
 - Graphical User Interface for configuration window.
-    It can be opened by clicking "Install" button on any Humble game.
+  It can be opened by clicking "Install" button on any Humble game.
 
 - Ability to import predefined tags: `Key`, `Unrevealed` and `Trove` to library. 
-    This won't add tags for newly appeared games automatically. You have to reimport them manually by going to Settings -> Features -> Import button under "HUMBLE BUNDLE".
+  This won't add tags for newly appeared games automatically. You have to reimport them manually by going to Settings -> Features -> Import button under "HUMBLE BUNDLE".
 
 - Support for keys containing multiple games at once.
 

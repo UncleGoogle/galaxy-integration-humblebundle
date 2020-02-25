@@ -19,17 +19,12 @@ Toga is in developement stage and lacks many features. So why using it?
 import sys
 import enum
 from typing import Optional, Iterable
+from gui.options import OPTIONS_MODE
 
 
 class PAGE(enum.Enum):
     KEYS = 'keys'
     OPTIONS = 'options'
-
-
-class OPTIONS_MODE(enum.Enum):
-    NORMAL = 'normal'
-    WELCOME = 'welcome'
-    NEWS = 'news'
 
 
 class GUIError(Exception):
@@ -117,6 +112,6 @@ if __name__ == '__main__':
     option = PAGE(args.page)
 
     if option == PAGE.OPTIONS:
-        Options(args.mode).main_loop()
+        Options(OPTIONS_MODE(args.mode)).main_loop()
     elif option == PAGE.KEYS:
         ShowKey(args.human_name, args.key_type, args.key_val).main_loop()

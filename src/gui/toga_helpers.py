@@ -1,4 +1,5 @@
 import webbrowser
+from typing import Optional
 
 import toga
 
@@ -91,8 +92,8 @@ class OneColumnTable(toga.Table):
         return len(self.data) > 0
     
     @property
-    def selection(self):
-        """Dummy addition for lacking toga implementation"""
+    def selection(self) -> Optional[list]:
+        """Addition for lacking toga implementation"""
         if IS_WINDOWS:
             idcs = self._impl.native.SelectedIndices
             selected_rows = []
@@ -102,7 +103,10 @@ class OneColumnTable(toga.Table):
                 return None
             return selected_rows
         else:
-            return super().selection
+            sel = super().selection
+            if sel is not None and type(sel) != list:
+                return [sel]
+            return sel
 
 
 # -------------- Enhanced OptionsContainter -------------
