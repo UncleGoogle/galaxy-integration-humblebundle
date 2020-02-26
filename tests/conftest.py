@@ -10,6 +10,7 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'src'))
 
 from galaxy.api.errors import UnknownError
 from plugin import HumbleBundlePlugin
+from settings import Settings
 
 
 class AsyncMock(MagicMock):
@@ -23,6 +24,13 @@ def delayed_fn():
         await asyncio.sleep(delay)
         await awaitable(*args, **kwargs)
     return fn
+
+
+@pytest.fixture
+def settings_mock(mocker):
+    mocker.patch('plugin.Settings._load_config_file')
+    mock = Settings()
+    return mock 
 
 
 @pytest.fixture
@@ -60,9 +68,9 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
 
 
 @pytest.fixture
-async def plugin_mock(api_mock, mocker):
+async def plugin_mock(api_mock, settings_mock, mocker):
     mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
-    mocker.patch('settings.Settings', return_value=MagicMock())
+    mocker.patch('settings.Settings', return_value=settings_mock)
     plugin = HumbleBundlePlugin(MagicMock(), MagicMock(), "handshake_token")
     plugin.push_cache = MagicMock(spec=())
 
