@@ -108,7 +108,7 @@ def test_installed_update_serialize(mocker):
     if IS_WINDOWS:
         path = R"C:\Games\Humble Bundle"
     else:
-        path = "/mnt/Games Drive/"
+        path = "/mnt/Games Drive"
     raw = {
         "search_dirs": [path]
     }
