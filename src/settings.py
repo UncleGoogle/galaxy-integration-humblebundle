@@ -157,7 +157,6 @@ class Settings:
             with open(self.LOCAL_CONFIG_FILE, 'r') as f:
                 self._config = toml.load(f)
         except FileNotFoundError:
-            self._config = self.DEFAULT_CONFIG.copy()
             logger.info(f'Config not found. Loaded default')
         except Exception as e:
             logger.error(f'Parsing config file at {self.LOCAL_CONFIG_FILE} has failed: {repr(e)}')

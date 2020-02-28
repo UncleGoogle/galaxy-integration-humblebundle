@@ -119,9 +119,9 @@ def test_installed_update_serialize(mocker):
 
 @pytest.mark.skipif(not IS_WINDOWS, reason="test windows paths")
 def test_installed_from_raw_file_allowed_paths(mocker):
-    """Integration test starting from the raw file
+    R"""Integration test starting from the raw file
     Note: single tick 'path\here' allows for raw interpretation in uses perser (toml)
-    For "path\\here" there will be error throwned (handled and ignored in the code)
+    For 'path\\here' there will be error throwned (handled and ignored in the code)
     """
     config_content = r"""
     [library]

@@ -49,26 +49,6 @@ def get_torchlight(orders_keys):
 
 
 @pytest.mark.asyncio
-async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, change_settings, orders_keys):
-    torchlight_data, drm_free, _ = get_torchlight
-    _, trove = get_torchlight_trove
-
-    plugin_mock.push_cache.reset_mock()  # reset initial settings push
-    change_settings(plugin_mock, {'sources': ['drm-free', 'trove', 'keys'], 'show_revealed_keys': True})
-    result = await plugin_mock._library_resolver()
-    assert result[drm_free.machine_name] == drm_free
-    # deduplication of the same title game
-    # keys won't be deduplicated as they are forced to have additional info in name like "Steam Key"
-    assert trove.machine_name not in result
-
-    # cache and calls to api
-    assert torchlight_data['gamekey'] in json.loads(plugin_mock.persistent_cache['library'])['orders']
-    assert plugin_mock.push_cache.call_count == 1
-    assert plugin_mock._api.get_gamekeys.call_count == 1
-    assert plugin_mock._api.get_order_details.call_count == len(orders_keys)
-
-
-@pytest.mark.asyncio
 async def test_library_trove(plugin_mock, get_torchlight_trove, change_settings):
     trove_torch_data, trove = get_torchlight_trove
 
