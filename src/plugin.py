@@ -8,7 +8,7 @@ import pathlib
 import json
 from dataclasses import astuple
 from functools import partial
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from packaging import version
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -118,7 +118,7 @@ class HumbleBundlePlugin(Plugin):
         return Authentication(user_id, user_id)
     
     def __check_if_is_after_minor_update(self) -> bool:
-        def to_minor(ver: str) -> version.Version:
+        def to_minor(ver: str) -> Union[version.LegacyVersion, version.Version]:
             """3 part version assumed"""
             return version.parse(ver.rsplit('.', 1)[0])
         is_after_udpate = self._last_version is None or to_minor(__version__) > to_minor(self._last_version)
