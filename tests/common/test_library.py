@@ -6,6 +6,8 @@ from unittest.mock import Mock
 
 from galaxy.api.errors import UnknownError
 
+from consts import SOURCE
+from settings import LibrarySettings
 from library import LibraryResolver
 from model.game import Subproduct, Key, TroveGame
 
@@ -45,8 +47,40 @@ def get_torchlight(orders_keys):
             torchlight_order = i
     drm_free = Subproduct(torchlight_order['subproducts'][0])
     key = Key(torchlight_order['tpkd_dict']['all_tpks'][0])
-    return torchlight_order, drm_free, key
+    key_game = key.key_games[0]
+    return torchlight_order, drm_free, key_game
 
+
+# ------ library: all info stored in cache ------
+
+@pytest.mark.asyncio
+async def test_library_cache_drm_free(create_resolver, get_torchlight):
+    order, game, _ = get_torchlight
+    sources = {SOURCE.DRM_FREE}
+    cache = {'orders': {'mock_order_id': order}}
+    library = create_resolver(LibrarySettings(sources), cache)
+    assert {game.machine_name: game} == await library(only_cache=True)
+
+
+@pytest.mark.asyncio
+async def test_library_cache_key(create_resolver, get_torchlight):
+    order, _, key = get_torchlight
+    sources = {SOURCE.KEYS}
+    cache = {'orders': {'mock_order_id': order}}
+    library = create_resolver(LibrarySettings(sources), cache)
+    assert {key.machine_name: key} == await library(only_cache=True)
+
+
+@pytest.mark.asyncio
+async def test_library_cache_trove(create_resolver, get_torchlight_trove):
+    trove_raw, trove_game = get_torchlight_trove
+    sources = {SOURCE.TROVE}
+    cache = {'troves': [trove_raw]}
+    library = create_resolver(LibrarySettings(sources), cache)
+    assert {trove_game.machine_name: trove_game} == await library(only_cache=True)
+
+
+# ------ library: fetching info from API ---------
 
 @pytest.mark.asyncio
 async def test_library_trove(plugin_mock, get_torchlight_trove, change_settings):
