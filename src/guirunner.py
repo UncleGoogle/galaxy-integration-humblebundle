@@ -3,7 +3,7 @@ This module serves for two things:
 1) spawning GUI written in `gui` package (see __main__)
 2) simple asyncio handler for 1) that cares about communication with GUI process
 
-So handler 2) called from outside spawns separate python process that run 1).
+So handler 2) called from outside spawns separate python process that runs 1).
 
 Why? Because GUIs don't want to be spawned as a not-main thread.
 And also used `toga` toolkit cannot be pickled by `multiprocessing`
@@ -44,7 +44,7 @@ async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
 
     process = await asyncio.create_subprocess_exec(
         sys.executable,
-        __file__,  # this file for convenience
+        __file__,  # the code under __name__; the same file for convenience
         *all_args,
         stderr=asyncio.subprocess.PIPE
     )
@@ -104,6 +104,7 @@ if __name__ == '__main__':
 
     options_parser = subparsers.add_parser(PAGE.OPTIONS.value)
     options_parser.add_argument('mode', choices=[m.value for m in OPTIONS_MODE])
+    options_parser.add_argument('--changelog', default='CHANGELOG.md', help="Path relative to parent_dir")
 
     keys_parser = subparsers.add_parser(PAGE.KEYS.value)
     keys_parser.add_argument('human_name')
@@ -114,7 +115,9 @@ if __name__ == '__main__':
     option = PAGE(args.page)
 
     if option == PAGE.OPTIONS:
-        changelog_path = parent_dir / 'CHANGELOG.md'
+        changelog_path = parent_dir / args.changelog
         Options(OPTIONS_MODE(args.mode), changelog_path).main_loop()
     elif option == PAGE.KEYS:
         ShowKey(args.human_name, args.key_type, args.key_val).main_loop()
+
+    # for debugging: `python src/guirunner.py options news --changelog=../CHANGELOG.md`
