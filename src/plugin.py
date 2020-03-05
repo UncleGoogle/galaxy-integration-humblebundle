@@ -89,6 +89,9 @@ class HumbleBundlePlugin(Plugin):
         )
 
     async def authenticate(self, stored_credentials=None):
+        show_news = self.__is_after_minor_update()
+        self._save_cache('last_version', __version__)
+
         if not stored_credentials:
             return NextStep("web_session", {
                     "window_title": "Login to HumbleBundle",
@@ -103,25 +106,23 @@ class HumbleBundlePlugin(Plugin):
         user_id = await self._api.authenticate(stored_credentials)
         if user_id is None:
             raise InvalidCredentials()
-        if self.__check_if_is_after_minor_update():
+        if show_news:
             self._open_config(OPTIONS_MODE.NEWS)
         return Authentication(user_id, user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
-
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
         self._open_config(OPTIONS_MODE.WELCOME)
         return Authentication(user_id, user_id)
     
-    def __check_if_is_after_minor_update(self) -> bool:
-        def to_minor(ver: str) -> LooseVersion:
+    def __is_after_minor_update(self) -> bool:
+        def cut_to_minor(ver: str) -> LooseVersion:
             """3 part version assumed"""
             return LooseVersion(ver.rsplit('.', 1)[0])
-        is_after_udpate = self._last_version is None or to_minor(__version__) > to_minor(self._last_version)
-        self._save_cache('last_version', __version__)
-        return is_after_udpate
+        return self._last_version is None \
+            or cut_to_minor(__version__) > cut_to_minor(self._last_version)
 
     async def get_owned_games(self):
         if not self._api.is_authenticated:
