@@ -18,7 +18,9 @@ Toga is in developement stage and lacks many features. So why using it?
 
 import sys
 import enum
+import logging
 from typing import Optional, Iterable
+from contextlib import suppress
 
 
 class PAGE(enum.Enum):
@@ -32,7 +34,6 @@ class GUIError(Exception):
 
 async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
     import asyncio
-    import logging
     logger = logging.getLogger(__name__)
 
     logger.info(f'Running [{gui}] with args: {args}')
@@ -50,14 +51,14 @@ async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
     try:
         _, stderr_data = await process.communicate()
     except asyncio.CancelledError:
+        logger.info('GUI process cancelled. Closing.')
         process.terminate()
-    if stderr_data:
-        if type(stderr_data) == bytes:
-            try:
-                stderr_data = stderr_data.decode('utf-8')
-            except UnicodeDecodeError:
-                pass
-        raise GUIError(f'Error on running [{gui}]: {stderr_data}')
+    else:
+        if stderr_data:
+            if type(stderr_data) == bytes:
+                with suppress(UnicodeDecodeError):
+                    stderr_data = stderr_data.decode('utf-8')
+            raise GUIError(f'Error on running [{gui}]: {stderr_data}')
 
 
 async def show_key(game: 'LocalGame'):
@@ -88,7 +89,6 @@ if __name__ == '__main__':
     from gui.options import Options, OPTIONS_MODE
 
     # new root logger
-    import logging
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
