@@ -1,8 +1,7 @@
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import mock_open, patch
 from pathlib import Path
 from dataclasses import dataclass
 import pytest
-import toml
 
 from settings import UpdateTracker, Settings, InstalledSettings, LibrarySettings
 from consts import IS_WINDOWS
@@ -60,39 +59,6 @@ def test_ut_update_error(caplog):
         pytest.fail('TypeError should not be raised')
     assert 'TypeError' in caplog.text
     assert sec.key == False, 'Key value should not be changed'
-
-
-# ---------- Settings -----------
-
-
-@pytest.fixture
-def settings():
-    setts = Settings()
-    setts.dump_config = Mock()
-    return setts
-
-
-def test_migrate_from_toml_cache(settings):
-    save_cache = Mock()
-    user_cached_config = {
-            "library": {
-                "sources": ["drm-free", "trove", "keys"],
-            }, "installed": {
-                "search_dirs": [str(Path("C:/Games/Humble"))]
-            }
-        }
-    cache = {
-        "version": 1,
-        "config": toml.dumps(user_cached_config)
-    }
-    settings.migration_from_cache(cache, save_cache)
-    assert settings._config == user_cached_config
-    settings.dump_config.assert_called_once()
-    # settings are available just after migrations
-    settings.library == LibrarySettings(user_cached_config['library'])
-    # cleanup
-    assert 'config' not in cache
-    save_cache.assert_called_once()
 
 
 # --------- Installed --------

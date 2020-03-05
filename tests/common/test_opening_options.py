@@ -2,7 +2,7 @@ import pytest
 import asyncio
 from unittest.mock import MagicMock
 
-from guirunner import OPTIONS_MODE
+from gui.options import OPTIONS_MODE
 
 
 @pytest.fixture

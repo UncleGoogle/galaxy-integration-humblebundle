@@ -169,42 +169,28 @@ class Settings:
         self._library.update(self._config.get('library', {}))
         self._installed.update(self._config.get('installed', {}))
 
-    def dump_config(self):
-        """Dumps content of self._config to config file, creating it if not exists.
-        TODO Deprecated - remove
-        """
-        logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
-        self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        data = toml.dumps(self._config)
-        with open(self.DEFAULT_CONFIG_FILE, 'r') as f:
-            comment = ''
-            for line in f.readlines():
-                comment += line
-                if line.strip() == '# ===':
-                    break
-        with open(self.LOCAL_CONFIG_FILE, 'w') as f:
-            f.write(comment)
-            f.write(data)
-        
     def get_config(self):
         return {
             "library": self.library.serialize(),
             "installed": self.installed.serialize()
         }
     
+    def _get_config_file_comments(self) -> str:
+        """Loads comments from old config.ini file.
+        They are be helpful for manual editing with configuration file.
+        Deprecated: will be removed when GUI is stable."""
+        comment = ''
+        with open(self.DEFAULT_CONFIG_FILE, 'r') as f:
+            for line in f.readlines():
+                comment += line
+                if line.strip() == '# ===':
+                    break
+        return comment
+
     def save_config(self):
         logger.info(f'Dumping user config in {self.LOCAL_CONFIG_FILE}')
         self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        data = self.get_config()
+        serialized_data = toml.dumps(self.get_config())
         with open(self.LOCAL_CONFIG_FILE, 'w') as f:
-            toml.dump(data, f)
-
-    def migration_from_cache(self, cache: Dict[str, Any], push_cache: Callable):
-        """Copy cached config to new location."""
-        cached_config = cache.get('config')
-        if cached_config:
-            logger.info(f'Migrating cached config:\n{cached_config}')
-            self._config = toml.loads(cached_config)
-            cache.pop('config', None)
-            push_cache()
-        self.dump_config()
+            f.write(self._get_config_file_comments())
+            f.write(serialized_data)

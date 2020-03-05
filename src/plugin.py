@@ -28,6 +28,7 @@ from library import LibraryResolver
 from local import AppFinder
 from privacy import SensitiveFilter
 from utils.decorators import double_click_effect
+from gui.options import OPTIONS_MODE
 import guirunner as gui
 
 
@@ -69,8 +70,7 @@ class HumbleBundlePlugin(Plugin):
         self._under_instalation = set()
 
     def _save_cache(self, key: str, data: Any):
-        if type(data) != str:
-            data = json.dumps(data)
+        data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
     
@@ -80,7 +80,6 @@ class HumbleBundlePlugin(Plugin):
         return default
 
     def handshake_complete(self):
-        self._settings.migration_from_cache(self.persistent_cache, self.push_cache)
         self._last_version = self._load_cache('last_version', default=None)
         self._library_resolver = LibraryResolver(
             api=self._api,
@@ -104,7 +103,7 @@ class HumbleBundlePlugin(Plugin):
         user_id = await self._api.authenticate(stored_credentials)
         if user_id is None:
             raise InvalidCredentials()
-        self._open_config(gui.OPTIONS_MODE.WELCOME)
+        self._open_config(OPTIONS_MODE.WELCOME)
         return Authentication(user_id, user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
@@ -113,7 +112,7 @@ class HumbleBundlePlugin(Plugin):
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
         if self.__check_if_is_after_minor_update():
-            self._open_config(gui.OPTIONS_MODE.NEWS)
+            self._open_config(OPTIONS_MODE.NEWS)
         return Authentication(user_id, user_id)
     
     def __check_if_is_after_minor_update(self) -> bool:
@@ -137,15 +136,16 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
-    def _open_config(self, mode: gui.OPTIONS_MODE=gui.OPTIONS_MODE.NORMAL):
+    def _open_config(self, mode: OPTIONS_MODE=OPTIONS_MODE.NORMAL):
         """Synchonious wrapper for self._open_config_async"""
         self.create_task(self._open_config_async(mode), 'opening config')
     
-    async def _open_config_async(self, mode: gui.OPTIONS_MODE):
+    async def _open_config_async(self, mode: OPTIONS_MODE):
         try:
             await gui.show_options(mode)
         except Exception as e:
             logging.exception(e)
+            self._settings.save_config()
             self._settings.open_config_file()
 
     @double_click_effect(timeout=0.5, effect='_open_config')

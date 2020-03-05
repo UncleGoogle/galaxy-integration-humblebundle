@@ -24,7 +24,7 @@ class OPTIONS_MODE(enum.Enum):
 
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle Options'
-    SIZE = (600, 280)
+    SIZE = (620, 280)
     if IS_WINDOWS:
         TEXT_SIZE = 9
         TEXT_SIZE_BIG = 10
@@ -32,9 +32,9 @@ class Options(BaseApp):
         TEXT_SIZE = 11
         TEXT_SIZE_BIG = 12
 
-
-    def __init__(self, mode: OPTIONS_MODE):
+    def __init__(self, mode: OPTIONS_MODE, changelog_path: pathlib.Path):
         self._mode = mode
+        self._changelog_path = changelog_path
         self._cfg = Settings(suppress_initial_change=True)
         super().__init__(self.NAME, self.SIZE, has_menu=False)
 
@@ -150,7 +150,7 @@ class Options(BaseApp):
         if IS_MAC:
             desc_os = "If nothing selected, '/Applications' will be used."
         if IS_WINDOWS:
-            desc_os = "e.g. 'C:/Humble' to detect 'C:/Humble/Game Title II/gt2.exe'"
+            desc_os = "e.g. 'C:/Humble' to detect 'C:/Humble/Torchlight/torch.exe' ('Torchlight' matches game name)."
         description_os = toga.Label(desc_os, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
 
         self._paths_table = OneColumnTable('Path', data=[str(p) for p in self._cfg.installed.search_dirs])
@@ -186,7 +186,7 @@ class Options(BaseApp):
         box = toga.Box()
         box.style.padding_bottom = margin
 
-        with open('CHANGELOG.md', 'r') as f:
+        with open(self._changelog_path, 'r') as f:
             changelog = f.read()
         text_box = toga.MultilineTextInput(readonly=True)
         text_box.MIN_WIDTH = self.SIZE[0] - (2 * margin)
@@ -210,7 +210,7 @@ class Options(BaseApp):
             section.add(create_tab_content())
             main_container.add(name, section)
 
-        if self._mode is OPTIONS_MODE.WELCOME:
+        if self._mode in [OPTIONS_MODE.WELCOME, OPTIONS_MODE.NORMAL]:
             main_container.open_tab(0)
         if self._mode == OPTIONS_MODE.NEWS:
             main_container.open_tab(2)

@@ -2,7 +2,7 @@ import pytest
 import asyncio
 import pathlib
 import json
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 # workaround for vscode test discovery
 import sys
@@ -27,9 +27,10 @@ def delayed_fn():
 
 
 @pytest.fixture
-def settings_mock(mocker):
+def settings(mocker):
     mocker.patch('plugin.Settings._load_config_file')
     mock = Settings()
+    mock.save_config = Mock()
     return mock 
 
 
@@ -68,11 +69,11 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
 
 
 @pytest.fixture
-async def plugin_mock(api_mock, settings_mock, mocker):
+async def plugin_mock(api_mock, settings, mocker):
     mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
-    mocker.patch('settings.Settings', return_value=settings_mock)
-    plugin = HumbleBundlePlugin(MagicMock(), MagicMock(), "handshake_token")
-    plugin.push_cache = MagicMock(spec=())
+    mocker.patch('settings.Settings', return_value=settings)
+    plugin = HumbleBundlePlugin(Mock(), Mock(), "handshake_token")
+    plugin.push_cache = Mock(spec=())
 
     plugin._installed_check.cancel()
     plugin._statuses_check.cancel()

@@ -5,21 +5,20 @@ This module serves for two things:
 
 So handler 2) called from outside spawns separate python process that run 1).
 
-Why? Because GUIs don't want to be spawn as not-main thread.
+Why? Because GUIs don't want to be spawned as a not-main thread.
 And also used `toga` toolkit cannot be pickled by `multiprocessing`
 https://github.com/beeware/toga/issues/734
 
 Toga is in developement stage and lacks many features. So why using it?
 - it is OS native so is small in size (below 2MB) comparing to dozens/hundreds of MB for Qt/Wx
 - Tkinter is not shipped by python preinstalled with Galaxy
-- Galaxy allows to run webbrowser (chromium) only for user authentication. And to open local html file you need to setup local server
+- Galaxy allows to run webbrowser (chromium) only for user authentication (so it would require reconnecting integration)
 - Toga its nice, active project that needs support!
 """
 
 import sys
 import enum
 from typing import Optional, Iterable
-from gui.options import OPTIONS_MODE
 
 
 class PAGE(enum.Enum):
@@ -48,7 +47,10 @@ async def _open(gui: PAGE, *args, sensitive_args: Optional[Iterable]=None):
         *all_args,
         stderr=asyncio.subprocess.PIPE
     )
-    _, stderr_data = await process.communicate()
+    try:
+        _, stderr_data = await process.communicate()
+    except asyncio.CancelledError:
+        process.terminate()
     if stderr_data:
         if type(stderr_data) == bytes:
             try:
@@ -67,7 +69,7 @@ async def show_key(game: 'LocalGame'):
     )
 
 
-async def show_options(mode: OPTIONS_MODE=OPTIONS_MODE.NORMAL):
+async def show_options(mode: 'OPTIONS_MODE'):
     args = [PAGE.OPTIONS, mode.value]
     await _open(*args)
 
@@ -77,13 +79,13 @@ if __name__ == '__main__':
     import argparse
 
     # Allow for imports from base level (sys.path is extended with the file parent).
-    # Yes, I know it's not the best practise but `gui` is not reusable package, only code organiser
+    # Yes, I know it's not the best practise; however `gui` is not reusable package, only the code organiser
     parent_dir = pathlib.Path(__file__).parent
     sys.path.insert(0, str(parent_dir))  # our code
     sys.path.insert(0, str(parent_dir / 'modules'))  # third party
 
     from gui.keys import ShowKey
-    from gui.options import Options
+    from gui.options import Options, OPTIONS_MODE
 
     # new root logger
     import logging
@@ -112,6 +114,7 @@ if __name__ == '__main__':
     option = PAGE(args.page)
 
     if option == PAGE.OPTIONS:
-        Options(OPTIONS_MODE(args.mode)).main_loop()
+        changelog_path = parent_dir / 'CHANGELOG.md'
+        Options(OPTIONS_MODE(args.mode), changelog_path).main_loop()
     elif option == PAGE.KEYS:
         ShowKey(args.human_name, args.key_type, args.key_val).main_loop()
