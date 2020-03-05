@@ -103,7 +103,8 @@ class HumbleBundlePlugin(Plugin):
         user_id = await self._api.authenticate(stored_credentials)
         if user_id is None:
             raise InvalidCredentials()
-        self._open_config(OPTIONS_MODE.WELCOME)
+        if self.__check_if_is_after_minor_update():
+            self._open_config(OPTIONS_MODE.NEWS)
         return Authentication(user_id, user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
@@ -111,8 +112,7 @@ class HumbleBundlePlugin(Plugin):
 
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
-        if self.__check_if_is_after_minor_update():
-            self._open_config(OPTIONS_MODE.NEWS)
+        self._open_config(OPTIONS_MODE.WELCOME)
         return Authentication(user_id, user_id)
     
     def __check_if_is_after_minor_update(self) -> bool:
