@@ -18,7 +18,7 @@ async def test_open_news_on_minor_update(plugin_mock, auth_cookie, mocker):
     plugin_mock._open_config = MagicMock(spec=())
     plugin_mock._last_version = '0.6.1'
     mocker.patch('plugin.__version__', '0.7.0')
-    await plugin_mock.pass_login_credentials('step', 'credentials', [auth_cookie])
+    await plugin_mock.authenticate(stored_credentials=auth_cookie)
     plugin_mock._open_config.assert_called_once_with(OPTIONS_MODE.NEWS)
 
 
@@ -27,14 +27,14 @@ async def test_do_not_open_news_on_patch_update(plugin_mock, auth_cookie, mocker
     plugin_mock._open_config = MagicMock(spec=())
     plugin_mock._last_version = '0.7.0'
     mocker.patch('plugin.__version__', '0.7.1')
-    await plugin_mock.pass_login_credentials('step', 'credentials', [auth_cookie])
+    await plugin_mock.authenticate(stored_credentials=auth_cookie)
     plugin_mock._open_config.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_open_welcome_on_authenticate(plugin_mock, auth_cookie):
     plugin_mock._open_config = MagicMock(spec=())
-    await plugin_mock.authenticate(stored_credentials=auth_cookie)
+    await plugin_mock.pass_login_credentials('step', 'credentials', [auth_cookie])
     plugin_mock._open_config.assert_called_once_with(OPTIONS_MODE.WELCOME)
 
 
