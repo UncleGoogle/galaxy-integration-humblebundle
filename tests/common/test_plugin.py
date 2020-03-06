@@ -1,12 +1,13 @@
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, Mock, PropertyMock
 import pathlib
 
 from galaxy.api.consts import OSCompatibility as OSC
+from galaxy.api.types import GameLibrarySettings
 
 from consts import HP, CURRENT_SYSTEM
 from local.localgame import LocalHumbleGame
-from model.game import Subproduct
+from model.game import Subproduct, KeyGame, TroveGame
 from humbledownloader import HumbleDownloadResolver
 
 
@@ -71,5 +72,29 @@ async def test_get_os_compatibility(plugin_mock, overgrowth):
     plugin_mock._owned_games= { ovg_id: game, no_downloads_id: no_dw_game}
 
     ctx = await plugin_mock.prepare_os_compatibility_context([ovg_id, no_downloads_id])
-    await plugin_mock.get_os_compatibility(no_downloads_id, ctx) == None
-    await plugin_mock.get_os_compatibility(ovg_id, ctx) == OSC.Windows | OSC.MacOS | OSC.Linux
+    assert await plugin_mock.get_os_compatibility(no_downloads_id, ctx) == None
+    assert await plugin_mock.get_os_compatibility(ovg_id, ctx) == OSC.Windows | OSC.MacOS | OSC.Linux
+
+
+@pytest.mark.asyncio
+async def test_library_settings_key(plugin_mock):
+    trove = Mock(spec=TroveGame)
+    drm_free = Mock(spec=Subproduct)
+    key = Mock(spec=KeyGame)
+    type(key).key_val = PropertyMock(return_value='COEO23DN')
+    unrevealed_key = Mock(spec=KeyGame)
+    type(unrevealed_key).key_val = PropertyMock(return_value=None)
+
+    plugin_mock._owned_games = {
+        'a': drm_free,
+        'b': trove,
+        'c': key,
+        'd': unrevealed_key
+    }
+
+    ctx = await plugin_mock.prepare_game_library_settings_context(['b', 'c', 'd', 'a'])
+    assert await plugin_mock.get_game_library_settings('a', ctx) == GameLibrarySettings('a', None, None)
+    assert await plugin_mock.get_game_library_settings('b', ctx) == GameLibrarySettings('b', ['Trove'], None)
+    assert await plugin_mock.get_game_library_settings('c', ctx) == GameLibrarySettings('c', ['Key'], None)
+    assert await plugin_mock.get_game_library_settings('d', ctx) == GameLibrarySettings('d', ['Key', 'Unrevealed'], None)
+    

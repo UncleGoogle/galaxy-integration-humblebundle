@@ -6,6 +6,8 @@ from unittest.mock import Mock
 
 from galaxy.api.errors import UnknownError
 
+from consts import SOURCE
+from settings import LibrarySettings
 from library import LibraryResolver
 from model.game import Subproduct, Key, TroveGame
 
@@ -45,28 +47,40 @@ def get_torchlight(orders_keys):
             torchlight_order = i
     drm_free = Subproduct(torchlight_order['subproducts'][0])
     key = Key(torchlight_order['tpkd_dict']['all_tpks'][0])
-    return torchlight_order, drm_free, key
+    key_game = key.key_games[0]
+    return torchlight_order, drm_free, key_game
+
+
+# ------ library: all info stored in cache ------
+
+@pytest.mark.asyncio
+async def test_library_cache_drm_free(create_resolver, get_torchlight):
+    order, game, _ = get_torchlight
+    sources = {SOURCE.DRM_FREE}
+    cache = {'orders': {'mock_order_id': order}}
+    library = create_resolver(LibrarySettings(sources), cache)
+    assert {game.machine_name: game} == await library(only_cache=True)
 
 
 @pytest.mark.asyncio
-async def test_library_fetch(plugin_mock, get_torchlight, get_torchlight_trove, change_settings, orders_keys):
-    torchlight_data, drm_free, key = get_torchlight
-    _, trove = get_torchlight_trove
+async def test_library_cache_key(create_resolver, get_torchlight):
+    order, _, key = get_torchlight
+    sources = {SOURCE.KEYS}
+    cache = {'orders': {'mock_order_id': order}}
+    library = create_resolver(LibrarySettings(sources), cache)
+    assert {key.machine_name: key} == await library(only_cache=True)
 
-    plugin_mock.push_cache.reset_mock()  # reset initial settings push
-    change_settings(plugin_mock, {'sources': ['drm-free', 'trove', 'keys'], 'show_revealed_keys': True})
-    result = await plugin_mock._library_resolver()
-    assert result[drm_free.machine_name] == drm_free
-    # deduplication of the same title game
-    # keys won't be deduplicated as they are forced to have additional info in name like "Steam Key"
-    assert trove.machine_name not in result
 
-    # cache and calls to api
-    assert torchlight_data['gamekey'] in json.loads(plugin_mock.persistent_cache['library'])['orders']
-    assert plugin_mock.push_cache.call_count == 1
-    assert plugin_mock._api.get_gamekeys.call_count == 1
-    assert plugin_mock._api.get_order_details.call_count == len(orders_keys)
+@pytest.mark.asyncio
+async def test_library_cache_trove(create_resolver, get_torchlight_trove):
+    trove_raw, trove_game = get_torchlight_trove
+    sources = {SOURCE.TROVE}
+    cache = {'troves': [trove_raw]}
+    library = create_resolver(LibrarySettings(sources), cache)
+    assert {trove_game.machine_name: trove_game} == await library(only_cache=True)
 
+
+# ------ library: fetching info from API ---------
 
 @pytest.mark.asyncio
 async def test_library_trove(plugin_mock, get_torchlight_trove, change_settings):

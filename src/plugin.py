@@ -1,13 +1,14 @@
 import sys
+import platform
 import asyncio
 import logging
 import re
 import webbrowser
 import pathlib
 import json
-from dataclasses import astuple
 from functools import partial
 from typing import Any, Optional
+from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
@@ -15,7 +16,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility
-from galaxy.api.types import Authentication, NextStep, LocalGame
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
 from consts import HP, CURRENT_SYSTEM
@@ -27,6 +28,8 @@ from library import LibraryResolver
 from local import AppFinder
 from privacy import SensitiveFilter
 from utils.decorators import double_click_effect
+from gui.options import OPTIONS_MODE
+import guirunner as gui
 
 
 with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
@@ -67,21 +70,28 @@ class HumbleBundlePlugin(Plugin):
         self._under_instalation = set()
 
     def _save_cache(self, key: str, data: Any):
-        if type(data) != str:
-            data = json.dumps(data)
+        data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
     
+    def _load_cache(self, key: str, default: Any=None) -> Any:
+        if key in self.persistent_cache:
+            return json.loads(self.persistent_cache[key])
+        return default
+
     def handshake_complete(self):
-        self._settings.migration_from_cache(self.persistent_cache, self.push_cache)
+        self._last_version = self._load_cache('last_version', default=None)
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
-            cache=json.loads(self.persistent_cache.get('library', '{}')),
+            cache=self._load_cache('library', {}),
             save_cache_callback=partial(self._save_cache, 'library')
         )
 
     async def authenticate(self, stored_credentials=None):
+        show_news = self.__is_after_minor_update()
+        self._save_cache('last_version', __version__)
+
         if not stored_credentials:
             return NextStep("web_session", {
                     "window_title": "Login to HumbleBundle",
@@ -95,17 +105,24 @@ class HumbleBundlePlugin(Plugin):
         logging.info('Stored credentials found')
         user_id = await self._api.authenticate(stored_credentials)
         if user_id is None:
-            logging.debug('invalid creds')
             raise InvalidCredentials()
+        if show_news:
+            self._open_config(OPTIONS_MODE.NEWS)
         return Authentication(user_id, user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
-
         user_id = await self._api.authenticate(auth_cookie)
         self.store_credentials(auth_cookie)
-        self._open_config()
+        self._open_config(OPTIONS_MODE.WELCOME)
         return Authentication(user_id, user_id)
+    
+    def __is_after_minor_update(self) -> bool:
+        def cut_to_minor(ver: str) -> LooseVersion:
+            """3 part version assumed"""
+            return LooseVersion(ver.rsplit('.', 1)[0])
+        return self._last_version is None \
+            or cut_to_minor(__version__) > cut_to_minor(self._last_version)
 
     async def get_owned_games(self):
         if not self._api.is_authenticated:
@@ -120,10 +137,19 @@ class HumbleBundlePlugin(Plugin):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
 
-    def _open_config(self):
-        self._settings.open_config_file()
+    def _open_config(self, mode: OPTIONS_MODE=OPTIONS_MODE.NORMAL):
+        """Synchonious wrapper for self._open_config_async"""
+        self.create_task(self._open_config_async(mode), 'opening config')
+    
+    async def _open_config_async(self, mode: OPTIONS_MODE):
+        try:
+            await gui.show_options(mode)
+        except Exception as e:
+            logging.exception(e)
+            self._settings.save_config()
+            self._settings.open_config_file()
 
-    @double_click_effect(timeout=1, effect='_open_config')
+    @double_click_effect(timeout=0.5, effect='_open_config')
     async def install_game(self, game_id):
 
         if game_id in self._under_instalation:
@@ -137,13 +163,10 @@ class HumbleBundlePlugin(Plugin):
                 return
 
             if isinstance(game, Key):
-                args = [str(pathlib.Path(__file__).parent / 'keysgui.py'),
-                    game.human_name, game.key_type_human_name, str(game.key_val)
-                ]
-                process = await asyncio.create_subprocess_exec(sys.executable, *args, stderr=asyncio.subprocess.PIPE)
-                _, stderr_data = await process.communicate()
-                if stderr_data:
-                    logging.error(f'Error for keygui: {stderr_data}', extra={'guiargs': args[:-1]})
+                try:
+                    await gui.show_key(game)
+                except Exception as e:
+                    logging.error(e, extra={'platform_info': platform.uname()})
                     webbrowser.open('https://www.humblebundle.com/home/keys')
                 return
 
@@ -155,7 +178,7 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
                 except AuthenticationRequired:
-                    logging.info('Looks like your Humble Monthly subscription has expired. Refer to config.ini to manage showed games.')
+                    logging.info('Looks like your Humble Monthly subscription has expired.')
                     webbrowser.open('https://www.humblebundle.com/subscription/home')
                 else:
                     webbrowser.open(url['signed_url'])
@@ -164,6 +187,17 @@ class HumbleBundlePlugin(Plugin):
             logging.exception(e, extra={'game': game})
         finally:
             self._under_instalation.remove(game_id)
+    
+    async def get_game_library_settings(self, game_id: str, context: Any) -> GameLibrarySettings:
+        gls = GameLibrarySettings(game_id, None, None)
+        game = self._owned_games[game_id]
+        if isinstance(game, Key):
+            gls.tags = ['Key']
+            if game.key_val is None:
+                gls.tags.append('Unrevealed')
+        if isinstance(game, TroveGame):
+            gls.tags = ['Trove']
+        return gls
 
     async def launch_game(self, game_id):
         try:
@@ -194,8 +228,8 @@ class HumbleBundlePlugin(Plugin):
                 HP.LINUX: OSCompatibility.Linux
             }
             osc = OSCompatibility(0)
-            for platform in game.downloads:
-                osc |= HP_OS_MAP.get(platform, OSCompatibility(0))
+            for humble_platform in game.downloads:
+                osc |= HP_OS_MAP.get(humble_platform, OSCompatibility(0))
             return osc if osc else None
 
     async def _check_owned(self):
@@ -210,8 +244,8 @@ class HumbleBundlePlugin(Plugin):
     async def _check_installed(self):
         """
         Owned games are needed to local games search. Galaxy methods call order is:
-        get_local_games -> authenticate -> get_local_games -> get_owned_games (at the end!)
-        That is why plugin sets all logic of getting local games in perdiodic checks
+        get_local_games -> authenticate -> get_local_games -> get_owned_games (at the end!).
+        That is why the plugin sets all logic of getting local games in perdiodic checks like this one.
         """
         if not self._owned_games:
             logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
@@ -231,11 +265,11 @@ class HumbleBundlePlugin(Plugin):
         await asyncio.sleep(4)
 
     async def _check_statuses(self):
-        """Checks satuses of local games. Detects events when game is:
-        - installed (local games list updated in _check_installed)
-        - uninstalled
-        - launched (via Galaxy)
-        - stopped
+        """Checks satuses of local games. Detects changes in local games when the game is:
+        - installed (local games list appended in _check_installed)
+        - uninstalled (exe no longer exists)
+        - launched (via Galaxy - pid tracking started)
+        - stopped (process no longer running/is zombie)
         """
         freezed_locals = list(self._local_games.values())
         for game in freezed_locals:
@@ -264,7 +298,7 @@ class HumbleBundlePlugin(Plugin):
     async def shutdown(self):
         self._statuses_check.cancel()
         self._installed_check.cancel()
-        self.create_task(self._api.close_session(), 'closing session')
+        await self._api.close_session()
 
 
 def main():

@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
             "name": "plugin.py",
             "type": "python",
             "request": "launch",
@@ -15,13 +23,14 @@
                 "7994"
             ],
             "console": "integratedTerminal",
+            "justMyCode": false
         },
         {
-        "name": "Debug Tests",
-        "type": "python",
-        "request": "test",
-        "console": "integratedTerminal",
-        "justMyCode": false
+            "name": "Debug Tests",
+            "type": "python",
+            "request": "test",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }

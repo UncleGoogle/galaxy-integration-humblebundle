@@ -17,14 +17,6 @@ def mock_async_fn():
     return AsyncMock()
 
 
-@pytest.fixture
-def delayed_fn():
-    async def fn(delay, awaitable, *args, **kwargs):
-        await asyncio.sleep(delay)
-        await awaitable(*args, **kwargs)
-    return fn
-
-
 @pytest.mark.asyncio
 async def test_clicked_once(mock_dbclick, mock_async_fn):
     timeout = 0.1
