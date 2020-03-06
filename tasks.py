@@ -1,4 +1,5 @@
 import sys
+import time
 import psutil
 import json
 import os
@@ -52,11 +53,20 @@ def build(c, output=DIST_PLUGIN):
     output = Path(output).resolve()
     print('Removing', output)
     if os.path.exists(output):
-        shutil.rmtree(output)
+        try:
+            shutil.rmtree(output)
+        except OSError as e:
+            if hasattr(e, 'winerror') and e.winerror in [145, 5]:
+                # something e.g. antivirus check holds a file. Try to wait to be released for a moment
+                time.sleep(3)
+                shutil.rmtree(output)
+            else:
+                raise
 
     print('Copying source code to ', str(output))
     shutil.copytree('src', output, ignore=shutil.ignore_patterns(
-        '__pycache__', '.mypy_cache', 'galaxy'))
+        '__pycache__', '.mypy_cache', 'tests'))
+    shutil.copy('CHANGELOG.md', output)
 
     args = [
         PYTHON, "-m", "pip", "install",
@@ -112,8 +122,11 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
         shutil.copy(file_, output)
     for file_ in glob("src/local/*.py"):
         shutil.copy(file_, Path(output) / 'local')
+    for file_ in glob("src/gui/*.py"):
+        shutil.copy(file_, Path(output) / 'gui')
     for file_ in glob("src/*.ini"):
         shutil.copy(file_, output)
+    shutil.copy('CHANGELOG.md', output)
 
 
 @task

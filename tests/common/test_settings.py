@@ -1,8 +1,7 @@
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import mock_open, patch
 from pathlib import Path
 from dataclasses import dataclass
 import pytest
-import toml
 
 from settings import UpdateTracker, Settings, InstalledSettings, LibrarySettings
 from consts import IS_WINDOWS
@@ -17,6 +16,9 @@ class MockSection(UpdateTracker):
         if type(self.key) != type(key):
             raise TypeError
         self.key = key
+    
+    def serialize(self):
+        return self.key
 
 
 def test_ut_has_changed_on_init():
@@ -59,39 +61,6 @@ def test_ut_update_error(caplog):
     assert sec.key == False, 'Key value should not be changed'
 
 
-# ---------- Settings -----------
-
-
-@pytest.fixture
-def settings():
-    setts = Settings()
-    setts.dump_config = Mock()
-    return setts
-
-
-def test_migrate_from_toml_cache(settings):
-    save_cache = Mock()
-    user_cached_config = {
-            "library": {
-                "sources": ["drm-free", "trove", "keys"],
-            }, "installed": {
-                "search_dirs": [str(Path("C:/Games/Humble"))]
-            }
-        }
-    cache = {
-        "version": 1,
-        "config": toml.dumps(user_cached_config)
-    }
-    settings.migration_from_cache(cache, save_cache)
-    assert settings._config == user_cached_config
-    settings.dump_config.assert_called_once()
-    # settings are available just after migrations
-    settings.library == LibrarySettings(user_cached_config['library'])
-    # cleanup
-    assert 'config' not in cache
-    save_cache.assert_called_once()
-
-
 # --------- Installed --------
 
 def test_installed_defaults():
@@ -100,11 +69,25 @@ def test_installed_defaults():
     assert installed.search_dirs == set()
 
 
+def test_installed_update_serialize(mocker):
+    mocker.patch.object(Path, 'exists', return_value=True)
+    if IS_WINDOWS:
+        path = R"C:\Games\Humble Bundle"
+    else:
+        path = "/mnt/Games Drive"
+    raw = {
+        "search_dirs": [path]
+    }
+    installed = InstalledSettings()
+    installed.update(raw)
+    assert raw == installed.serialize()
+
+
 @pytest.mark.skipif(not IS_WINDOWS, reason="test windows paths")
 def test_installed_from_raw_file_allowed_paths(mocker):
-    """Integration test starting from the raw file
+    R"""Integration test starting from the raw file
     Note: single tick 'path\here' allows for raw interpretation in uses perser (toml)
-    For "path\\here" there will be error throwned (handled and ignored in the code)
+    For 'path\\here' there will be error throwned (handled and ignored in the code)
     """
     config_content = r"""
     [library]
@@ -124,3 +107,11 @@ def test_installed_from_raw_file_allowed_paths(mocker):
             Path("D:\\Games"),
             Path("E:\\Games")
         }
+
+
+def test_settings_default_config():
+    """Default values comes directly from specific settings classes"""
+    Settings()._config == {
+        'library': LibrarySettings().serialize(),
+        'installed': InstalledSettings().serialize()
+    }

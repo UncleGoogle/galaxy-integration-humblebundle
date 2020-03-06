@@ -3,8 +3,8 @@ import logging
 import os
 import subprocess
 import abc
-from dataclasses import dataclass, field, astuple
-from typing import Any, Dict, Callable, Mapping, Tuple, Optional, Set
+from dataclasses import dataclass, field
+from typing import Any, Dict, Callable, Mapping, Optional, Set
 
 import toml
 
@@ -15,15 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class UpdateTracker(abc.ABC):
-    """Keeps track of any changes in a subclass.
-    Default _serialize designed for dataclasses"""
+    """Keeps track of any changes in a subclass."""
     __prev = None
 
-    def __serialize(self):
-        return astuple(self)
-
     def has_changed(self) -> bool:
-        curr = self.__serialize()
+        curr = self.serialize()
         if self.__prev != curr:
             self.__prev = curr
             logger.info(f"{self.__class__.__name__} has changed: {curr}")
@@ -40,11 +36,15 @@ class UpdateTracker(abc.ABC):
     @abc.abstractmethod
     def _update(self, *args, **kwargs):
         """Validates and updates section"""
+    
+    @abc.abstractmethod
+    def serialize(self) -> Dict[str, Any]:
+        """Serialize to "ready to dump" dictionary. Should be compatibile with _update"""
 
 
 @dataclass
 class LibrarySettings(UpdateTracker):
-    sources: Tuple[SOURCE, ...] = tuple()
+    sources: Set[SOURCE] = field(default_factory=lambda: set([SOURCE.DRM_FREE, SOURCE.KEYS]))
     show_revealed_keys: bool = False
 
     def _update(self, library):
@@ -57,9 +57,15 @@ class LibrarySettings(UpdateTracker):
             raise TypeError(f'revealed_keys should be boolean (true or false), got {show_keys}')
 
         if sources is not None:
-            self.sources = tuple([SOURCE(s) for s in sources])
+            self.sources = set([SOURCE(s) for s in sources])
         if show_keys is not None:
             self.show_revealed_keys = show_keys
+    
+    def serialize(self) -> Dict[str, Any]:
+        return {
+            "sources": [s.value for s in self.sources],
+            "show_revealed_keys": self.show_revealed_keys
+        }
 
 
 @dataclass
@@ -81,28 +87,30 @@ class InstalledSettings(UpdateTracker):
             dirs_set.add(path)
         self.search_dirs = dirs_set
 
+    def serialize(self) -> Dict[str, Any]:
+        return {
+            "search_dirs": [str(i) for i in self.search_dirs]
+        }
+
 
 class Settings:
     DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'  # deprecated
-    DEFAULT_CONFIG = {
-        "library": {
-            "sources": ["drm-free", "keys"],
-            "show_revealed_keys": True
-        }, "installed": {
-            "search_dirs": []
-        }
-    }
+
     if CURRENT_SYSTEM == HP.WINDOWS:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-humble-config.ini"
     else:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-humble.cfg"
 
-    def __init__(self):
+    def __init__(self, suppress_initial_change=False):
         self._last_modification_time: Optional[float] = None
 
-        self._config: Dict[str, Any] = self.DEFAULT_CONFIG.copy()
         self._library = LibrarySettings()
         self._installed = InstalledSettings()
+        if suppress_initial_change:
+            self._library.has_changed()
+            self._installed.has_changed()
+
+        self._config: Dict[str, Any] = self.get_config()
 
         self.reload_config_if_changed(initial=True)
 
@@ -149,7 +157,6 @@ class Settings:
             with open(self.LOCAL_CONFIG_FILE, 'r') as f:
                 self._config = toml.load(f)
         except FileNotFoundError:
-            self._config = self.DEFAULT_CONFIG.copy()
             logger.info(f'Config not found. Loaded default')
         except Exception as e:
             logger.error(f'Parsing config file at {self.LOCAL_CONFIG_FILE} has failed: {repr(e)}')
@@ -162,27 +169,28 @@ class Settings:
         self._library.update(self._config.get('library', {}))
         self._installed.update(self._config.get('installed', {}))
 
-    def dump_config(self):
-        """Dumps content of self._config to config file, creating it if not exists."""
-        logger.info(f'Recreating user config in {self.LOCAL_CONFIG_FILE}')
-        self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        data = toml.dumps(self._config)
+    def get_config(self):
+        return {
+            "library": self.library.serialize(),
+            "installed": self.installed.serialize()
+        }
+    
+    def _get_config_file_comments(self) -> str:
+        """Loads comments from old config.ini file.
+        They are be helpful for manual editing with configuration file.
+        Deprecated: will be removed when GUI is stable."""
+        comment = ''
         with open(self.DEFAULT_CONFIG_FILE, 'r') as f:
-            comment = ''
             for line in f.readlines():
                 comment += line
                 if line.strip() == '# ===':
                     break
-        with open(self.LOCAL_CONFIG_FILE, 'w') as f:
-            f.write(comment)
-            f.write(data)
+        return comment
 
-    def migration_from_cache(self, cache: Dict[str, Any], push_cache: Callable):
-        """Copy cached config to new location."""
-        cached_config = cache.get('config')
-        if cached_config:
-            logger.info(f'Migrating cached config:\n{cached_config}')
-            self._config = toml.loads(cached_config)
-            cache.pop('config', None)
-            push_cache()
-        self.dump_config()
+    def save_config(self):
+        logger.info(f'Dumping user config in {self.LOCAL_CONFIG_FILE}')
+        self.LOCAL_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        serialized_data = toml.dumps(self.get_config())
+        with open(self.LOCAL_CONFIG_FILE, 'w') as f:
+            f.write(self._get_config_file_comments())
+            f.write(serialized_data)

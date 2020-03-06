@@ -1,32 +1,23 @@
 import pathlib
 import webbrowser
-import sys
 from typing import Optional
 
-modules = pathlib.Path(__file__).parent / 'modules'
-sys.path.insert(0, str(modules))
-sys.path.insert(0, str(modules.parent))  # FriendsOfGalaxy structure
-
+from gui.baseapp import BaseApp
 import toga
 
 
-class ShowKey(toga.App):
-    WINDOW_NAME = 'Key'
-    APP_ID = 'org.humblebundle-integration.key'
+class ShowKey(BaseApp):
+    SIZE = (40, 40)
     KEYS_URL = 'https://www.humblebundle.com/home/keys'
-    H_ICON = str(pathlib.Path(__file__).resolve().parent / 'static' / 'h_icon.png')
 
-    def __init__(self, human_name: str, key_type: str, key_val: Optional[str]):
+    def __init__(self, human_name: str, key_type: str, key_val: Optional[str]=None):
         self._key_type = key_type
         self._key_val = key_val
         revealed_info = ' (not revealed yet)' if self._key_val is None else ''
         self._info = f"{human_name}{revealed_info}:"
+        super().__init__(f'{self._key_type} Key', self.SIZE, has_menu=False)
 
-        super().__init__(f'{self._key_type} Key', self.APP_ID, icon=self.H_ICON)
-
-    def startup(self):
-        self.main_window = toga.MainWindow(title=self.name, factory=self.factory, size=(40, 40))
-
+    def startup_method(self):
         box = toga.Box()
         info = toga.Label(self._info)
         info.style.padding = 10
@@ -36,32 +27,14 @@ class ShowKey(toga.App):
         else:
             el = toga.TextInput(readonly=True, initial=self._key_val)
             el.style.width = 210
-
         el.style.padding = 30
         el.style.flex = 1
         box.add(el)
-
-        self.main_window.content = box
-        self.main_window.show()
+        return box
 
     def open_keys_url(self, _):
         print('opening', self.KEYS_URL)
         webbrowser.open(self.KEYS_URL)
-
-    def _create_impl(self):
-        """Overwritten to remove menubar"""
-        factory_app = self.factory.App
-        factory_app.create_menus = lambda _: None
-        return factory_app(interface=self)
-
-
-def main():
-    human_name = sys.argv[1]
-    key_type = sys.argv[2]
-    key_val = sys.argv[3]
-    if key_val == 'None':
-        key_val = None
-    ShowKey(human_name, key_type, key_val).main_loop()
 
 
 def test():
@@ -75,4 +48,4 @@ def test():
 
 
 if __name__ == "__main__":
-    main()
+    test()
