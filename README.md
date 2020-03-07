@@ -16,12 +16,10 @@ Integration for GOG Galaxy 2.0.
 
 ## Installation
 
-#### Stable release*:
-_autoupdates to next Stable relase_
+#### Stable release:
+_autoupdates to next Stable relase (served as [FriendsOfGalaxy fork][5])_
 
 GOG Galaxy 2.0 go to `Settings`->`Integrations`-> use build-in `Search GitHub` engine
-
-*_fork reviewed by FriendsOfGalaxy_
 
 #### Latest release:
 _autoupdates to next Latest release (since 0.7.0)_
@@ -67,3 +65,4 @@ Create new issue [here][2].
 [2]: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/new/choose
 [3]: https://github.com/gogcom/galaxy-integrations-python-api
 [4]: https://github.com/MayeulC/hb-downloader
+[5]: https://github.com/FriendsOfGalaxy/galaxy-integration-humble
