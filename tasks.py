@@ -17,8 +17,9 @@ with open('src/manifest.json') as f:
     __version__ = json.load(f)['version']
 
 
-REQUIREMENTS = os.path.join('requirements.txt')
-REQUIREMENTS_DEV = os.path.join('requirements-dev')
+REQUIREMENTS = 'requirements.txt'
+REQUIREMENTS_DEV = 'requirements-dev'
+CURRENT_VERSION_FILE = 'current_version.json'
 
 GALAXY_PATH = ''
 DIST_DIR = ''
@@ -38,6 +39,17 @@ elif sys.platform == 'darwin':
 
 DIST_PLUGIN = os.path.join(DIST_DIR, 'humblebundle')
 THIRD_PARTY_RELATIVE_DEST = 'modules'
+
+
+
+def get_repo():
+    token = os.environ['GITHUB_TOKEN']
+    g = github.Github(token)
+    return g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
+
+
+def asset_name(tag, platform):
+    return f'humble_{tag}_{platform[:3].lower()}.zip'
 
 
 @task
@@ -168,6 +180,25 @@ def archive(c, zip_name=None, target=None):
     return str(zip_path.resolve())
 
 
+@task
+def curr_ver(c, tag=None):
+    """Refresh CURRENT_VERSION_FILE"""
+    if tag is None:
+        tag = get_repo().get_latest_release().tag_name
+    content = {
+        "tag_name": tag,
+        "assets": []
+    }
+    for platform in ["Windows", "Mac"]:
+        name = asset_name(tag, platform)
+        content['assets'].append({
+            "browser_download_url": f"https://github.com/UncleGoogle/galaxy-integration-humblebundle/releases/download/{tag}/{name}",
+            "name": name
+        })
+    with open(CURRENT_VERSION_FILE, 'w') as f:
+        json.dump(content, f, indent=4)
+
+
 @task(aliases=['tag'])
 def create_tag(c, tag=None):
     if tag is None:
@@ -182,6 +213,9 @@ def create_tag(c, tag=None):
     c.run(f'git tag {tag}')
     c.run(f'git push origin {tag}')
 
+    print(f'Refreshing {CURRENT_VERSION_FILE}. Push it to master after release')
+    curr_ver(c, tag)
+
 
 @task
 def release(c, automa=False):
@@ -193,9 +227,7 @@ def release(c, automa=False):
         if input('y/n').lower() != 'y':
             return
 
-    token = os.environ['GITHUB_TOKEN']
-    g = github.Github(token)
-    repo = g.get_repo('UncleGoogle/galaxy-integration-humblebundle')
+    repo = get_repo()
 
     for release in repo.get_releases():
         if release.tag_name == tag and release.draft:
@@ -217,7 +249,7 @@ def release(c, automa=False):
 
     build(c, output='build')
     test(c, target='build')
-    asset_path = archive(c, target='build', zip_name=f'humble_{tag}_{PLATFORM[:3].lower()}.zip')
+    asset_path = archive(c, target='build', zip_name=asset_name(tag, PLATFORM))
 
     print(f'Uploading asset for {PLATFORM}: {asset_path}')
     draft_release.upload_asset(asset_path)

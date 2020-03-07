@@ -6,8 +6,7 @@ This module serves for two things:
 So handler 2) called from outside spawns separate python process that runs 1).
 
 Why? Because GUIs don't want to be spawned as a not-main thread.
-And also used `toga` toolkit cannot be pickled by `multiprocessing`
-https://github.com/beeware/toga/issues/734
+And also used `toga` toolkit cannot be pickled by `multiprocessing`: https://github.com/beeware/toga/issues/734.
 
 Toga is in developement stage and lacks many features. So why using it?
 - it is OS native so is small in size (below 2MB) comparing to dozens/hundreds of MB for Qt/Wx
@@ -80,7 +79,6 @@ if __name__ == '__main__':
     import argparse
 
     # Allow for imports from base level (sys.path is extended with the file parent).
-    # Yes, I know it's not the best practise; however `gui` is not reusable package, only the code organiser
     parent_dir = pathlib.Path(__file__).parent
     sys.path.insert(0, str(parent_dir))  # our code
     sys.path.insert(0, str(parent_dir / 'modules'))  # third party
@@ -114,10 +112,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     option = PAGE(args.page)
 
+    # for debugging: `python src/guirunner.py options news --changelog=../CHANGELOG.md`
     if option == PAGE.OPTIONS:
         changelog_path = parent_dir / args.changelog
         Options(OPTIONS_MODE(args.mode), changelog_path).main_loop()
     elif option == PAGE.KEYS:
         ShowKey(args.human_name, args.key_type, args.key_val).main_loop()
-
-    # for debugging: `python src/guirunner.py options news --changelog=../CHANGELOG.md`
