@@ -98,7 +98,6 @@ class HumbleBundlePlugin(Plugin):
                     "window_width": 560,
                     "window_height": 610,
                     "start_uri": "https://www.humblebundle.com/login?goto=/home/library",
-                    # or https://www.humblebundle.com/account-start?goto=home"
                     "end_uri_regex": "^" + re.escape("https://www.humblebundle.com/home/library")
                 })
 
@@ -151,7 +150,6 @@ class HumbleBundlePlugin(Plugin):
 
     @double_click_effect(timeout=0.5, effect='_open_config')
     async def install_game(self, game_id):
-
         if game_id in self._under_instalation:
             return
         self._under_instalation.add(game_id)
@@ -301,8 +299,5 @@ class HumbleBundlePlugin(Plugin):
         await self._api.close_session()
 
 
-def main():
-    create_and_run_plugin(HumbleBundlePlugin, sys.argv)
-
 if __name__ == "__main__":
-    main()
+    create_and_run_plugin(HumbleBundlePlugin, sys.argv)

@@ -6,7 +6,6 @@
 - Support for keys containing multiple games at once.
 - Automatic updates to integration downloaded manually from https://github.com/UncleGoogle/galaxy-integration-humblebundle/releases (this is "latest" version channel - new versions come eariler but are less stable than integrtion downloaded via Galaxy)
 
-
 ## Version 0.6.0
 
 [Added] 
