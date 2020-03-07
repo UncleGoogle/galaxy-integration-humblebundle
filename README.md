@@ -24,7 +24,7 @@ GOG Galaxy 2.0 go to `Settings`->`Integrations`-> use build-in `Search GitHub` e
 *_fork reviewed by FriendsOfGalaxy_
 
 #### Latest release:
-_autoupdates to next Latest release_
+_autoupdates to next Latest release (since 0.7.0)_
 
 Download asset `humblebundle_v{}.zip` from [releases][1] and upack to:
 - Windows: `%localappdata%\GOG.com\Galaxy\plugins\installed`
@@ -42,16 +42,16 @@ _Requires `python3.6` or higher_
 
 To open configuration double click "Install" button from any HumbleBundle game view.
 
-#### Defaults:
+#### Defaults
 - Library: List DRM-free games and unrevealed third party keys
 - Installed games: use only Windows registry scan; edit `search_paths` to enable directory scaning feature
 
-#### Manual Tags import
+#### Import Tags
 
-You can import predefined tags: `Key`, `Unrevealed` and `Trove` to your library manually by going to
+Predefined tags: `Key`, `Unrevealed` and `Trove` can be imported to your library manually by going to
 `Settings` -> `Features` -> `Import` button under "HUMBLE BUNDLE".
 
-Warning: this will not automatically add tags for newly added games. You will have to import tags again.
+**Warning:** this will not automatically add tags for newly added games. You will have to import tags again.
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
