@@ -299,5 +299,8 @@ class HumbleBundlePlugin(Plugin):
         await self._api.close_session()
 
 
-if __name__ == "__main__":
+def main():
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)
+
+if __name__ == "__main__":
+    main()
