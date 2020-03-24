@@ -78,7 +78,6 @@ def build(c, output=DIST_PLUGIN):
     print('Copying source code to ', str(output))
     shutil.copytree('src', output, ignore=shutil.ignore_patterns(
         '__pycache__', '.mypy_cache', 'tests'))
-    shutil.copy('CHANGELOG.md', output)
 
     args = [
         PYTHON, "-m", "pip", "install",

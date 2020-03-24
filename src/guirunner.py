@@ -102,7 +102,6 @@ if __name__ == '__main__':
 
     options_parser = subparsers.add_parser(PAGE.OPTIONS.value)
     options_parser.add_argument('mode', choices=[m.value for m in OPTIONS_MODE])
-    options_parser.add_argument('--changelog', default='CHANGELOG.md', help="Path relative to parent_dir")
 
     keys_parser = subparsers.add_parser(PAGE.KEYS.value)
     keys_parser.add_argument('human_name')
@@ -112,9 +111,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     option = PAGE(args.page)
 
-    # for debugging: `python src/guirunner.py options news --changelog=../CHANGELOG.md`
+    # for debugging: `python src/guirunner.py options news
     if option == PAGE.OPTIONS:
-        changelog_path = parent_dir / args.changelog
+        changelog_path = parent_dir / 'CHANGELOG.md'
         Options(OPTIONS_MODE(args.mode), changelog_path).main_loop()
     elif option == PAGE.KEYS:
         ShowKey(args.human_name, args.key_type, args.key_val).main_loop()
