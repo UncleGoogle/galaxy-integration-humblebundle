@@ -24,11 +24,12 @@ class OPTIONS_MODE(enum.Enum):
 
 class Options(BaseApp):
     NAME = 'Galaxy HumbleBundle Options'
-    SIZE = (620, 280)
     if IS_WINDOWS:
+        SIZE = (620, 255)
         TEXT_SIZE = 9
         TEXT_SIZE_BIG = 10
     elif IS_MAC:
+        SIZE = (620, 340)
         TEXT_SIZE = 11
         TEXT_SIZE_BIG = 12
 
@@ -186,10 +187,14 @@ class Options(BaseApp):
         box = toga.Box()
         box.style.padding_bottom = margin
 
-        with open(self._changelog_path, 'r') as f:
-            changelog = f.read()
+        try:
+            with open(self._changelog_path, 'r') as f:
+                changelog = f.read()
+        except FileNotFoundError as e:
+            changelog = str(e)
         text_box = toga.MultilineTextInput(readonly=True)
         text_box.MIN_WIDTH = self.SIZE[0] - (2 * margin)
+        text_box.MIN_HEIGHT = self.SIZE[1] - (2 * margin)
         text_box.value = changelog
 
         box.add(text_box)
