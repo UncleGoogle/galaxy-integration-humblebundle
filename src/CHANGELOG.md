@@ -1,3 +1,9 @@
+## Version 0.7.1
+
+[Fixed]
+- GUI: fix showing (add missing changelog) on stable branch
+- psutil: security update to 5.6.6
+
 ## Version 0.7.0
 
 [Added]
@@ -8,7 +14,7 @@
 
 ## Version 0.6.0
 
-[Added] 
+[Added]
 - Config: open config by double clicking "Install" button of any HumbleBundle game (#74)
 - Trove: get (scrap) ALL recent games (previously only humble trove API was used in which most recent games appears with a week or two delay (#79)
 
