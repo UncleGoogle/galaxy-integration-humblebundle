@@ -67,13 +67,13 @@ class HumbleBundlePlugin(Plugin):
         self._installed_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
 
         self._rescan_needed = True
-        self._under_instalation = set()
+        self._under_installation = set()
 
     def _save_cache(self, key: str, data: Any):
         data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
-    
+
     def _load_cache(self, key: str, default: Any=None) -> Any:
         if key in self.persistent_cache:
             return json.loads(self.persistent_cache[key])
@@ -115,7 +115,7 @@ class HumbleBundlePlugin(Plugin):
         self.store_credentials(auth_cookie)
         self._open_config(OPTIONS_MODE.WELCOME)
         return Authentication(user_id, user_id)
-    
+
     def __is_after_minor_update(self) -> bool:
         def cut_to_minor(ver: str) -> LooseVersion:
             """3 part version assumed"""
@@ -139,7 +139,7 @@ class HumbleBundlePlugin(Plugin):
     def _open_config(self, mode: OPTIONS_MODE=OPTIONS_MODE.NORMAL):
         """Synchonious wrapper for self._open_config_async"""
         self.create_task(self._open_config_async(mode), 'opening config')
-    
+
     async def _open_config_async(self, mode: OPTIONS_MODE):
         try:
             await gui.show_options(mode)
@@ -150,9 +150,9 @@ class HumbleBundlePlugin(Plugin):
 
     @double_click_effect(timeout=0.5, effect='_open_config')
     async def install_game(self, game_id):
-        if game_id in self._under_instalation:
+        if game_id in self._under_installation:
             return
-        self._under_instalation.add(game_id)
+        self._under_installation.add(game_id)
 
         try:
             game = self._owned_games.get(game_id)
@@ -184,8 +184,8 @@ class HumbleBundlePlugin(Plugin):
         except Exception as e:
             logging.exception(e, extra={'game': game})
         finally:
-            self._under_instalation.remove(game_id)
-    
+            self._under_installation.remove(game_id)
+
     async def get_game_library_settings(self, game_id: str, context: Any) -> GameLibrarySettings:
         gls = GameLibrarySettings(game_id, None, None)
         game = self._owned_games[game_id]

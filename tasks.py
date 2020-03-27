@@ -137,7 +137,6 @@ def copy(c, output=DIST_PLUGIN, galaxy_path=GALAXY_PATH):
         shutil.copy(file_, Path(output) / 'gui')
     for file_ in glob("src/*.ini"):
         shutil.copy(file_, output)
-    shutil.copy('CHANGELOG.md', output)
 
 
 @task
