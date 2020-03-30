@@ -5,7 +5,7 @@
 - psutil: security update to 5.6.6
 
 [Changed]
-- GUI: increased throttling of loading library settings to ~0.3/sec to protect Galaxy from expensive operations
+- GUI: rate of loading library settings decreased to ~0.3/sec to protect Galaxy from expensive operations #91
 
 ## Version 0.7.0
 
