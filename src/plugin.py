@@ -63,6 +63,7 @@ class HumbleBundlePlugin(Plugin):
         self._cached_game_states = {}
 
         self._getting_owned_games = asyncio.Lock()
+        self._owned_check: asyncio.Task = asyncio.create_task(asyncio.sleep(8))
         self._statuses_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
         self._installed_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
 
@@ -238,6 +239,8 @@ class HumbleBundlePlugin(Plugin):
                 self.remove_game(old_id)
             for new_id in self._owned_games.keys() - old_ids:
                 self.add_game(self._owned_games[new_id].in_galaxy_format())
+        # increased throttle to protect Galaxy from quick & heavy library changes
+        await asyncio.sleep(3)
 
     async def _check_installed(self):
         """
@@ -281,8 +284,8 @@ class HumbleBundlePlugin(Plugin):
     def tick(self):
         self._settings.reload_config_if_changed()
 
-        if self._settings.library.has_changed():
-            self.create_task(self._check_owned(), 'check owned')
+        if self._owned_check.done() and self._settings.library.has_changed():
+            self._owned_check = self.create_task(self._check_owned(), 'check owned')
 
         if self._settings.installed.has_changed():
             self._rescan_needed = True

@@ -4,6 +4,9 @@
 - GUI: fix showing (add missing changelog) on stable branch
 - psutil: security update to 5.6.6
 
+[Changed]
+- GUI: rate of loading library settings decreased to ~0.3/sec to protect Galaxy from expensive operations #91
+
 ## Version 0.7.0
 
 [Added]
