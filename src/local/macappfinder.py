@@ -47,7 +47,7 @@ class MacAppFinder(BaseAppFinder):
         dir_ = pathlib.Path(app_dir).resolve()
         try:
             with open(dir_ / 'Contents' / 'Info.plist', 'rb') as f:
-                plist: Dict[str, str]= plistlib.load(f)
+                plist: Dict[str, str] = plistlib.load(f)
         except (FileExistsError, OSError) as e:
             logging.error(f'{repr(e)}')
             return None
@@ -62,4 +62,3 @@ class MacAppFinder(BaseAppFinder):
             name = pathlib.PurePath(app_dir).stem
         bundle = BundleInfo(dir_, exe_name, name)
         return bundle.executable
-    

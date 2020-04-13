@@ -6,6 +6,36 @@ from local import AppFinder
 from consts import IS_WINDOWS
 
 
+# unit
+
+@pytest.fixture
+def candidates():
+    """Bunch of owned game names that are candidates for matching algorithm"""
+    return set(
+        ['Dummy', 'Trine 2: Complete Story', 'Space Pilgrim Episode III: Delta Pavonis', 'Halcyon 6: LIGHTSPEED EDITION', 'Shank 2', 'AaaaaAAaaaAAAaaAAAAaAAAAA!!! for the Awesome']
+    )
+
+
+@pytest.mark.parametrize('dirname, expected', [
+    ('Dummy', ['Dummy']),
+    ('Haven Moon - DRM free', ['Haven Moon - DRM free']),
+])
+def test_get_close_matches_exact(dirname, expected, candidates):
+    result = AppFinder().get_close_matches(dirname, candidates, similarity=1)
+    assert expected == result
+
+
+@pytest.mark.parametrize('dirname, expected', [
+    ('Dummy', ['Dummy']),
+    ('Trine 2 Complete Story', ['Trine 2: Complete Story']),
+])
+def test_get_close_matches_close(dirname, expected, candidates):
+    result = AppFinder().get_close_matches(dirname, candidates, similarity=0.8)
+    assert expected == result
+
+
+# integration
+
 @pytest.fixture
 def create_mock_walk(mocker):
     def fn(walk_paths: list):
