@@ -16,7 +16,7 @@ class HumbleGame(abc.ABC):
     def __init__(self, data: dict):
         self._data = data
         self._minimal_validation()
-    
+
     def _minimal_validation(self):
         try:
             self.in_galaxy_format()
@@ -52,7 +52,7 @@ class HumbleGame(abc.ABC):
 
     def __str__(self):
         return f"<{self.__class__.__name__}> {self.human_name} : {self.machine_name}"
-    
+
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
@@ -83,6 +83,10 @@ class TroveGame(HumbleGame):
 
 
 class Subproduct(HumbleGame):
+    def __init__(self, data: dict, gamekey: str):
+        super().__init__(data)
+        self._gamekey = gamekey
+
     @property
     def downloads(self) -> Dict[HP, List[SubproductDownload]]:
         result = {}
@@ -97,6 +101,11 @@ class Subproduct(HumbleGame):
                     for x in dw['download_struct']
                 ]
         return result
+
+    @property
+    def gamekey(self) -> str:
+        """gamekey of order from which this subproduct becomes"""
+        return self._gamekey
 
     @property
     def license(self) -> LicenseInfo:
@@ -131,7 +140,7 @@ class Key(HumbleGame):
     def key_val(self) -> Optional[str]:
         """If returned value is None - the key was not revealed yet"""
         return self._data.get('redeemed_key_val')
-    
+
     @property
     def key_games(self) -> List['KeyGame']:
         """One key can represent multiple games listed in human_name.
@@ -153,12 +162,12 @@ class KeyGame(Key):
         self._game_name = game_name
         self._game_id = game_id
         super().__init__(key._data)
-    
+
     @property
     def human_name(self):
         """Uses heuristics to add key identity if not already present.
         The heuristics may be wrong but it is not very harmfull."""
-        key_type = super().key_type_human_name 
+        key_type = super().key_type_human_name
         keywords = [" Key", key_type]
         for keyword in keywords:
             if keyword in self._game_name:

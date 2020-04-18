@@ -169,7 +169,16 @@ class HumbleBundlePlugin(Plugin):
                     webbrowser.open('https://www.humblebundle.com/home/keys')
                 return
 
+            # refresh download link
+            if isinstance(game, Subproduct):
+                order = await self._api.get_order_details(game.gamekey)
+                for sb in LibraryResolver.get_subproducts([order]):
+                    if sb.machine_name == game.machine_name:
+                        game = sb
+                        break
+
             chosen_download = self._download_resolver(game)
+
             if isinstance(game, Subproduct):
                 webbrowser.open(chosen_download.web)
 

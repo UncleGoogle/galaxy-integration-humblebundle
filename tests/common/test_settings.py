@@ -16,7 +16,7 @@ class MockSection(UpdateTracker):
         if type(self.key) != type(key):
             raise TypeError
         self.key = key
-    
+
     def serialize(self):
         return self.key
 
@@ -96,7 +96,7 @@ def test_installed_from_raw_file_allowed_paths(mocker):
         search_dirs = [
             'C:\Program Files(x86)\Humble',
             'D:\\Games',
-            "E:\\Games",
+            "Z:\\Games",
         ]
     """
     mocker.patch.object(Path, 'exists', return_value=True)
@@ -105,7 +105,7 @@ def test_installed_from_raw_file_allowed_paths(mocker):
         assert settings.installed.search_dirs == {
             Path("C:\\Program Files(x86)\\Humble"),
             Path("D:\\Games"),
-            Path("E:\\Games")
+            Path("Z:\\Games")
         }
 
 

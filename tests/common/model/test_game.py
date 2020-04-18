@@ -3,8 +3,9 @@ from consts import GAME_PLATFORMS, HP
 
 
 def test_game_properties_overgrowth(overgrowth):
+    gamekey = 'mock'
     for sub_data in overgrowth['subproducts']:
-        sub = Subproduct(sub_data)
+        sub = Subproduct(sub_data, gamekey)
         sub.human_name
         sub.machine_name
         sub.license
@@ -20,10 +21,11 @@ def test_game_properties_overgrowth(overgrowth):
 def test_game_properties_access(orders):
     for order in orders:
         for sub_data in order['subproducts']:
-            sub = Subproduct(sub_data)
+            sub = Subproduct(sub_data, order['gamekey'])
             sub.human_name
             sub.machine_name
             sub.license
+            sub.gamekey
             for platform, download_structs in sub.downloads.items():
                 assert platform in set(HP)
                 for dw_struct in download_structs:

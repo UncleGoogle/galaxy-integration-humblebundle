@@ -45,7 +45,7 @@ def get_torchlight(orders_keys):
     for i in orders_keys:
         if i['product']['machine_name'] == 'torchlight_storefront':
             torchlight_order = i
-    drm_free = Subproduct(torchlight_order['subproducts'][0])
+    drm_free = Subproduct(torchlight_order['subproducts'][0], 'mock')
     key = Key(torchlight_order['tpkd_dict']['all_tpks'][0])
     key_game = key.key_games[0]
     return torchlight_order, drm_free, key_game
@@ -115,7 +115,7 @@ async def test_library_cache_orders(plugin_mock, get_torchlight, change_settings
     # no api calls if cache used
     assert plugin_mock._api.get_gamekeys.call_count == 0
     assert plugin_mock._api.get_order_details.call_count == 0
-    
+
 
 @pytest.mark.asyncio
 async def test_library_fetch_with_cache_orders(plugin_mock, get_torchlight, change_settings):
@@ -148,14 +148,14 @@ async def test_library_fetch_with_cache_orders(plugin_mock, get_torchlight, chan
     assert key.machine_name not in result  # revealed -> removed
     assert plugin_mock._api.get_gamekeys.call_count == 1
     assert plugin_mock._api.get_order_details.call_count == len(unrevealed_order_keys)
-    
+
 
 @pytest.mark.asyncio
 async def test_library_cache_period(plugin_mock, change_settings, orders_keys):
     """Refresh reveals keys only if needed"""
     change_settings(plugin_mock, {'sources': ['keys', 'trove'], 'show_revealed_keys': False})
 
-    # set expired next fetch 
+    # set expired next fetch
     plugin_mock._library_resolver._cache['next_fetch_orders'] = time.time() - 10
     plugin_mock._library_resolver._cache['next_fetch_troves'] = time.time() - 10
 

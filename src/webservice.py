@@ -114,10 +114,10 @@ class AuthorizedHumbleAPI:
         else:
             logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
             return False
-    
+
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
-        Returns json containing "newlyAdded" trove games and "standardProducts" that is 
+        Returns json containing "newlyAdded" trove games and "standardProducts" that is
         the same like output from api/v1/trove/chunk/index=0
         "standardProducts" may not contain "newlyAdded" sometimes
         """
@@ -128,7 +128,7 @@ class AuthorizedHumbleAPI:
         candidate = txt[json_start:].strip()
         parsed, _ = json.JSONDecoder().raw_decode(candidate)
         return parsed
-    
+
     async def get_trove_details(self, from_chunk: int=0):
         troves: List[str] = []
         index = from_chunk

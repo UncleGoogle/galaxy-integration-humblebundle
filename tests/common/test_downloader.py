@@ -12,11 +12,11 @@ def test_any_download_found(orders, get_troves, platform, bitness):
 
     for order in orders:
         for sub_data in order['subproducts']:
-            sub = Subproduct(sub_data)
+            sub = Subproduct(sub_data, order['gamekey'])
             if not sub.os_compatibile(platform):
                 continue
             try:
-                download_resolver(sub) 
+                download_resolver(sub)
             except NotImplementedError as e:
                 pytest.fail('Unresolved download: ' + str(e))
 
@@ -42,7 +42,7 @@ def test_windows_bitness_priority():
             }
         ]
     }
-    sub = Subproduct(subproduct_data)
+    sub = Subproduct(subproduct_data, 'mock_gamekey')
     download = HumbleDownloadResolver(HP.WINDOWS, BITNESS.B64)(sub)
     assert download.name == '64-bit'
     download = HumbleDownloadResolver(HP.WINDOWS, BITNESS.B32)(sub)

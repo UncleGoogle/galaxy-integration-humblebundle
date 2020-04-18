@@ -31,7 +31,7 @@ def settings(mocker):
     mocker.patch('plugin.Settings._load_config_file')
     mock = Settings()
     mock.save_config = Mock()
-    return mock 
+    return mock
 
 
 @pytest.fixture

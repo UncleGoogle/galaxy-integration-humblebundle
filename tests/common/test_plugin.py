@@ -38,11 +38,12 @@ async def test_uninstall_game(plugin_mock, overgrowth):
 
 
 @pytest.mark.asyncio
-async def test_install_game(plugin_mock, overgrowth):
+@pytest.mark.parametrize('os_', [HP.WINDOWS, HP.MAC])
+async def test_install_game(os_, api_mock, plugin_mock, overgrowth):
     id_ = overgrowth['product']['machine_name']
     subproduct = overgrowth['subproducts'][0]
-    game = Subproduct(subproduct)
-    plugin_mock._owned_games= { id_: game }
+    game = Subproduct(subproduct, overgrowth['gamekey'])
+    plugin_mock._owned_games = { id_: game }
     # Note windows have also download_struct named "Patch". Not supported currently, only one download
     download_urls = {
         "linux": "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-linux64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=46b9a84ac7c864cf8fe263239a9978ae",
@@ -50,25 +51,24 @@ async def test_install_game(plugin_mock, overgrowth):
         "mac": "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-macosx.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=5ade7954d8fc63bbe861932be538c07e",
     }
 
-    for os_ in [HP.WINDOWS, HP.MAC]:
-        plugin_mock._download_resolver = HumbleDownloadResolver(target_platform=os_)
-        with patch('webbrowser.open') as browser_open:
-            await plugin_mock.install_game(id_)
-            browser_open.assert_called_once_with(download_urls[os_.value])
+    plugin_mock._download_resolver = HumbleDownloadResolver(target_platform=os_)
+    with patch('webbrowser.open') as browser_open:
+        await plugin_mock.install_game(id_)
+        browser_open.assert_called_once_with(download_urls[os_.value])
 
 
 @pytest.mark.asyncio
 async def test_get_os_compatibility(plugin_mock, overgrowth):
     ovg_id = overgrowth['product']['machine_name']
     subproduct = overgrowth['subproducts'][0]
-    game = Subproduct(subproduct)
+    game = Subproduct(subproduct, overgrowth['gamekey'])
 
     no_downloads_id = 'nodw'
     no_dw_game = Subproduct({
         'human_name': 'mock',
         'machine_name': no_downloads_id,
         'downloads': []
-    })
+    }, 'mock')
     plugin_mock._owned_games= { ovg_id: game, no_downloads_id: no_dw_game}
 
     ctx = await plugin_mock.prepare_os_compatibility_context([ovg_id, no_downloads_id])
@@ -97,4 +97,3 @@ async def test_library_settings_key(plugin_mock):
     assert await plugin_mock.get_game_library_settings('b', ctx) == GameLibrarySettings('b', ['Trove'], None)
     assert await plugin_mock.get_game_library_settings('c', ctx) == GameLibrarySettings('c', ['Key'], None)
     assert await plugin_mock.get_game_library_settings('d', ctx) == GameLibrarySettings('d', ['Key', 'Unrevealed'], None)
-    

@@ -28,7 +28,7 @@ class LibraryResolver:
         all_games: List[HumbleGame] = []
         for source in self._settings.sources:
             if source == SOURCE.DRM_FREE:
-                all_games.extend(self._get_subproducts(orders))
+                all_games.extend(self.get_subproducts(orders))
             elif source == SOURCE.TROVE:
                 all_games.extend(self._get_trove_games(
                     self._cache.get('troves', []) + self._cache.get('troves_recent', [])))
@@ -101,7 +101,7 @@ class LibraryResolver:
 
     @staticmethod
     async def __gather_no_exceptions(tasks: Iterable[Coroutine]):
-        """Wrapper around asyncio.gather(*args, return_exception=True) 
+        """Wrapper around asyncio.gather(*args, return_exception=True)
         Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
         Use case: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/59
         """
@@ -139,12 +139,12 @@ class LibraryResolver:
         return filtered
 
     @staticmethod
-    def _get_subproducts(orders: list) -> List[Subproduct]:
+    def get_subproducts(orders: list) -> List[Subproduct]:
         subproducts = []
         for details in orders:
             for sub_data in details['subproducts']:
                 try:
-                    sub = Subproduct(sub_data)
+                    sub = Subproduct(sub_data, details['gamekey'])
                     if not set(sub.downloads).isdisjoint(GAME_PLATFORMS):
                         # at least one download exists for supported OS
                         subproducts.append(sub)
