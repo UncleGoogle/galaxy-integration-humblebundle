@@ -165,7 +165,6 @@ class AuthorizedHumbleAPI:
         content = await res.read()
         if content != b"{'success': True}":
             logging.error(f'unexpected response while reedem trove download: {content}')
-            raise UnknownError()
 
     @staticmethod
     def _filename_from_web_link(link: str):
