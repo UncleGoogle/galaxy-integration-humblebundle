@@ -38,16 +38,18 @@ _Requires `python3.6` or higher_
 
 ## Configuration
 
-To open configuration double click "Install" button from any HumbleBundle game view.
+#### Config window
 
-#### Defaults
-- Library: List DRM-free games and unrevealed third party keys
-- Installed games: use only Windows registry scan; edit `search_paths` to enable directory scaning feature
+To open double click "Install" button from any HumbleBundle game view.
+
+<img src="https://i.gyazo.com/b806e5d01590f5c6c48fbe09f9dddb95.gif" width="640" height="300"/>
 
 #### Import Tags
 
 Predefined tags: `Key`, `Unrevealed` and `Trove` can be imported to your library manually by going to
+Galaxy menu ->
 `Settings` -> `Features` -> `Import` button under "HUMBLE BUNDLE".
+<img src="https://i.gyazo.com/14ee4e4665e6ab96eca6adc47f151c5e.png" width="640">
 
 **Warning:** this will not automatically add tags for newly added games. You will have to import tags again.
 
