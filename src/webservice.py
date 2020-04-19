@@ -10,7 +10,7 @@ import yarl
 from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
-from model.download import TroveDownload, DownloadStructItem
+from model.download import TroveDownload, DownloadStructItem, SubproductDownload
 
 
 class AuthorizedHumbleAPI:
@@ -152,24 +152,20 @@ class AuthorizedHumbleAPI:
         })
         return await res.json()
 
-    async def _reedem_trove_download(self, download: TroveDownload, product_machine_name: str):
+    async def __reedem_download(self, download_machine_name: str, custom_data: dict):
         """Unknown purpose - humble http client do this after post for signed_url
         Response should be text with {'success': True} if everything is OK
         """
-        res = await self._request('post', self._HUMBLER_REDEEM_DOWNLOAD, params={
-            'download': download.machine_name,
+        params = {
+            'download': download_machine_name,
             'download_page': "false",  # TODO check what it does
-            'product': product_machine_name
-        })
+        }
+        params.update(custom_data)
+        res = await self._request('post', self._HUMBLER_REDEEM_DOWNLOAD, params=params)
         content = await res.read()
         if content != b"{'success': True}":
             logging.error(f'unexpected response while reedem trove download: {content}')
             raise UnknownError()
-
-    async def get_trove_sign_url(self, download: TroveDownload, product_machine_name: str):
-        urls = await self._sign_download(download.machine_name, download.web)
-        await self._reedem_trove_download(download, product_machine_name)
-        return urls
 
     @staticmethod
     def _filename_from_web_link(link: str):
@@ -178,9 +174,14 @@ class AuthorizedHumbleAPI:
     async def get_subproduct_sign_url(self, download: DownloadStructItem, download_machine_name: str):
         filename = self._filename_from_web_link(download.web)
         urls = await self._sign_download(download_machine_name, filename)
-        # eg. params for subproduct: download_page=false&download=almostthere_theplatformer_windows&download_url_file=Almost_There_Windows.zip
-        # TODO required?
-        # await self._reedem_trove_download(download, product_machine_name)
+        await self.__reedem_download(
+            download.machine_name, {'download_url_file': filename})
+        return urls
+
+    async def get_trove_sign_url(self, download: TroveDownload, product_machine_name: str):
+        urls = await self._sign_download(download.machine_name, download.web)
+        await self.__reedem_download(
+            download.machine_name, {'product': product_machine_name})
         return urls
 
     async def close_session(self):
