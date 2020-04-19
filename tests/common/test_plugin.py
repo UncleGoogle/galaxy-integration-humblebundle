@@ -44,7 +44,7 @@ async def test_install_game_drm_free(api_mock, plugin, overgrowth):
     game = Subproduct(subproduct)
     plugin._owned_games = { id_: game }
     expected_url = "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-win64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=7f2263e7f3360f3beb112e58521145a0"
-    api_mock.get_subproduct_sign_url.return_value = {
+    api_mock.sign_url_subproduct.return_value = {
         "signed_url": expected_url
     }
 
@@ -59,7 +59,7 @@ async def test_install_game_trove(api_mock, plugin):
     game = Mock(spec=TroveGame, downloads={CURRENT_SYSTEM: Mock(spec=TroveDownload)})
     plugin._owned_games = { id_: game }
     expected_url = "https://dl.humble.com/developer/trove_game_012_build-5584-win64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=7f2263e7f3360f3beb112e58521145a0"
-    api_mock.get_trove_sign_url.return_value = {
+    api_mock.sign_url_trove.return_value = {
         "signed_url": expected_url
     }
 

@@ -176,12 +176,12 @@ class HumbleBundlePlugin(Plugin):
 
             if isinstance(game, Subproduct):
                 chosen_download_struct = self._download_resolver(curr_os_download)
-                urls = await self._api.get_subproduct_sign_url(chosen_download_struct, curr_os_download.machine_name)
+                urls = await self._api.sign_url_subproduct(chosen_download_struct, curr_os_download.machine_name)
                 webbrowser.open(urls['signed_url'])
 
             if isinstance(game, TroveGame):
                 try:
-                    urls = await self._api.get_trove_sign_url(curr_os_download, game.machine_name)
+                    urls = await self._api.sign_url_trove(curr_os_download, game.machine_name)
                 except AuthenticationRequired:
                     logging.info('Looks like your Humble Monthly subscription has expired.')
                     webbrowser.open('https://www.humblebundle.com/subscription/home')

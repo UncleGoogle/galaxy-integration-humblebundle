@@ -145,14 +145,14 @@ class AuthorizedHumbleAPI:
             index += 1
         return troves
 
-    async def _sign_download(self, machine_name: str, filename: str):
+    async def sign_download(self, machine_name: str, filename: str):
         res = await self._request('post', self._DOWNLOAD_SIGN, params={
             'machine_name': machine_name,
             'filename': filename
         })
         return await res.json()
 
-    async def __reedem_download(self, download_machine_name: str, custom_data: dict):
+    async def _reedem_download(self, download_machine_name: str, custom_data: dict):
         """Unknown purpose - humble http client do this after post for signed_url
         Response should be text with {'success': True} if everything is OK
         """
@@ -170,24 +170,24 @@ class AuthorizedHumbleAPI:
     def _filename_from_web_link(link: str):
         return yarl.URL(link).parts[-1]
 
-    async def get_subproduct_sign_url(self, download: DownloadStructItem, download_machine_name: str):
+    async def sign_url_subproduct(self, download: DownloadStructItem, download_machine_name: str):
         if download.web is None:
             raise RuntimeError(f'No download web link in download struct item {download}')
         filename = self._filename_from_web_link(download.web)
-        urls = await self._sign_download(download_machine_name, filename)
+        urls = await self.sign_download(download_machine_name, filename)
         try:
-            await self.__reedem_download(
+            await self._reedem_download(
                 download_machine_name, {'download_url_file': filename})
         except Exception as e:
             logging.error(repr(e) + '. Error ignored')
         return urls
 
-    async def get_trove_sign_url(self, download: TroveDownload, product_machine_name: str):
+    async def sign_url_trove(self, download: TroveDownload, product_machine_name: str):
         if download.web is None:
             raise RuntimeError(f'No download web link in download struct item {download}')
-        urls = await self._sign_download(download.machine_name, download.web)
+        urls = await self.sign_download(download.machine_name, download.web)
         try:
-            await self.__reedem_download(
+            await self._reedem_download(
                 download.machine_name, {'product': product_machine_name})
         except Exception as e:
             logging.error(repr(e) + '. Error ignored')

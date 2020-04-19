@@ -42,8 +42,8 @@ def api_mock_raw():
     mock.get_gamekeys = AsyncMock()
     mock.had_trove_subscription = AsyncMock()
     mock.get_trove_details = AsyncMock()
-    mock.get_trove_sign_url = AsyncMock()
-    mock.get_subproduct_sign_url = AsyncMock()
+    mock.sign_url_trove = AsyncMock()
+    mock.sign_url_subproduct = AsyncMock()
     mock.close_session = AsyncMock()
     return mock
 
