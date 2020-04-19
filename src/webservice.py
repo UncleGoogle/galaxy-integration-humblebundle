@@ -172,13 +172,17 @@ class AuthorizedHumbleAPI:
         return yarl.URL(link).parts[-1]
 
     async def get_subproduct_sign_url(self, download: DownloadStructItem, download_machine_name: str):
+        if download.web is None:
+            raise RuntimeError(f'No download web link in download struct item {download}')
         filename = self._filename_from_web_link(download.web)
         urls = await self._sign_download(download_machine_name, filename)
         await self.__reedem_download(
-            download.machine_name, {'download_url_file': filename})
+            download_machine_name, {'download_url_file': filename})
         return urls
 
     async def get_trove_sign_url(self, download: TroveDownload, product_machine_name: str):
+        if download.web is None:
+            raise RuntimeError(f'No download web link in download struct item {download}')
         urls = await self._sign_download(download.machine_name, download.web)
         await self.__reedem_download(
             download.machine_name, {'product': product_machine_name})
