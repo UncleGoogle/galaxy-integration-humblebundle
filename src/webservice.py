@@ -6,10 +6,11 @@ import json
 import base64
 import logging
 
+import yarl
 from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
-from model.download import TroveDownload
+from model.download import TroveDownload, DownloadStructItem
 
 
 class AuthorizedHumbleAPI:
@@ -22,8 +23,8 @@ class AuthorizedHumbleAPI:
     _SUBSCRIPTION_HOME = 'subscription/home'
     _SUBSCRIPTION_TROVE = 'subscription/trove'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
-    _TROVE_DOWNLOAD_SIGN_URL = 'api/v1/user/download/sign'
-    _TROVE_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
+    _DOWNLOAD_SIGN = 'api/v1/user/download/sign'
+    _HUMBLER_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
 
     _DEFAULT_PARAMS = {"ajax": "true"}
     _DEFAULT_HEADERS = {
@@ -114,10 +115,10 @@ class AuthorizedHumbleAPI:
         else:
             logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
             return False
-    
+
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
-        Returns json containing "newlyAdded" trove games and "standardProducts" that is 
+        Returns json containing "newlyAdded" trove games and "standardProducts" that is
         the same like output from api/v1/trove/chunk/index=0
         "standardProducts" may not contain "newlyAdded" sometimes
         """
@@ -128,7 +129,7 @@ class AuthorizedHumbleAPI:
         candidate = txt[json_start:].strip()
         parsed, _ = json.JSONDecoder().raw_decode(candidate)
         return parsed
-    
+
     async def get_trove_details(self, from_chunk: int=0):
         troves: List[str] = []
         index = from_chunk
@@ -144,10 +145,10 @@ class AuthorizedHumbleAPI:
             index += 1
         return troves
 
-    async def _get_trove_signed_url(self, download: TroveDownload):
-        res = await self._request('post', self._TROVE_DOWNLOAD_SIGN_URL, params={
-            'machine_name': download.machine_name,
-            'filename': download.web
+    async def _sign_download(self, machine_name: str, filename: str):
+        res = await self._request('post', self._DOWNLOAD_SIGN, params={
+            'machine_name': machine_name,
+            'filename': filename
         })
         return await res.json()
 
@@ -155,7 +156,7 @@ class AuthorizedHumbleAPI:
         """Unknown purpose - humble http client do this after post for signed_url
         Response should be text with {'success': True} if everything is OK
         """
-        res = await self._request('post', self._TROVE_REDEEM_DOWNLOAD, params={
+        res = await self._request('post', self._HUMBLER_REDEEM_DOWNLOAD, params={
             'download': download.machine_name,
             'download_page': "false",  # TODO check what it does
             'product': product_machine_name
@@ -166,8 +167,20 @@ class AuthorizedHumbleAPI:
             raise UnknownError()
 
     async def get_trove_sign_url(self, download: TroveDownload, product_machine_name: str):
-        urls = await self._get_trove_signed_url(download)
+        urls = await self._sign_download(download.machine_name, download.web)
         await self._reedem_trove_download(download, product_machine_name)
+        return urls
+
+    @staticmethod
+    def _filename_from_web_link(link: str):
+        return yarl.URL(link).parts[-1]
+
+    async def get_subproduct_sign_url(self, download: DownloadStructItem, download_machine_name: str):
+        filename = self._filename_from_web_link(download.web)
+        urls = await self._sign_download(download_machine_name, filename)
+        # eg. params for subproduct: download_page=false&download=almostthere_theplatformer_windows&download_url_file=Almost_There_Windows.zip
+        # TODO required?
+        # await self._reedem_trove_download(download, product_machine_name)
         return urls
 
     async def close_session(self):

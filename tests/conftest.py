@@ -31,7 +31,7 @@ def settings(mocker):
     mocker.patch('plugin.Settings._load_config_file')
     mock = Settings()
     mock.save_config = Mock()
-    return mock 
+    return mock
 
 
 @pytest.fixture
@@ -43,6 +43,7 @@ def api_mock_raw():
     mock.had_trove_subscription = AsyncMock()
     mock.get_trove_sign_url = AsyncMock()
     mock.get_trove_details = AsyncMock()
+    mock.get_subproduct_sign_url = AsyncMock()
     mock.close_session = AsyncMock()
     return mock
 

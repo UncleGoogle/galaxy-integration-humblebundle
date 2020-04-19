@@ -8,7 +8,6 @@ from galaxy.api.types import GameLibrarySettings
 from consts import HP, CURRENT_SYSTEM
 from local.localgame import LocalHumbleGame
 from model.game import Subproduct, KeyGame, TroveGame
-from humbledownloader import HumbleDownloadResolver
 
 
 @pytest.mark.asyncio
@@ -38,23 +37,19 @@ async def test_uninstall_game(plugin_mock, overgrowth):
 
 
 @pytest.mark.asyncio
-async def test_install_game(plugin_mock, overgrowth):
+async def test_install_game_drm_free(api_mock, plugin_mock, overgrowth):
     id_ = overgrowth['product']['machine_name']
     subproduct = overgrowth['subproducts'][0]
     game = Subproduct(subproduct)
-    plugin_mock._owned_games= { id_: game }
-    # Note windows have also download_struct named "Patch". Not supported currently, only one download
-    download_urls = {
-        "linux": "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-linux64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=46b9a84ac7c864cf8fe263239a9978ae",
-        "windows": "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-win64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=7f2263e7f3360f3beb112e58521145a0",
-        "mac": "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-macosx.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=5ade7954d8fc63bbe861932be538c07e",
+    plugin_mock._owned_games = { id_: game }
+    expected_url = "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-win64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=7f2263e7f3360f3beb112e58521145a0"
+    api_mock.get_subproduct_sign_url.return_value = {
+        "signed_url": expected_url
     }
 
-    for os_ in [HP.WINDOWS, HP.MAC]:
-        plugin_mock._download_resolver = HumbleDownloadResolver(target_platform=os_)
-        with patch('webbrowser.open') as browser_open:
-            await plugin_mock.install_game(id_)
-            browser_open.assert_called_once_with(download_urls[os_.value])
+    with patch('webbrowser.open') as browser_open:
+        await plugin_mock.install_game(id_)
+        browser_open.assert_called_once_with(expected_url)
 
 
 @pytest.mark.asyncio
@@ -97,4 +92,3 @@ async def test_library_settings_key(plugin_mock):
     assert await plugin_mock.get_game_library_settings('b', ctx) == GameLibrarySettings('b', ['Trove'], None)
     assert await plugin_mock.get_game_library_settings('c', ctx) == GameLibrarySettings('c', ['Key'], None)
     assert await plugin_mock.get_game_library_settings('d', ctx) == GameLibrarySettings('d', ['Key', 'Unrevealed'], None)
-    
