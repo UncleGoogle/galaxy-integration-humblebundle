@@ -48,11 +48,11 @@ class TroveDownload(DownloadStructItem):
     size: str
     """
     @property
-    def human_size(self):
+    def human_size(self) -> str:
         return self._data['size']
 
     @property
-    def machine_name(self):
+    def machine_name(self) -> str:
         return self._data['machine_name']
 
 
