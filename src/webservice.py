@@ -164,7 +164,7 @@ class AuthorizedHumbleAPI:
         res = await self._request('post', self._HUMBLER_REDEEM_DOWNLOAD, params=params)
         content = await res.read()
         if content != b"{'success': True}":
-            logging.error(f'unexpected response while reedem trove download: {content}')
+            raise UnknownBackendResponse(f'unexpected response while reedem trove download: {content}')
 
     @staticmethod
     def _filename_from_web_link(link: str):
@@ -175,16 +175,22 @@ class AuthorizedHumbleAPI:
             raise RuntimeError(f'No download web link in download struct item {download}')
         filename = self._filename_from_web_link(download.web)
         urls = await self._sign_download(download_machine_name, filename)
-        await self.__reedem_download(
-            download_machine_name, {'download_url_file': filename})
+        try:
+            await self.__reedem_download(
+                download_machine_name, {'download_url_file': filename})
+        except Exception as e:
+            logging.error(repr(e) + '. Error ignored')
         return urls
 
     async def get_trove_sign_url(self, download: TroveDownload, product_machine_name: str):
         if download.web is None:
             raise RuntimeError(f'No download web link in download struct item {download}')
         urls = await self._sign_download(download.machine_name, download.web)
-        await self.__reedem_download(
-            download.machine_name, {'product': product_machine_name})
+        try:
+            await self.__reedem_download(
+                download.machine_name, {'product': product_machine_name})
+        except Exception as e:
+            logging.error(repr(e) + '. Error ignored')
         return urls
 
     async def close_session(self):
