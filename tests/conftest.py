@@ -31,7 +31,7 @@ def settings(mocker):
     mocker.patch('plugin.Settings._load_config_file')
     mock = Settings()
     mock.save_config = Mock()
-    return mock 
+    return mock
 
 
 @pytest.fixture
@@ -41,8 +41,9 @@ def api_mock_raw():
     mock.get_order_details = AsyncMock()
     mock.get_gamekeys = AsyncMock()
     mock.had_trove_subscription = AsyncMock()
-    mock.get_trove_sign_url = AsyncMock()
     mock.get_trove_details = AsyncMock()
+    mock.sign_url_trove = AsyncMock()
+    mock.sign_url_subproduct = AsyncMock()
     mock.close_session = AsyncMock()
     return mock
 
@@ -69,7 +70,7 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
 
 
 @pytest.fixture
-async def plugin_mock(api_mock, settings, mocker):
+async def plugin(api_mock, settings, mocker):
     mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
     mocker.patch('settings.Settings', return_value=settings)
     plugin = HumbleBundlePlugin(Mock(), Mock(), "handshake_token")

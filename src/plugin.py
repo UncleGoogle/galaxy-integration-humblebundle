@@ -17,7 +17,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings
-from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
+from galaxy.api.errors import AuthenticationRequired, InvalidCredentials, UnknownError
 
 from consts import HP, CURRENT_SYSTEM
 from settings import Settings
@@ -153,8 +153,8 @@ class HumbleBundlePlugin(Plugin):
     async def install_game(self, game_id):
         if game_id in self._under_installation:
             return
-        self._under_installation.add(game_id)
 
+        self._under_installation.add(game_id)
         try:
             game = self._owned_games.get(game_id)
             if game is None:
@@ -169,21 +169,28 @@ class HumbleBundlePlugin(Plugin):
                     webbrowser.open('https://www.humblebundle.com/home/keys')
                 return
 
-            chosen_download = self._download_resolver(game)
+            try:
+                curr_os_download = game.downloads[CURRENT_SYSTEM]
+            except KeyError:
+                raise UnknownError(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')
+
             if isinstance(game, Subproduct):
-                webbrowser.open(chosen_download.web)
+                chosen_download_struct = self._download_resolver(curr_os_download)
+                urls = await self._api.sign_url_subproduct(chosen_download_struct, curr_os_download.machine_name)
+                webbrowser.open(urls['signed_url'])
 
             if isinstance(game, TroveGame):
                 try:
-                    url = await self._api.get_trove_sign_url(chosen_download, game.machine_name)
+                    urls = await self._api.sign_url_trove(curr_os_download, game.machine_name)
                 except AuthenticationRequired:
                     logging.info('Looks like your Humble Monthly subscription has expired.')
                     webbrowser.open('https://www.humblebundle.com/subscription/home')
                 else:
-                    webbrowser.open(url['signed_url'])
+                    webbrowser.open(urls['signed_url'])
 
         except Exception as e:
-            logging.exception(e, extra={'game': game})
+            logging.error(e, extra={'game': game})
+            raise
         finally:
             self._under_installation.remove(game_id)
 

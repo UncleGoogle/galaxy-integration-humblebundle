@@ -1,8 +1,7 @@
-import abc
-from typing import Optional
+from typing import Optional, List
 
 
-class DownloadStruct(abc.ABC):
+class DownloadStructItem():
     """
     url: Dict[str, str]         # {'bittorent': str, 'web': str}
     file_size: str
@@ -13,7 +12,7 @@ class DownloadStruct(abc.ABC):
     def __init__(self, data: dict):
         self._data = data
         self.url = data.get('url')
-    
+
     def __str__(self):
         return f"<{self.__class__.__name__}> '{self.name}'"
 
@@ -36,12 +35,12 @@ class DownloadStruct(abc.ABC):
             return None
         return self.url.get('bittorrent')
 
-    @abc.abstractmethod
+    @property
     def human_size(self) -> str:
-        pass
+        return self._data['human_size']
 
 
-class TroveDownload(DownloadStruct):
+class TroveDownload(DownloadStructItem):
     """ Additional fields:
     sha1: str
     timestamp: int          # ?
@@ -49,18 +48,26 @@ class TroveDownload(DownloadStruct):
     size: str
     """
     @property
-    def human_size(self):
+    def human_size(self) -> str:
         return self._data['size']
 
     @property
-    def machine_name(self):
+    def machine_name(self) -> str:
         return self._data['machine_name']
 
 
-class SubproductDownload(DownloadStruct):
-    """ Additional fields:
-    human_size: str
-    """
+class SubproductDownload():
+    def __init__(self, data: dict):
+        self._data = data
+        self._download_struct = [
+            DownloadStructItem(x)
+            for x in data['download_struct']
+        ]
+
     @property
-    def human_size(self):
-        return self._data['human_size']
+    def machine_name(self) -> str:
+        return self._data['machine_name']
+
+    @property
+    def download_struct(self) -> List[DownloadStructItem]:
+        return self._download_struct
