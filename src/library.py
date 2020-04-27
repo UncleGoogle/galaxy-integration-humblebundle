@@ -5,7 +5,7 @@ from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product
-from model.game import HumbleGame, Subproduct, TroveGame, Key, KeyGame
+from model.game import HumbleGame, Subproduct, Key, KeyGame
 from settings import LibrarySettings
 
 
@@ -68,13 +68,6 @@ class LibraryResolver:
         orders = await self.__gather_no_exceptions(order_tasks)
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
-
-    async def _fetch_troves(self, cached_trove_data: list) -> list:
-        troves_no = len(cached_trove_data)
-        from_chunk = troves_no // self._api.TROVES_PER_CHUNK
-        new_commers = await self._api.get_trove_details(from_chunk)
-        new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
-        return cached_trove_data + new_commers[-new_troves_no:]
 
     @staticmethod
     async def __gather_no_exceptions(tasks: Iterable[Coroutine]):

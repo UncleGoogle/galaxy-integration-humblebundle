@@ -18,7 +18,6 @@ class KEY_TYPE(enum.Enum):
 
 class SOURCE(enum.Enum):
     DRM_FREE = 'drm-free'
-    TROVE = 'trove'
     KEYS = 'keys'
 
 
