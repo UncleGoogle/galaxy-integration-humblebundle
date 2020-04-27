@@ -228,7 +228,7 @@ class HumbleBundlePlugin(Plugin):
             if game.key_val is None:
                 gls.tags.append('Unrevealed')
         if isinstance(game, TroveGame):
-            gls.tags = ['Trove']
+            gls.tags = []  # remove redundant tags since Galaxy support for subscripitons
         return gls
 
     async def launch_game(self, game_id):
