@@ -29,9 +29,6 @@ class LibraryResolver:
         for source in self._settings.sources:
             if source == SOURCE.DRM_FREE:
                 all_games.extend(self._get_subproducts(orders))
-            elif source == SOURCE.TROVE:
-                all_games.extend(self._get_trove_games(
-                    self._cache.get('troves', []) + self._cache.get('troves_recent', [])))
             elif source == SOURCE.KEYS:
                 all_games.extend(self._get_keys(orders, self._settings.show_revealed_keys))
 
@@ -63,26 +60,6 @@ class LibraryResolver:
                 }
                 self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
-        if SOURCE.TROVE in sources and await self._api.had_trove_subscription():
-            next_fetch_troves = self._cache.get('next_fetch_troves')
-            if next_fetch_troves is None or time.time() > next_fetch_troves:
-                logging.info('Refreshing all troves')
-                self._cache['troves'] = await self._fetch_troves([])
-                self._cache['next_fetch_troves'] = time.time() + self.NEXT_FETCH_IN
-            else:
-                cached_troves = self._cache.get('troves', [])
-                updated_troves = await self._fetch_troves(cached_troves)
-                if updated_troves:
-                    self._cache['troves'] = updated_troves
-
-            try:  # scrap for newest games as sometimes they are not in standard API yet
-                recently_added = (await self._api.get_montly_trove_data())['newlyAdded']
-            except Exception as e:
-                logging.error(e)
-            else:
-                if recently_added:
-                    self._cache['troves_recent'] = recently_added
-
         self._save_cache(self._cache)
 
     async def _fetch_orders(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
@@ -101,7 +78,7 @@ class LibraryResolver:
 
     @staticmethod
     async def __gather_no_exceptions(tasks: Iterable[Coroutine]):
-        """Wrapper around asyncio.gather(*args, return_exception=True) 
+        """Wrapper around asyncio.gather(*args, return_exception=True)
         Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
         Use case: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/59
         """
@@ -152,17 +129,6 @@ class LibraryResolver:
                     logging.error(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
                     continue
         return subproducts
-
-    @staticmethod
-    def _get_trove_games(troves: list) -> List[TroveGame]:
-        trove_games = []
-        for trove in troves:
-            try:
-                trove_games.append(TroveGame(trove))
-            except Exception as e:
-                logging.error(f"Error while parsing troves {repr(e)}: {troves}", extra={'data': trove})
-                continue
-        return trove_games
 
     @staticmethod
     def _get_keys(orders: list, show_revealed_keys: bool) -> List[KeyGame]:
