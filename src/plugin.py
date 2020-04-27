@@ -15,8 +15,8 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.consts import Platform, OSCompatibility
-from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings
+from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials
 
 from consts import HP, CURRENT_SYSTEM
@@ -132,6 +132,32 @@ class HumbleBundlePlugin(Plugin):
             logging.debug('getting owned games')
             self._owned_games = await self._library_resolver()
             return [g.in_galaxy_format() for g in self._owned_games.values()]
+
+    async def get_subscriptions(self):
+        return [
+            Subscription('Trove', subscription_discovery=SubscriptionDiscovery.USER_ENABLED)
+        ]
+
+    async def _get_trove_games(self):
+        def parse_troves(troves):
+            games = []
+            for trove in troves:
+                try:
+                    games.append(TroveGame(trove).in_galaxy_format())
+                except Exception as e:
+                    logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
+            return games
+
+        newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
+        if newly_added:
+            yield parse_troves(newly_added)
+        async for troves in self._api.get_trove_details():
+            yield parse_troves(troves)
+
+    async def get_subscription_games(self, subscription_name, context):
+        if subscription_name == 'Trove':
+            async for troves in self._get_trove_games():
+                yield troves
 
     async def get_local_games(self):
         self._rescan_needed = True
