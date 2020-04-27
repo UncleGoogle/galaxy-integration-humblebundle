@@ -12,7 +12,7 @@ from consts import IS_WINDOWS
 def candidates():
     """Bunch of owned game names that are candidates for matching algorithm"""
     return set(
-        ['Dummy', 'Trine 2: Complete Story', 'Space Pilgrim Episode III: Delta Pavonis', 'Halcyon 6: LIGHTSPEED EDITION', 'Shank 2', 'AaaaaAAaaaAAAaaAAAAaAAAAA!!! for the Awesome']
+        ['Dummy', 'Haven Moon - DRM free', 'Trine 2: Complete Story', 'Space Pilgrim Episode III: Delta Pavonis', 'Halcyon 6: LIGHTSPEED EDITION', 'Shank 2', 'AaaaaAAaaaAAAaaAAAAaAAAAA!!! for the Awesome']
     )
 
 

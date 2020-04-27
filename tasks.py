@@ -68,7 +68,7 @@ def build(c, output=DIST_PLUGIN):
         try:
             shutil.rmtree(output)
         except OSError as e:
-            if hasattr(e, 'winerror') and e.winerror in [145, 5]:
+            if hasattr(e, 'winerror') and e.winerror in [145, 5]:  # type: ignore
                 # something e.g. antivirus check holds a file. Try to wait to be released for a moment
                 time.sleep(3)
                 shutil.rmtree(output)
