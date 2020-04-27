@@ -7,6 +7,7 @@ Integration for GOG Galaxy 2.0.
 * Library:
     * DRM free direct downloads from HumbleBundle
     * Third party game keys
+* Subscriptions:
     * Humble Trove games
 * Install: simple download via webbrowser
 * Installed games detection:
@@ -43,6 +44,10 @@ _Requires `python3.6` or higher_
 To open double click "Install" button from any HumbleBundle game view.
 
 <img src="https://i.gyazo.com/b806e5d01590f5c6c48fbe09f9dddb95.gif" width="640" height="300"/>
+
+#### Subscription games
+
+Since v0.8 you the plugin uses Galaxy subscriptions support. To enable Trove games, go to Galaxy `Settings` -> `Features` -> `Subscriptions` under "HUMBLE BUNDLE" -> select `Show Trove`
 
 #### Import Tags
 

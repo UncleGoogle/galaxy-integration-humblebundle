@@ -1,3 +1,11 @@
+## Unreleased
+[Fixed]
+- Downloading DRM-free games
+
+[Changed]
+- support for Trove; now it the plugin uses dedicated interface for subscription games
+
+
 ## Version 0.7.1
 
 [Fixed]
