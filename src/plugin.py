@@ -7,7 +7,7 @@ import webbrowser
 import pathlib
 import json
 from functools import partial
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -19,10 +19,10 @@ from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials, UnknownError
 
-from consts import HP, CURRENT_SYSTEM
+from consts import HP, CURRENT_SYSTEM, SUBSCRIPTIONS
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
-from model.game import TroveGame, Key, Subproduct
+from model.game import TroveGame, Key, Subproduct, HumbleGame
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -58,7 +58,8 @@ class HumbleBundlePlugin(Plugin):
         self._settings = Settings()
         self._library_resolver = None
 
-        self._owned_games = {}
+        self._owned_games: Dict[str, HumbleGame] = {}
+        self._subscription_games: Dict[str, TroveGame] = {}
         self._local_games = {}
         self._cached_game_states = {}
 
@@ -69,6 +70,14 @@ class HumbleBundlePlugin(Plugin):
 
         self._rescan_needed = True
         self._under_installation = set()
+
+    @property
+    def _humble_games(self) -> Dict[str, HumbleGame]:
+        """Alias for cached owned and subscription games mapped by id"""
+        return {
+            **self._owned_games,
+            **self._subscription_games
+        }
 
     def _save_cache(self, key: str, data: Any):
         data = json.dumps(data)
@@ -135,27 +144,29 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_subscriptions(self):
         return [
-            Subscription('Trove', subscription_discovery=SubscriptionDiscovery.USER_ENABLED)
+            Subscription(SUBSCRIPTIONS.TROVE, subscription_discovery=SubscriptionDiscovery.USER_ENABLED)
         ]
 
     async def _get_trove_games(self):
-        def parse_troves(troves):
-            games = []
+        def parse_and_cache(troves):
+            games: List['SubscriptionGame'] = []
             for trove in troves:
                 try:
-                    games.append(TroveGame(trove).in_galaxy_format())
+                    trove_game = TroveGame(trove)
+                    games.append(trove_game.in_galaxy_format())
+                    self._subscription_games[trove_game.machine_name] = trove_game
                 except Exception as e:
                     logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
             return games
 
         newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
         if newly_added:
-            yield parse_troves(newly_added)
+            yield parse_and_cache(newly_added)
         async for troves in self._api.get_trove_details():
-            yield parse_troves(troves)
+            yield parse_and_cache(troves)
 
     async def get_subscription_games(self, subscription_name, context):
-        if subscription_name == 'Trove':
+        if SUBSCRIPTIONS(subscription_name) == SUBSCRIPTIONS.TROVE:
             async for troves in self._get_trove_games():
                 yield troves
 

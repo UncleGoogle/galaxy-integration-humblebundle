@@ -18,6 +18,12 @@ class AsyncMock(MagicMock):
         return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
+async def aiter(seq):
+    """Helper for mocking asynchonous generators"""
+    for item in seq:
+        yield item
+
+
 @pytest.fixture
 def delayed_fn():
     async def fn(delay, awaitable, *args, **kwargs):
@@ -40,6 +46,7 @@ def api_mock_raw():
     mock.authenticate = AsyncMock()
     mock.get_order_details = AsyncMock()
     mock.get_gamekeys = AsyncMock()
+    mock.get_montly_trove_data = AsyncMock()
     mock.had_trove_subscription = AsyncMock()
     mock.get_trove_details = AsyncMock()
     mock.sign_url_trove = AsyncMock()

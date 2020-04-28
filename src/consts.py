@@ -7,6 +7,10 @@ class PlatformNotSupported(Exception):
     pass
 
 
+class SUBSCRIPTIONS(enum.Enum):
+    TROVE = 'Humble Trove'
+
+
 class KEY_TYPE(enum.Enum):
     STEAM = 'steam'
     ORIGIN = 'origin'
