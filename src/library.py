@@ -113,14 +113,15 @@ class LibraryResolver:
         subproducts = []
         for details in orders:
             for sub_data in details['subproducts']:
+                sub = Subproduct(sub_data)
                 try:
-                    sub = Subproduct(sub_data)
-                    if not set(sub.downloads).isdisjoint(GAME_PLATFORMS):
-                        # at least one download exists for supported OS
-                        subproducts.append(sub)
+                    sub.in_galaxy_format()  # minimal validation
                 except Exception as e:
-                    logging.error(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
+                    logging.warning(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
                     continue
+                if not set(sub.downloads).isdisjoint(GAME_PLATFORMS):
+                    # at least one download exists for supported OS
+                    subproducts.append(sub)
         return subproducts
 
     @staticmethod

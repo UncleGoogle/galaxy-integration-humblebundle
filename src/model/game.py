@@ -2,33 +2,18 @@ import abc
 import logging
 from typing import Dict, List, Optional, Any
 
-from galaxy.api.types import Game, LicenseType, LicenseInfo
+from galaxy.api.types import Game, LicenseType, LicenseInfo, SubscriptionGame
 
 from consts import KEY_TYPE, HP
 from model.download import TroveDownload, SubproductDownload
 
 
-class InvalidHumbleGame(Exception):
-    pass
-
-
 class HumbleGame(abc.ABC):
     def __init__(self, data: dict):
         self._data = data
-        self._minimal_validation()
-
-    def _minimal_validation(self):
-        try:
-            self.in_galaxy_format()
-        except KeyError as e:
-            raise InvalidHumbleGame(repr(e))
 
     @abc.abstractproperty
     def downloads(self) -> Dict[HP, Any]:
-        pass
-
-    @abc.abstractproperty
-    def license(self) -> LicenseInfo:
         pass
 
     def os_compatibile(self, os: HP) -> bool:
@@ -73,13 +58,11 @@ class TroveGame(HumbleGame):
         return result
 
     @property
-    def license(self) -> LicenseInfo:
-        """There is currently not 'subscription' type license"""
-        return LicenseInfo(LicenseType.OtherUserLicense)
-
-    @property
     def human_name(self):
         return self._data['human-name']
+
+    def in_galaxy_format(self):
+        return SubscriptionGame(self.machine_name, self.human_name)
 
 
 class Subproduct(HumbleGame):
