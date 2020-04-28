@@ -193,9 +193,9 @@ class HumbleBundlePlugin(Plugin):
 
         self._under_installation.add(game_id)
         try:
-            game = self._owned_games.get(game_id)
+            game = self._humble_games.get(game_id)
             if game is None:
-                logging.error(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
+                logging.error(f'Install game: game {game_id} not found. Owned games: {self._humble_games.keys()}')
                 return
 
             if isinstance(game, Key):
@@ -233,7 +233,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_game_library_settings(self, game_id: str, context: Any) -> GameLibrarySettings:
         gls = GameLibrarySettings(game_id, None, None)
-        game = self._owned_games[game_id]
+        game = self._humble_games[game_id]
         if isinstance(game, Key):
             gls.tags = ['Key']
             if game.key_val is None:
@@ -260,9 +260,9 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
         try:
-            game = self._owned_games[game_id]
+            game = self._humble_games[game_id]
         except KeyError as e:
-            logging.error(e, extra={'owned_games': self._owned_games})
+            logging.error(e, extra={'humble_games': self._humble_games})
             return None
         else:
             HP_OS_MAP = {
@@ -292,21 +292,21 @@ class HumbleBundlePlugin(Plugin):
         get_local_games -> authenticate -> get_local_games -> get_owned_games (at the end!).
         That is why the plugin sets all logic of getting local games in perdiodic checks like this one.
         """
-        if not self._owned_games:
-            logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
+        if not self._humble_games:
+            logging.debug('Skipping perdiodic check for local games as owned/subscription games not found yet.')
             return
 
-        owned_title_id = {
+        installable_title_id = {
             game.human_name: uid for uid, game
-            in self._owned_games.items()
+            in self._humble_games.items()
             if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
         }
         if self._rescan_needed:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning in: {self._settings.installed.search_dirs}')
-            self._local_games = await self._app_finder(owned_title_id, self._settings.installed.search_dirs)
+            self._local_games = await self._app_finder(installable_title_id, self._settings.installed.search_dirs)
         else:
-            self._local_games.update(await self._app_finder(owned_title_id, None))
+            self._local_games.update(await self._app_finder(installable_title_id, None))
         await asyncio.sleep(4)
 
     async def _check_statuses(self):
