@@ -129,10 +129,11 @@ class LibraryResolver:
         keys = []
         for details in orders:
             for tpks in details['tpkd_dict']['all_tpks']:
+                key = Key(tpks)
                 try:
-                    key = Key(tpks)
+                    key.in_galaxy_format()  # minimal validation
                 except Exception as e:
-                    logging.error(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
+                    logging.warning(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
                 else:
                     if key.key_val is None or show_revealed_keys:
                         keys.extend(key.key_games)
