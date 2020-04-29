@@ -131,7 +131,6 @@ class AuthorizedHumbleAPI:
         return parsed
 
     async def get_trove_details(self, from_chunk: int=0):
-        troves: List[str] = []
         index = from_chunk
         while True:
             chunk_details = await self._get_trove_details(index)
