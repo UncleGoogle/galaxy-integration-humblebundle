@@ -91,6 +91,7 @@ class HumbleBundlePlugin(Plugin):
 
     def handshake_complete(self):
         self._last_version = self._load_cache('last_version', default=None)
+        self._subscription_games = {g.machine_name: g for g in self._load_cache('subscription_games', [])}
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
@@ -169,6 +170,10 @@ class HumbleBundlePlugin(Plugin):
         if SUBSCRIPTIONS(subscription_name) == SUBSCRIPTIONS.TROVE:
             async for troves in self._get_trove_games():
                 yield troves
+
+    async def subscription_games_import_complete(self):
+        sub_games_raw_data = [game.serialize() for game in self._subscription_games.values]
+        self._save_cache('subscription_games', sub_games_raw_data)
 
     async def get_local_games(self):
         self._rescan_needed = True
@@ -262,6 +267,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             game = self._humble_games[game_id]
         except KeyError as e:
+            logging.debug(self._humble_games)
             logging.error(e, extra={'humble_games': self._humble_games})
             return None
         else:

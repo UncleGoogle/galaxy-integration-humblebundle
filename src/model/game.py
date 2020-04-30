@@ -62,7 +62,14 @@ class TroveGame(HumbleGame):
         return self._data['human-name']
 
     def in_galaxy_format(self):
-        return SubscriptionGame(self.machine_name, self.human_name)
+        return SubscriptionGame(self.human_name, self.machine_name)
+
+    def serialize(self):
+        return {
+            'human-name': self._data['human-name'],
+            'machine_name': self.data['machine_name'],
+            'downloads': self._data['downloads']
+        }
 
 
 class Subproduct(HumbleGame):
