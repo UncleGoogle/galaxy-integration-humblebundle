@@ -59,7 +59,7 @@ class HumbleBundlePlugin(Plugin):
         self._library_resolver = None
 
         self._owned_games: Dict[str, HumbleGame] = {}
-        self._subscription_games: Dict[str, TroveGame] = {}
+        self._trove_games: Dict[str, TroveGame] = {}
         self._local_games = {}
         self._cached_game_states = {}
 
@@ -76,7 +76,7 @@ class HumbleBundlePlugin(Plugin):
         """Alias for cached owned and subscription games mapped by id"""
         return {
             **self._owned_games,
-            **self._subscription_games
+            **self._trove_games
         }
 
     def _save_cache(self, key: str, data: Any):
@@ -91,7 +91,7 @@ class HumbleBundlePlugin(Plugin):
 
     def handshake_complete(self):
         self._last_version = self._load_cache('last_version', default=None)
-        self._subscription_games = {g.machine_name: g for g in self._load_cache('subscription_games', [])}
+        self._trove_games = {g.machine_name: g for g in self._load_cache('trove_games', [])}
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
@@ -155,7 +155,7 @@ class HumbleBundlePlugin(Plugin):
                 try:
                     trove_game = TroveGame(trove)
                     games.append(trove_game.in_galaxy_format())
-                    self._subscription_games[trove_game.machine_name] = trove_game
+                    self._trove_games[trove_game.machine_name] = trove_game
                 except Exception as e:
                     logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
             return games
@@ -172,8 +172,8 @@ class HumbleBundlePlugin(Plugin):
                 yield troves
 
     async def subscription_games_import_complete(self):
-        sub_games_raw_data = [game.serialize() for game in self._subscription_games.values]
-        self._save_cache('subscription_games', sub_games_raw_data)
+        sub_games_raw_data = [game.serialize() for game in self._trove_games.values]
+        self._save_cache('trove_games', sub_games_raw_data)
 
     async def get_local_games(self):
         self._rescan_needed = True

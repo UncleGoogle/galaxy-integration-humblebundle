@@ -67,7 +67,7 @@ async def test_subscription_games_cache_trove(api_mock, plugin):
     ctx = None
     async for bunch in plugin.get_subscription_games('Humble Trove', ctx):
         pass
-    assert plugin._subscription_games == {
+    assert plugin._trove_games == {
         'a': TroveGame({'human-name': 'A', 'machine_name': 'a'}),
         'b': TroveGame({'human-name': 'B', 'machine_name': 'b'}),
         'c': TroveGame({'human-name': 'C', 'machine_name': 'c'}),
