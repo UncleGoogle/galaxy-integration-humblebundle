@@ -56,7 +56,7 @@ class Options(BaseApp):
         self._cfg.library.show_revealed_keys = el.is_on
         if self._cfg.library.has_changed():
             self._cfg.save_config()
-    
+
     def __cfg_add_path(self, raw_path: str) -> Optional[str]:
         """Adds path to config file and returns its normalized form"""
         path = pathlib.Path(raw_path).resolve()
@@ -103,12 +103,12 @@ class Options(BaseApp):
             self.__cfg_remove_path(row.path)
             self._paths_table.data.remove(row)
         self._remove_btn.enabled = self._paths_table.not_empty
-    
+
     def _library_section(self) -> toga.Widget:
-        desc = "Choose HumbleBundle game types to be shown in your GOG Galaxy library."
+        desc = "Choose HumbleBundle game types to be shown in your GOG Galaxy library.\n" \
+               "For trove games go to Galaxy Settings->Features"
         source_help = {
             SOURCE.DRM_FREE: "Games from www.humblebundle.com/home/library that have direct download for Windows, Mac or Linux",
-            SOURCE.TROVE: "Games from Humble Trove games (requires to be an active or past subscriber).",
             SOURCE.KEYS: "Game keys to be redeemed in foreign services like Steam or Origin."
         }
         show_revealed_help = 'Check to show all game keys as separate games.\n' \
@@ -119,7 +119,7 @@ class Options(BaseApp):
         rows = [description]
         self.show_revealed_sw = toga.Switch(
             'show_revealed_keys',
-            on_toggle=self._on_revealed_switch, 
+            on_toggle=self._on_revealed_switch,
             is_on=self._cfg.library.show_revealed_keys,
             enabled=SOURCE.KEYS in self._cfg.library.sources,
             style=Pack(padding_left=20, padding_top=2)
@@ -201,7 +201,7 @@ class Options(BaseApp):
         return box
 
     def startup_method(self) -> toga.Widget:
-        main_container = OptionContainer() 
+        main_container = OptionContainer()
 
         sections = {
             'Library': self._library_section,
@@ -219,5 +219,5 @@ class Options(BaseApp):
             main_container.open_tab(0)
         if self._mode == OPTIONS_MODE.NEWS:
             main_container.open_tab(2)
-        
+
         return main_container

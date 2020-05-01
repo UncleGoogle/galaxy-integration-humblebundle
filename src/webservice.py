@@ -131,7 +131,6 @@ class AuthorizedHumbleAPI:
         return parsed
 
     async def get_trove_details(self, from_chunk: int=0):
-        troves: List[str] = []
         index = from_chunk
         while True:
             chunk_details = await self._get_trove_details(index)
@@ -140,10 +139,9 @@ class AuthorizedHumbleAPI:
                 raise UnknownBackendResponse()
             elif len(chunk_details) == 0:
                 logging.debug('No more chunk pages')
-                break
-            troves += chunk_details
+                return
+            yield chunk_details
             index += 1
-        return troves
 
     async def sign_download(self, machine_name: str, filename: str):
         res = await self._request('post', self._DOWNLOAD_SIGN, params={

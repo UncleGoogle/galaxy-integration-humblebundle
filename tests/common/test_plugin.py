@@ -105,6 +105,6 @@ async def test_library_settings_key(plugin):
 
     ctx = await plugin.prepare_game_library_settings_context(['b', 'c', 'd', 'a'])
     assert await plugin.get_game_library_settings('a', ctx) == GameLibrarySettings('a', None, None)
-    assert await plugin.get_game_library_settings('b', ctx) == GameLibrarySettings('b', ['Trove'], None)
+    assert await plugin.get_game_library_settings('b', ctx) == GameLibrarySettings('b', [], None)
     assert await plugin.get_game_library_settings('c', ctx) == GameLibrarySettings('c', ['Key'], None)
     assert await plugin.get_game_library_settings('d', ctx) == GameLibrarySettings('d', ['Key', 'Unrevealed'], None)

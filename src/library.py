@@ -5,7 +5,7 @@ from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
 from model.product import Product
-from model.game import HumbleGame, Subproduct, TroveGame, Key, KeyGame
+from model.game import HumbleGame, Subproduct, Key, KeyGame
 from settings import LibrarySettings
 
 
@@ -29,9 +29,6 @@ class LibraryResolver:
         for source in self._settings.sources:
             if source == SOURCE.DRM_FREE:
                 all_games.extend(self._get_subproducts(orders))
-            elif source == SOURCE.TROVE:
-                all_games.extend(self._get_trove_games(
-                    self._cache.get('troves', []) + self._cache.get('troves_recent', [])))
             elif source == SOURCE.KEYS:
                 all_games.extend(self._get_keys(orders, self._settings.show_revealed_keys))
 
@@ -63,26 +60,6 @@ class LibraryResolver:
                 }
                 self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
-        if SOURCE.TROVE in sources and await self._api.had_trove_subscription():
-            next_fetch_troves = self._cache.get('next_fetch_troves')
-            if next_fetch_troves is None or time.time() > next_fetch_troves:
-                logging.info('Refreshing all troves')
-                self._cache['troves'] = await self._fetch_troves([])
-                self._cache['next_fetch_troves'] = time.time() + self.NEXT_FETCH_IN
-            else:
-                cached_troves = self._cache.get('troves', [])
-                updated_troves = await self._fetch_troves(cached_troves)
-                if updated_troves:
-                    self._cache['troves'] = updated_troves
-
-            try:  # scrap for newest games as sometimes they are not in standard API yet
-                recently_added = (await self._api.get_montly_trove_data())['newlyAdded']
-            except Exception as e:
-                logging.error(e)
-            else:
-                if recently_added:
-                    self._cache['troves_recent'] = recently_added
-
         self._save_cache(self._cache)
 
     async def _fetch_orders(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
@@ -92,16 +69,9 @@ class LibraryResolver:
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
 
-    async def _fetch_troves(self, cached_trove_data: list) -> list:
-        troves_no = len(cached_trove_data)
-        from_chunk = troves_no // self._api.TROVES_PER_CHUNK
-        new_commers = await self._api.get_trove_details(from_chunk)
-        new_troves_no = (len(new_commers) + from_chunk * self._api.TROVES_PER_CHUNK) - troves_no
-        return cached_trove_data + new_commers[-new_troves_no:]
-
     @staticmethod
     async def __gather_no_exceptions(tasks: Iterable[Coroutine]):
-        """Wrapper around asyncio.gather(*args, return_exception=True) 
+        """Wrapper around asyncio.gather(*args, return_exception=True)
         Returns list of non-exception items. If every item is exception, raise first of them, else logs them.
         Use case: https://github.com/UncleGoogle/galaxy-integration-humblebundle/issues/59
         """
@@ -143,36 +113,27 @@ class LibraryResolver:
         subproducts = []
         for details in orders:
             for sub_data in details['subproducts']:
+                sub = Subproduct(sub_data)
                 try:
-                    sub = Subproduct(sub_data)
-                    if not set(sub.downloads).isdisjoint(GAME_PLATFORMS):
-                        # at least one download exists for supported OS
-                        subproducts.append(sub)
+                    sub.in_galaxy_format()  # minimal validation
                 except Exception as e:
-                    logging.error(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
+                    logging.warning(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
                     continue
+                if not set(sub.downloads).isdisjoint(GAME_PLATFORMS):
+                    # at least one download exists for supported OS
+                    subproducts.append(sub)
         return subproducts
-
-    @staticmethod
-    def _get_trove_games(troves: list) -> List[TroveGame]:
-        trove_games = []
-        for trove in troves:
-            try:
-                trove_games.append(TroveGame(trove))
-            except Exception as e:
-                logging.error(f"Error while parsing troves {repr(e)}: {troves}", extra={'data': trove})
-                continue
-        return trove_games
 
     @staticmethod
     def _get_keys(orders: list, show_revealed_keys: bool) -> List[KeyGame]:
         keys = []
         for details in orders:
             for tpks in details['tpkd_dict']['all_tpks']:
+                key = Key(tpks)
                 try:
-                    key = Key(tpks)
+                    key.in_galaxy_format()  # minimal validation
                 except Exception as e:
-                    logging.error(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
+                    logging.warning(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
                 else:
                     if key.key_val is None or show_revealed_keys:
                         keys.extend(key.key_games)

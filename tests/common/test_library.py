@@ -1,6 +1,5 @@
 import pytest
 import time
-import json
 from functools import partial
 from unittest.mock import Mock
 
@@ -9,7 +8,7 @@ from galaxy.api.errors import UnknownError
 from consts import SOURCE
 from settings import LibrarySettings
 from library import LibraryResolver
-from model.game import Subproduct, Key, TroveGame
+from model.game import Subproduct, Key
 
 
 @pytest.fixture
@@ -29,15 +28,6 @@ def change_settings():
     def fn(plugin, lib_config):
         plugin._library_resolver._settings.update(lib_config)
     return fn
-
-
-@pytest.fixture
-def get_torchlight_trove(get_troves):
-    troves_data = get_troves(from_index=0)
-    for i in troves_data:
-        if i['machine_name'] == 'torchlight_trove':
-            trove_torchlight = i
-    return trove_torchlight, TroveGame(trove_torchlight)
 
 
 @pytest.fixture
@@ -71,31 +61,7 @@ async def test_library_cache_key(create_resolver, get_torchlight):
     assert {key.machine_name: key} == await library(only_cache=True)
 
 
-@pytest.mark.asyncio
-async def test_library_cache_trove(create_resolver, get_torchlight_trove):
-    trove_raw, trove_game = get_torchlight_trove
-    sources = {SOURCE.TROVE}
-    cache = {'troves': [trove_raw]}
-    library = create_resolver(LibrarySettings(sources), cache)
-    assert {trove_game.machine_name: trove_game} == await library(only_cache=True)
-
-
 # ------ library: fetching info from API ---------
-
-@pytest.mark.asyncio
-async def test_library_trove(plugin, get_torchlight_trove, change_settings):
-    trove_torch_data, trove = get_torchlight_trove
-
-    change_settings(plugin, {'sources': ['trove']})
-    result = await plugin._library_resolver()
-    assert result[trove.machine_name] == trove
-    assert trove_torch_data in json.loads(plugin.persistent_cache['library'])['troves']
-
-    # cache and calls to api
-    assert plugin._api.get_gamekeys.call_count == 0  # only troves are checked
-    assert plugin._api.get_order_details.call_count == 0
-    assert plugin._api.get_trove_details.call_count == 1  # from chunk no. 0
-
 
 @pytest.mark.asyncio
 async def test_library_cache_orders(plugin, get_torchlight, change_settings):
@@ -153,18 +119,15 @@ async def test_library_fetch_with_cache_orders(plugin, get_torchlight, change_se
 @pytest.mark.asyncio
 async def test_library_cache_period(plugin, change_settings, orders_keys):
     """Refresh reveals keys only if needed"""
-    change_settings(plugin, {'sources': ['keys', 'trove'], 'show_revealed_keys': False})
+    change_settings(plugin, {'sources': ['keys'], 'show_revealed_keys': False})
 
     # set expired next fetch
     plugin._library_resolver._cache['next_fetch_orders'] = time.time() - 10
-    plugin._library_resolver._cache['next_fetch_troves'] = time.time() - 10
 
     # cache "fetch_in" time has passed: refresh all
     await plugin._library_resolver()
     assert plugin._api.get_gamekeys.call_count == 1
-    assert plugin._api.get_trove_details.call_count == 1
     assert plugin._api.get_order_details.call_count == len(orders_keys)
-    assert plugin._api.had_trove_subscription.call_count == 1
 
 
 # --------test fetching orders-------------------

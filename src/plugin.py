@@ -7,7 +7,7 @@ import webbrowser
 import pathlib
 import json
 from functools import partial
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -15,14 +15,14 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.consts import Platform, OSCompatibility
-from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings
+from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials, UnknownError
 
-from consts import HP, CURRENT_SYSTEM
+from consts import HP, CURRENT_SYSTEM, SUBSCRIPTIONS
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
-from model.game import TroveGame, Key, Subproduct
+from model.game import TroveGame, Key, Subproduct, HumbleGame
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -58,7 +58,8 @@ class HumbleBundlePlugin(Plugin):
         self._settings = Settings()
         self._library_resolver = None
 
-        self._owned_games = {}
+        self._owned_games: Dict[str, HumbleGame] = {}
+        self._trove_games: Dict[str, TroveGame] = {}
         self._local_games = {}
         self._cached_game_states = {}
 
@@ -69,6 +70,14 @@ class HumbleBundlePlugin(Plugin):
 
         self._rescan_needed = True
         self._under_installation = set()
+
+    @property
+    def _humble_games(self) -> Dict[str, HumbleGame]:
+        """Alias for cached owned and subscription games mapped by id"""
+        return {
+            **self._owned_games,
+            **self._trove_games
+        }
 
     def _save_cache(self, key: str, data: Any):
         data = json.dumps(data)
@@ -82,6 +91,7 @@ class HumbleBundlePlugin(Plugin):
 
     def handshake_complete(self):
         self._last_version = self._load_cache('last_version', default=None)
+        self._trove_games = {g.machine_name: g for g in self._load_cache('trove_games', [])}
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
@@ -133,6 +143,38 @@ class HumbleBundlePlugin(Plugin):
             self._owned_games = await self._library_resolver()
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
+    async def get_subscriptions(self):
+        return [
+            Subscription(SUBSCRIPTIONS.TROVE, subscription_discovery=SubscriptionDiscovery.USER_ENABLED)
+        ]
+
+    async def _get_trove_games(self):
+        def parse_and_cache(troves):
+            games: List['SubscriptionGame'] = []
+            for trove in troves:
+                try:
+                    trove_game = TroveGame(trove)
+                    games.append(trove_game.in_galaxy_format())
+                    self._trove_games[trove_game.machine_name] = trove_game
+                except Exception as e:
+                    logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
+            return games
+
+        newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
+        if newly_added:
+            yield parse_and_cache(newly_added)
+        async for troves in self._api.get_trove_details():
+            yield parse_and_cache(troves)
+
+    async def get_subscription_games(self, subscription_name, context):
+        if SUBSCRIPTIONS(subscription_name) == SUBSCRIPTIONS.TROVE:
+            async for troves in self._get_trove_games():
+                yield troves
+
+    async def subscription_games_import_complete(self):
+        sub_games_raw_data = [game.serialize() for game in self._trove_games.values]
+        self._save_cache('trove_games', sub_games_raw_data)
+
     async def get_local_games(self):
         self._rescan_needed = True
         return [g.in_galaxy_format() for g in self._local_games.values()]
@@ -156,9 +198,9 @@ class HumbleBundlePlugin(Plugin):
 
         self._under_installation.add(game_id)
         try:
-            game = self._owned_games.get(game_id)
+            game = self._humble_games.get(game_id)
             if game is None:
-                logging.error(f'Install game: game {game_id} not found. Owned games: {self._owned_games.keys()}')
+                logging.error(f'Install game: game {game_id} not found. Owned games: {self._humble_games.keys()}')
                 return
 
             if isinstance(game, Key):
@@ -196,13 +238,13 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_game_library_settings(self, game_id: str, context: Any) -> GameLibrarySettings:
         gls = GameLibrarySettings(game_id, None, None)
-        game = self._owned_games[game_id]
+        game = self._humble_games[game_id]
         if isinstance(game, Key):
             gls.tags = ['Key']
             if game.key_val is None:
                 gls.tags.append('Unrevealed')
         if isinstance(game, TroveGame):
-            gls.tags = ['Trove']
+            gls.tags = []  # remove redundant tags since Galaxy support for subscripitons
         return gls
 
     async def launch_game(self, game_id):
@@ -223,9 +265,10 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
         try:
-            game = self._owned_games[game_id]
+            game = self._humble_games[game_id]
         except KeyError as e:
-            logging.error(e, extra={'owned_games': self._owned_games})
+            logging.debug(self._humble_games)
+            logging.error(e, extra={'humble_games': self._humble_games})
             return None
         else:
             HP_OS_MAP = {
@@ -255,21 +298,21 @@ class HumbleBundlePlugin(Plugin):
         get_local_games -> authenticate -> get_local_games -> get_owned_games (at the end!).
         That is why the plugin sets all logic of getting local games in perdiodic checks like this one.
         """
-        if not self._owned_games:
-            logging.debug('Skipping perdiodic check for local games as owned games not found yet.')
+        if not self._humble_games:
+            logging.debug('Skipping perdiodic check for local games as owned/subscription games not found yet.')
             return
 
-        owned_title_id = {
+        installable_title_id = {
             game.human_name: uid for uid, game
-            in self._owned_games.items()
+            in self._humble_games.items()
             if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
         }
         if self._rescan_needed:
             self._rescan_needed = False
             logging.debug(f'Checking installed games with path scanning in: {self._settings.installed.search_dirs}')
-            self._local_games = await self._app_finder(owned_title_id, self._settings.installed.search_dirs)
+            self._local_games = await self._app_finder(installable_title_id, self._settings.installed.search_dirs)
         else:
-            self._local_games.update(await self._app_finder(owned_title_id, None))
+            self._local_games.update(await self._app_finder(installable_title_id, None))
         await asyncio.sleep(4)
 
     async def _check_statuses(self):
