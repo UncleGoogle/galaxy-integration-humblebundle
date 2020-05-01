@@ -36,13 +36,13 @@ async def test_subscription_games_trove(api_mock, plugin):
         trove_games.extend(bunch)
     assert sorted(trove_games, key=lambda x: x.game_id) \
         == sorted([
-            SubscriptionGame('a', 'A'),
-            SubscriptionGame('b', 'B'),
-            SubscriptionGame('c', 'C'),
-            SubscriptionGame('d', 'D'),
-            SubscriptionGame('e', 'E'),
-            SubscriptionGame('z', 'Z'),
-            SubscriptionGame('a', 'A')  # don't mind returning 2 times the same item
+            SubscriptionGame('A', 'a'),
+            SubscriptionGame('B', 'b'),
+            SubscriptionGame('C', 'c'),
+            SubscriptionGame('D', 'd'),
+            SubscriptionGame('E', 'e'),
+            SubscriptionGame('Z', 'z'),
+            SubscriptionGame('A', 'a')  # don't mind returning 2 times the same item
         ], key=lambda x: x.game_id)
 
 
