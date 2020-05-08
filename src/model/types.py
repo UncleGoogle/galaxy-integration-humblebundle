@@ -32,3 +32,7 @@ class DeliveryMethod(enum.Enum):
     GOG = 'gog'
     DOWNLOAD = 'download'
 
+
+class ExtrasType(enum.Enum):
+    # TODO discover more
+    DRM_FREE = 'DRM-free Game'
