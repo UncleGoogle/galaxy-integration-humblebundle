@@ -116,19 +116,23 @@ class AuthorizedHumbleAPI:
             logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
             return False
 
+    async def _get_webpack_data(self, path: str, webpack_id: str) -> dict:
+        res = await self._request('GET', path)
+        txt = await res.text()
+        search = f'<script id="{webpack_id}" type="application/json">'
+        json_start = txt.find(search) + len(search)
+        candidate = txt[json_start:].strip()
+        parsed, _ = json.JSONDecoder().raw_decode(candidate)
+        return parsed
+
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
         Returns json containing "newlyAdded" trove games and "standardProducts" that is
         the same like output from api/v1/trove/chunk/index=0
         "standardProducts" may not contain "newlyAdded" sometimes
         """
-        res = await self._request('get', self._SUBSCRIPTION_TROVE)
-        txt = await res.text()
-        search = '<script id="webpack-monthly-trove-data" type="application/json">'
-        json_start = txt.find(search) + len(search)
-        candidate = txt[json_start:].strip()
-        parsed, _ = json.JSONDecoder().raw_decode(candidate)
-        return parsed
+        webpack_id = "webpack-monthly-trove-data"
+        return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
 
     async def get_trove_details(self, from_chunk: int=0):
         index = from_chunk
