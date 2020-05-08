@@ -1,9 +1,9 @@
-from consts import HP, CURRENT_SYSTEM
+from consts import IS_MAC, IS_WINDOWS
 
 
-if CURRENT_SYSTEM == HP.WINDOWS:
+if IS_WINDOWS:
     from local.winappfinder import WindowsAppFinder as AppFinder  # noqa
-elif CURRENT_SYSTEM == HP.MAC:
+elif IS_MAC:
     from local.macappfinder import MacAppFinder as AppFinder  # type: ignore[misc] # noqa
 else:
-    raise RuntimeError(f'Unsupported system: {CURRENT_SYSTEM}')
+    raise RuntimeError(f'Unsupported system')

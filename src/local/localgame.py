@@ -6,7 +6,7 @@ from typing import Optional
 
 from galaxy.api.types import LocalGameState, LocalGame
 
-from consts import HP, CURRENT_SYSTEM
+from consts import IS_WINDOWS, IS_MAC
 
 DETACHED_PROCESS = 0b0001000
 
@@ -49,20 +49,20 @@ class LocalHumbleGame:
 
     def in_galaxy_format(self):
         return LocalGame(self.machine_name, self.state)
-    
+
     @property
     def bundle_name(self) -> Optional[pathlib.Path]:
-        assert CURRENT_SYSTEM == HP.MAC, "macos only property"
+        assert IS_MAC, "macos only property"
         for p in self.executable.parents:
             if p.suffix == '.app':
                 return p
         return None
 
     def run(self):
-        if CURRENT_SYSTEM == HP.WINDOWS:
+        if IS_WINDOWS:
             flags = DETACHED_PROCESS
             proc = subprocess.Popen(str(self.executable), cwd=self.executable.parent, creationflags=flags)
-        elif CURRENT_SYSTEM == HP.MAC:
+        elif IS_MAC:
             '''
             -a   Opens with the specified application.
             -W   Blocks until the used applications are closed (even if they were already running).

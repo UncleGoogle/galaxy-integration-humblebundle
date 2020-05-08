@@ -19,10 +19,11 @@ from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials, UnknownError
 
-from consts import HP, CURRENT_SYSTEM, SUBSCRIPTIONS
+from consts import SUBSCRIPTIONS, IS_WINDOWS
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame
+from model.platform import HP
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -212,7 +213,8 @@ class HumbleBundlePlugin(Plugin):
                 return
 
             try:
-                curr_os_download = game.downloads[CURRENT_SYSTEM]
+                platform = HP.WINDOWS if IS_WINDOWS else HP.MAC
+                curr_os_download = game.downloads[platform]
             except KeyError:
                 raise UnknownError(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')
 
@@ -302,10 +304,11 @@ class HumbleBundlePlugin(Plugin):
             logging.debug('Skipping perdiodic check for local games as owned/subscription games not found yet.')
             return
 
+        platform = HP.WINDOWS if IS_WINDOWS else HP.MAC
         installable_title_id = {
             game.human_name: uid for uid, game
             in self._humble_games.items()
-            if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
+            if not isinstance(game, Key) and game.os_compatibile(platform)
         }
         if self._rescan_needed:
             self._rescan_needed = False
