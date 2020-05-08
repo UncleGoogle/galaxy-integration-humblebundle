@@ -21,3 +21,14 @@ class HP(enum.Enum):
 
     def __hash__(self):
         return hash(self.value)
+
+
+class DeliveryMethod(enum.Enum):
+    STEAM = 'steam'
+    ORIGIN = 'origin'
+    UPLAY = 'uplay'
+    EPIC = 'epic'
+    BATTLENET = 'battlenet'
+    GOG = 'gog'
+    DOWNLOAD = 'download'
+

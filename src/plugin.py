@@ -23,7 +23,7 @@ from consts import SUBSCRIPTIONS, IS_WINDOWS
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame
-from model.platform import HP
+from model.types import HP
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder

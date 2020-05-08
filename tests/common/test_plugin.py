@@ -9,7 +9,7 @@ from consts import IS_WINDOWS, IS_MAC
 from local.localgame import LocalHumbleGame
 from model.game import Subproduct, KeyGame, TroveGame
 from model.download import TroveDownload
-from model.platform import HP
+from model.types import HP
 
 
 @pytest.mark.asyncio
