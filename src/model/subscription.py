@@ -102,7 +102,7 @@ class Extras:
 
 class ContentChoiceOptions:
     def __init__(self, data: dict):
-        self.MAX_CHOISES: int = data['MAC_CHOISES']
+        self.MAX_CHOICES: int = data['MAC_CHOICES']
         self.gamekey: str = data['gamekey']
         self.is_active_content: bool = data['isActiveContent']
         self.product_url_path: str = data['productUrlPath']
