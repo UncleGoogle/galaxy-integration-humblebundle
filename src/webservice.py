@@ -1,6 +1,6 @@
 from http.cookies import SimpleCookie
 from http import HTTPStatus
-from typing import List, Optional
+from typing import List, Optional, Dict
 import aiohttp
 import json
 import base64
@@ -21,6 +21,7 @@ class AuthorizedHumbleAPI:
     _ORDER_URL = "/api/v1/order/{}"
 
     TROVES_PER_CHUNK = 20
+    _SUBSCRIPTION = 'subscription'
     _SUBSCRIPTION_HOME = 'subscription/home'
     _SUBSCRIPTION_TROVE = 'subscription/trove'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
@@ -134,6 +135,12 @@ class AuthorizedHumbleAPI:
         """
         webpack_id = "webpack-monthly-trove-data"
         return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
+
+    async def get_choice_months(self) -> list:
+        webpack_id = "webpack-choice-marketing-data"
+        data = await self._get_webpack_data(self._SUBSCRIPTION, webpack_id)
+        month_details = data['monthDetails']
+        return [month_details['active_month'], *month_details['previous_months']]
 
     async def get_montly_content_data(self, product_url_path) -> MontlyContentData:
         """
