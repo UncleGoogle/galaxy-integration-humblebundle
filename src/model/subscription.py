@@ -6,22 +6,56 @@ from model.game import HumbleGame, Key
 from model.types import HP, DeliveryMethod
 
 
-class UserSubscriptionPlan:
+class ChoiceMonth:
     """
-    "human_name": "Month-to-Month Classic Plan",
-    "length": 1,
-    "machine_name": "monthly_basic",
-    "pricing|money": {
-        "currency": "USD",
-        "amount": 12
-        }
-    "user_max_reward_amount": 20
+    {
+        "additional_items_text": "DiRT Rally 2.0 + 3 DLCs, Street Fighter V, Bad North: Jotunn Edition, Trailmakers, Unrailed!, Whispers of a Machine, Them's Fightin' Herds, Mages of Mystralia, and GRIP + 1 DLC",
+        "machine_name": "january_2020_choice",
+        "short_human_name": "January 2020",
+        "image_human_names": {
+          "grip": "GRIP + 1 DLC",
+          "graveyardkeeper": "Graveyard Keeper",
+          "..."
+        },
+        "month_string": "February",
+        "early_unlock_logos": [
+          "https://hb.imgix.net/9a6a64a968664683d0948c03012adb779c5d59e1.png?auto=compress,format&w=650&s=dd323d59e5db2a4ce5e103e70ff59c70"
+        ],
+        "image_grid": {
+          "width": 308,
+          "size_override": null,
+          "displayitem_image_info": {
+            "grip": {
+              "standard_url": "https://hb.imgix.net/a8589ac1102547877319717a3a37b02bfc1b6341.jpeg?auto=compress,format&dpr=1&fit=clip&h=177&w=308&s=812e5702ffd184571eab42d45f5bb73d",
+              "blocked_territories": [],
+              "allowed_territories": null,
+              "hide_from_hero_tile": null,
+              "retina_url": "https://hb.imgix.net/a8589ac1102547877319717a3a37b02bfc1b6341.jpeg?auto=compress,format&dpr=2&fit=clip&h=177&w=308&s=fd99859c52ac37a864f106c831d433d2"
+            },
+            "...": {}
+          },
+          "height": 177
+        },
+        "charity_logo": "https://hb.imgix.net/ca5838784ea6a6e1f60ee1ef183036548384e75d.png?auto=compress,format&fit=clip&h=165&w=260&s=b58e3c3db87a698ae2563489725d836b",
+        "monthly_product_page_url": "/subscription/january-2020",
+        "grid_display_order": [
+          "middleearth_shadowofwar",
+          "graveyardkeeper",
+          "..."
+        ],
+        "charity_name": "Girls Inc.",
+        "item_count": 12,
+        "msrp|money": {
+          "currency": "EUR",
+          "amount": 302
+        },
+        "charity_video_url": "ngmfbcEktXU"
+      },
     """
     def __init__(self, data: dict):
-        self.human_name: str = data['human_name']
         self.machine_name: str = data['machine_name']
-        self.length: int  = data['length']
-
+        self.short_human_name: str = data['short_human_name']
+        self.item_count: int = data['item_count']
 
 
 class Section():
@@ -81,7 +115,7 @@ class Extras:
 
 class ContentChoiceOptions:
     def __init__(self, data: dict):
-        self.MAX_CHOICES: int = data['MAC_CHOICES']
+        self.MAX_CHOICES: int = data['MAX_CHOICES']
         self.gamekey: str = data['gamekey']
         self.is_active_content: bool = data['isActiveContent']
         self.product_url_path: str = data['productUrlPath']
@@ -89,9 +123,9 @@ class ContentChoiceOptions:
         self.is_choice_tier: bool = data['isChoiceTier']
         self.product_machine_name: str = data['productMachineName']
 
-        self.unlocked_conntent_event: t.Optional[str] = data.get('unlockedContentEvents')
+        self.unlocked_conntent_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
-        self.title: str = data['contentChoiceData']['initial']['title']
+        self.title: str = data['title']
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c)
             for id, c
@@ -101,14 +135,13 @@ class ContentChoiceOptions:
             Extras(extras) for extras
             in data['contentChoiceData']['extras']
         ]
+        self._content_choices_made = data.get('contentChoicesMade')
 
     @property
-    def machine_name(self) -> str:
-        return self.product_machine_name
-
-    @property
-    def human_name(self) -> str:
-        return self.title
+    def content_choices_made(self) -> t.Optional[t.List[str]]:
+        if self._content_choices_made:
+            return self._content_choices_made['initial']['choices_made']
+        return None
 
 
 class MontlyContentData:
@@ -149,7 +182,7 @@ class MontlyContentData:
     def __init__(self, data: dict):
         base = data['webpack_json']
         self.user_options: dict = base['userOptions']
-        self.user_subscription_plan = UserSubscriptionPlan(base['userSubscriptionPlan'])
+        self.user_subscription_plan: t.Optional[dict] = base['userSubscriptionPlan']
 
         content = data['navbarOptions']
         self.product_human_name: str = content['product_human_name']
@@ -178,7 +211,7 @@ class ChoiceContentData:
     """
     def __init__(self, data: dict):
         self.user_options: dict = data['userOptions']
-        self.user_subscription_plan = UserSubscriptionPlan(data['userSubscriptionPlan'])
+        self.user_subscription_plan: t.Optional[dict] = data['userSubscriptionPlan']
         self.pay_early_option: dict = data['payEarlyOptions']
         self.content_choice_options = ContentChoiceOptions(data['contentChoiceOptions'])
 
@@ -196,4 +229,4 @@ class ChoiceContentData:
 
     @property
     def human_name(self) -> str:
-        return self.content_choice_options.human_name
+        return self.content_choice_options.title

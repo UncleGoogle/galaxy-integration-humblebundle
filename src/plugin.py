@@ -145,9 +145,50 @@ class HumbleBundlePlugin(Plugin):
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     async def get_subscriptions(self):
-        return [
-            Subscription(SUBSCRIPTIONS.TROVE, subscription_discovery=SubscriptionDiscovery.USER_ENABLED)
-        ]
+        subscriptions: List[Subscription] = []
+        is_active_subscriber = False
+
+        user_choice_products = await self._api.get_choice_products()
+        for product in user_choice_products:
+            subscriptions.append(
+                Subscription(
+                    subscription_name=product.title,
+                    owned=True,
+                    subscription_discovery=SubscriptionDiscovery.AUTOMATIC
+                )
+            )
+            if product.is_active_content:
+                is_active_subscriber = True
+
+        if not is_active_subscriber:
+            '''
+            For those who has not used "Early Unlock" we need to check if they have active plan
+            https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
+            '''
+            choice_months_details = await self._api.get_choice_month_details()
+            active_month = choice_months_details['active_month']
+            active_month_content = await self._api.get_choice_content_data(
+                active_month['montly_product_page_url']
+            )
+            if active_month_content.user_subscription_plan is not None:
+                is_active_subscriber = True
+                subscriptions.append(
+                    Subscription(
+                        subscription_name=active_month['short_human_name'],
+                        owned=True,
+                        subscription_discovery=SubscriptionDiscovery.AUTOMATIC
+                    )
+                )
+
+        subscriptions.append(
+            Subscription(
+                subscription_name=SUBSCRIPTIONS.TROVE,
+                owned=is_active_subscriber,
+                subscription_discovery=SubscriptionDiscovery.AUTOMATIC | SubscriptionDiscovery.USER_ENABLED
+            )
+        )
+
+        return subscriptions
 
     async def _get_trove_games(self):
         def parse_and_cache(troves):

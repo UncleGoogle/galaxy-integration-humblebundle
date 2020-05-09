@@ -11,7 +11,7 @@ from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
 from model.download import TroveDownload, DownloadStructItem, SubproductDownload
-from model.subscription import MontlyContentData, ChoiceContentData
+from model.subscription import MontlyContentData, ChoiceContentData, ContentChoiceOptions
 
 
 class AuthorizedHumbleAPI:
@@ -24,6 +24,7 @@ class AuthorizedHumbleAPI:
     _SUBSCRIPTION = 'subscription'
     _SUBSCRIPTION_HOME = 'subscription/home'
     _SUBSCRIPTION_TROVE = 'subscription/trove'
+    _SUBSCRIPTION_PRODUCTS = 'api/v1/subscriptions/humble_monthly/subscription_products_with_gamekeys'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
     _DOWNLOAD_SIGN = 'api/v1/user/download/sign'
     _HUMBLER_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
@@ -105,6 +106,15 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
 
+    async def get_choice_products(self) -> List[ContentChoiceOptions]:
+        """
+        WARGNING: Does not return all subscription games for given months (only some that are displayed in subscription/home).
+        Use `get_choice_content_data` for full list
+        """
+        res = await self._request('GET', self._SUBSCRIPTION_PRODUCTS)
+        res_json = await res.json()
+        return res_json['products']
+
     async def had_trove_subscription(self) -> bool:
         """Based on current behavior of `humblebundle.com/subscription/home`
         that is accesable only by "current and former subscribers"
@@ -136,20 +146,10 @@ class AuthorizedHumbleAPI:
         webpack_id = "webpack-monthly-trove-data"
         return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
 
-    async def get_choice_months(self) -> list:
+    async def get_choice_month_details(self) -> list:
         webpack_id = "webpack-choice-marketing-data"
         data = await self._get_webpack_data(self._SUBSCRIPTION, webpack_id)
-        month_details = data['monthDetails']
-        return [month_details['active_month'], *month_details['previous_months']]
-
-    async def get_montly_content_data(self, product_url_path) -> MontlyContentData:
-        """
-        product_url_path: last element of subscripiton url for example 'august_2019_monthly'
-        """
-        url = 'monthly/p/' + product_url_path
-        webpack_id = 'webpack-monthly-product-data'
-        data = await self._get_webpack_data(url, webpack_id)
-        return MontlyContentData(data)
+        return data['monthDetails']
 
     async def get_choice_content_data(self, product_url_path) -> ChoiceContentData:
         """
@@ -159,6 +159,15 @@ class AuthorizedHumbleAPI:
         webpack_id = 'webpack-monthly-product-data'
         data = await self._get_webpack_data(url, webpack_id)
         return ChoiceContentData(data)
+
+    async def get_montly_content_data(self, product_url_path) -> MontlyContentData:
+        """
+        product_url_path: last element of subscripiton url for example 'august_2019_monthly'
+        """
+        url = 'monthly/p/' + product_url_path
+        webpack_id = 'webpack-monthly-product-data'
+        data = await self._get_webpack_data(url, webpack_id)
+        return MontlyContentData(data)
 
     async def get_trove_details(self, from_chunk: int=0):
         index = from_chunk
