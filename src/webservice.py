@@ -11,6 +11,7 @@ from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
 from model.download import TroveDownload, DownloadStructItem, SubproductDownload
+from model.subscription import MontlyContentData, ChoiceContentData
 
 
 class AuthorizedHumbleAPI:
@@ -133,6 +134,24 @@ class AuthorizedHumbleAPI:
         """
         webpack_id = "webpack-monthly-trove-data"
         return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
+
+    async def get_montly_content_data(self, product_url_path) -> MontlyContentData:
+        """
+        product_url_path: last element of subscripiton url for example 'august_2019_monthly'
+        """
+        url = 'monthly/p/' + product_url_path
+        webpack_id = 'webpack-monthly-product-data'
+        data = await self._get_webpack_data(url, webpack_id)
+        return MontlyContentData(data)
+
+    async def get_choice_content_data(self, product_url_path) -> ChoiceContentData:
+        """
+        product_url_path: last element of subscripiton url for example 'february-2020'
+        """
+        url = 'subscription/' + product_url_path
+        webpack_id = 'webpack-monthly-product-data'
+        data = await self._get_webpack_data(url, webpack_id)
+        return ChoiceContentData(data)
 
     async def get_trove_details(self, from_chunk: int=0):
         index = from_chunk
