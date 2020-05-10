@@ -116,18 +116,18 @@ class Extras:
 class ContentChoiceOptions:
     def __init__(self, data: dict):
         self.MAX_CHOICES: int = data['MAX_CHOICES']
-        self.gamekey: str = data['gamekey']
+        self.gamekey: t.Optional[str] = data.get('gamekey')
         self.is_active_content: bool = data['isActiveContent']
         self.product_url_path: str = data['productUrlPath']
-        self.includes_any_uplay_tpkds: bool = data['includesAnyUplayTpkds']
+        self.includes_any_uplay_tpkds: t.Optional[bool] = data.get('includesAnyUplayTpkds')
         self.is_choice_tier: bool = data['isChoiceTier']
         self.product_machine_name: str = data['productMachineName']
+        self.title: str = data['title']
 
         self.unlocked_conntent_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
-        self.title: str = data['title']
         self.content_choices: t.List[ContentChoice] = [
-            ContentChoice(id, c)
+            ContentChoice(id, cself._)
             for id, c
             in data['contentChoiceData']['initial']['contentChoices'].items()
         ]

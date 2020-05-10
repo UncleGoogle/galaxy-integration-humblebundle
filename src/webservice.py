@@ -106,16 +106,24 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
 
-    async def get_choice_products(self) -> List[ContentChoiceOptions]:
+    async def get_subscription_products_with_gamekeys(self):
         """
-        WARGNING: Does not return all subscription games for given months (only some that are displayed in subscription/home).
-        Use `get_choice_content_data` for full list
+        Yields list of products - historically backward subscriptions info.
+        Every product includes few representative games from given subscription and other data as:
+        `ChoiceContentData` (with user plan details) or `MontlyContentData` (with `download_url` if was subscribed)
+        Used in `https://www.humblebundle.com/subscription/home`
         """
-        res = await self._request('GET', self._SUBSCRIPTION_PRODUCTS)
-        res_json = await res.json()
-        return res_json['products']
+        cursor = ''
+        while True:
+            res = await self._request('GET', self._SUBSCRIPTION_PRODUCTS + f"/{cursor}")
+            if res.status == 404:  # Ends in November 2015
+                return
+            res_json = await res.json()
+            for product in res_json['products']:
+                yield product
+            cursor = res_json
 
-    async def had_trove_subscription(self) -> bool:
+    async def had_subscription(self) -> Optional[bool]:
         """Based on current behavior of `humblebundle.com/subscription/home`
         that is accesable only by "current and former subscribers"
         """
@@ -126,7 +134,7 @@ class AuthorizedHumbleAPI:
             return False
         else:
             logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
-            return False
+            return None
 
     async def _get_webpack_data(self, path: str, webpack_id: str) -> dict:
         res = await self._request('GET', path)

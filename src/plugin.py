@@ -3,6 +3,7 @@ import platform
 import asyncio
 import logging
 import re
+import datetime
 import webbrowser
 import pathlib
 import json
@@ -24,6 +25,7 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame
 from model.types import HP
+from model.subscription import ChoiceContentData
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -48,6 +50,13 @@ sentry_sdk.init(
     integrations=[sentry_logging],
     release=f"hb-galaxy@{__version__}"
 )
+
+
+def find_first_friday(y, m):
+    dt = datetime.date(y, m, 1)
+    next_friday = (1 + (4 - dt.weekday())) % 7
+    dt.replace(day=next_friday)
+    return dt
 
 
 class HumbleBundlePlugin(Plugin):
@@ -146,45 +155,53 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
-        is_active_subscriber = False
+        current_month_unlocked = False
+        current_or_former_subscriber = await self._api.had_subscription()
 
-        user_choice_products = await self._api.get_choice_products()
-        for product in user_choice_products:
-            subscriptions.append(
-                Subscription(
-                    subscription_name=product.title,
-                    owned=True,
-                    subscription_discovery=SubscriptionDiscovery.AUTOMATIC
+        if current_or_former_subscriber:
+            async for product in await self._api.get_subscription_products_with_gamekeys():
+                if not product.get('isChoiceTier'):
+                    # no more choice content, now humble montly data coming from before 2020
+                    break
+                subscriptions.append(
+                    Subscription(product['title'], owned=True)
                 )
-            )
-            if product.is_active_content:
-                is_active_subscriber = True
+                if product.is_active_content:
+                    # assuming only current month has "is_active_content": true
+                    current_month_unlocked = True
 
-        if not is_active_subscriber:
+        if not current_month_unlocked:
             '''
-            For those who has not used "Early Unlock" we need to check if they have active plan
-            https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
+            - for not subscribers as potential discovery of current choice games
+            - for subscribers who has not used "Early Unlock" yet:
+              https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
             choice_months_details = await self._api.get_choice_month_details()
             active_month = choice_months_details['active_month']
-            active_month_content = await self._api.get_choice_content_data(
-                active_month['montly_product_page_url']
-            )
-            if active_month_content.user_subscription_plan is not None:
-                is_active_subscriber = True
-                subscriptions.append(
-                    Subscription(
-                        subscription_name=active_month['short_human_name'],
-                        owned=True,
-                        subscription_discovery=SubscriptionDiscovery.AUTOMATIC
-                    )
+
+            if current_or_former_subscriber:
+                active_month_content = await self._api.get_choice_content_data(
+                    active_month['montly_product_page_url']
                 )
+                if active_month_content.user_subscription_plan is not None:
+                    current_month_unlocked = True
+                end_time = None  # owned subscription never ends
+            else:
+                # TODO the nearest first Friday of month at 10 am PT
+                end_time = None  # tell new commers to hurry up
+
+            subscriptions.append(
+                Subscription(
+                    active_month['short_human_name'],
+                    owned=current_month_unlocked,
+                    end_time=end_time
+                )
+            )
 
         subscriptions.append(
             Subscription(
                 subscription_name=SUBSCRIPTIONS.TROVE,
-                owned=is_active_subscriber,
-                subscription_discovery=SubscriptionDiscovery.AUTOMATIC | SubscriptionDiscovery.USER_ENABLED
+                owned=current_month_unlocked
             )
         )
 
