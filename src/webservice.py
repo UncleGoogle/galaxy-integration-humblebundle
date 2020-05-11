@@ -122,7 +122,7 @@ class AuthorizedHumbleAPI:
             res_json = await res.json()
             for product in res_json['products']:
                 yield product
-            cursor = res_json
+            cursor = res_json['cursor']
 
     async def had_subscription(self) -> Optional[bool]:
         """Based on current behavior of `humblebundle.com/subscription/home`
