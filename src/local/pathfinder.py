@@ -5,8 +5,6 @@ from pathlib import Path, PurePath
 from typing import List, Union, Sequence, Optional
 from typing import cast
 
-from consts import HP
-
 
 class PathFinder:
     def __init__(self, is_windows: bool):

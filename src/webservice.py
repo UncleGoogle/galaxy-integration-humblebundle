@@ -110,7 +110,8 @@ class AuthorizedHumbleAPI:
         """
         Yields list of products - historically backward subscriptions info.
         Every product includes few representative games from given subscription and other data as:
-        `ChoiceContentData` (with user plan details) or `MontlyContentData` (with `download_url` if was subscribed)
+        `ChoiceContentOptions` (with gamekey if unlocked and made choices)
+        or `MontlyContentData` (with `download_url` if was subscribed this month)
         Used in `https://www.humblebundle.com/subscription/home`
         """
         cursor = ''

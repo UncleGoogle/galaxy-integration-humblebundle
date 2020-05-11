@@ -23,6 +23,18 @@ class HP(enum.Enum):
         return hash(self.value)
 
 
+GAME_PLATFORMS = set([HP.WINDOWS, HP.MAC, HP.LINUX])
+
+
+class KEY_TYPE(enum.Enum):
+    STEAM = 'steam'
+    ORIGIN = 'origin'
+    UPLAY = 'uplay'
+    EPIC = 'epic'  # not sure about it
+    BATTLENET = 'battlenet'  # not sure about it
+    GOG = 'gog'  # not sure about it
+
+
 class DeliveryMethod(enum.Enum):
     STEAM = 'steam'
     ORIGIN = 'origin'

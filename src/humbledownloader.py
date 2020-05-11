@@ -1,6 +1,6 @@
 from model.game import HumbleGame, TroveGame, Subproduct
 from model.download import DownloadStructItem, SubproductDownload, TroveDownload
-from consts import CURRENT_BITNESS, HP, BITNESS
+from consts import CURRENT_BITNESS, BITNESS
 
 
 class HumbleDownloadResolver:

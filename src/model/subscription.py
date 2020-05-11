@@ -127,8 +127,7 @@ class ContentChoiceOptions:
         self.unlocked_conntent_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
         self.content_choices: t.List[ContentChoice] = [
-            ContentChoice(id, cself._)
-            for id, c
+            ContentChoice(id, c) for id, c
             in data['contentChoiceData']['initial']['contentChoices'].items()
         ]
         self.extras: t.List[Extras] = [

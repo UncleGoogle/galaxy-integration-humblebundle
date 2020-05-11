@@ -229,6 +229,7 @@ class HumbleBundlePlugin(Plugin):
         if SUBSCRIPTIONS(subscription_name) == SUBSCRIPTIONS.TROVE:
             async for troves in self._get_trove_games():
                 yield troves
+            return
 
     async def subscription_games_import_complete(self):
         sub_games_raw_data = [game.serialize() for game in self._trove_games.values]
