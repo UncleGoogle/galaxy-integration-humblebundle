@@ -110,7 +110,7 @@ class AuthorizedHumbleAPI:
         """
         Yields list of products - historically backward subscriptions info.
         Every product includes few representative games from given subscription and other data as:
-        `ChoiceContentOptions` (with gamekey if unlocked and made choices)
+        `ContentChoiceOptions` (with gamekey if unlocked and made choices)
         or `MontlyContentData` (with `download_url` if was subscribed this month)
         Used in `https://www.humblebundle.com/subscription/home`
         """
@@ -121,7 +121,11 @@ class AuthorizedHumbleAPI:
                 return
             res_json = await res.json()
             for product in res_json['products']:
-                yield product
+                if 'isChoiceTier' in product:
+                    yield ContentChoiceOptions(product)
+                else:  # no more choice content, now humble montly goes
+                    # yield MontlyContentData(product)
+                    return
             cursor = res_json['cursor']
 
     async def had_subscription(self) -> Optional[bool]:

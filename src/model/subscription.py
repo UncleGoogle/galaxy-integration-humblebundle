@@ -107,7 +107,7 @@ class ContentChoice:
 class Extras:
     def __init__(self, data: dict):
         self.human_name: str = data['human_name']
-        self.icon_path: str = data['icon_path']
+        self.icon_path: t.Optional[str] = data.get('icon_path')
         self.machine_name: str = data['machine_name']
         self.class_: str = data['class']
         self._types: t.List[str] = data['types']
@@ -120,15 +120,15 @@ class ContentChoiceOptions:
         self.is_active_content: bool = data['isActiveContent']
         self.product_url_path: str = data['productUrlPath']
         self.includes_any_uplay_tpkds: t.Optional[bool] = data.get('includesAnyUplayTpkds')
-        self.is_choice_tier: bool = data['isChoiceTier']
+        self.is_choice_tier: t.Optional[bool] = data.get('isChoiceTier')  # no in active month
         self.product_machine_name: str = data['productMachineName']
         self.title: str = data['title']
 
-        self.unlocked_conntent_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
+        self.unlocked_content_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c) for id, c
-            in data['contentChoiceData']['initial']['contentChoices'].items()
+            in data['contentChoiceData']['initial']['content_choices'].items()
         ]
         self.extras: t.List[Extras] = [
             Extras(extras) for extras
@@ -215,7 +215,7 @@ class ChoiceContentData:
         self.content_choice_options = ContentChoiceOptions(data['contentChoiceOptions'])
 
     @property
-    def active_from(self) -> t.Optional[datetime.datetime]:
+    def early_unlock_since(self) -> t.Optional[datetime.datetime]:
         try:
             iso = self.pay_early_option['activeContentStart|datetime']
         except KeyError:

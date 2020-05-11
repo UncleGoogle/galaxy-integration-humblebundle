@@ -17,7 +17,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
-from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials, UnknownError
 
 from consts import SUBSCRIPTIONS, IS_WINDOWS
@@ -25,7 +25,6 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame
 from model.types import HP
-from model.subscription import ChoiceContentData
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -72,6 +71,7 @@ class HumbleBundlePlugin(Plugin):
         self._trove_games: Dict[str, TroveGame] = {}
         self._local_games = {}
         self._cached_game_states = {}
+        self._active_month = {}
 
         self._getting_owned_games = asyncio.Lock()
         self._owned_check: asyncio.Task = asyncio.create_task(asyncio.sleep(8))
@@ -160,13 +160,10 @@ class HumbleBundlePlugin(Plugin):
 
         if current_or_former_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
-                if not product.get('isChoiceTier'):
-                    # no more choice content, now humble montly data coming from before 2020
-                    break
                 subscriptions.append(
-                    Subscription(product['title'], owned=True)
+                    Subscription(product.title, owned=True)
                 )
-                if product['isActiveContent']:
+                if product.is_active_content:
                     # assuming only current month has "is_active_content": true
                     current_month_unlocked = True
 
@@ -177,11 +174,11 @@ class HumbleBundlePlugin(Plugin):
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
             choice_months_details = await self._api.get_choice_month_details()
-            active_month = choice_months_details['active_month']
+            self._active_month = choice_months_details['active_month']
 
             if current_or_former_subscriber:
                 active_month_content = await self._api.get_choice_content_data(
-                    active_month['montly_product_page_url']
+                    self._active_month['monthly_product_page_url'].split('/')[-1]
                 )
                 if active_month_content.user_subscription_plan is not None:
                     current_month_unlocked = True
@@ -192,7 +189,7 @@ class HumbleBundlePlugin(Plugin):
 
             subscriptions.append(
                 Subscription(
-                    active_month['short_human_name'],
+                    self._active_month['short_human_name'],
                     owned=current_month_unlocked,
                     end_time=end_time
                 )
@@ -225,11 +222,35 @@ class HumbleBundlePlugin(Plugin):
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
 
+    async def prepare_subscription_games_context(self, subscription_names) -> Dict[str, str]:
+        # todo: optimize: find oldest subscription_name and do not iterate cursor after it
+        subscription_url = {}
+
+        # active_month set only if not unlocked yet
+        if self._active_month:
+            subscription_url[self._active_month['short_human_name']] = self._active_month['monthly_product_page_url'].split('/')[-1]
+
+        async for product in self._api.get_subscription_products_with_gamekeys():
+            subscription_url[product.title] = product.product_url_path
+        return subscription_url
+
     async def get_subscription_games(self, subscription_name, context):
         if subscription_name == SUBSCRIPTIONS.TROVE.value:
             async for troves in self._get_trove_games():
                 yield troves
             return
+
+        url_part = context[subscription_name]
+        full_content = await self._api.get_choice_content_data(url_part)
+
+        yield [
+            SubscriptionGame(ch.title, ch.id, full_content.early_access_since.timestamp())
+            for ch in full_content.content_choices
+        ]
+        yield [
+            SubscriptionGame(extr.human_name, extr.machine_name, full_content.early_access_since.timestamp())
+            for extr in full_content.extrases
+        ]
 
     async def subscription_games_import_complete(self):
         sub_games_raw_data = [game.serialize() for game in self._trove_games.values]
