@@ -159,14 +159,14 @@ class HumbleBundlePlugin(Plugin):
         current_or_former_subscriber = await self._api.had_subscription()
 
         if current_or_former_subscriber:
-            async for product in await self._api.get_subscription_products_with_gamekeys():
+            async for product in self._api.get_subscription_products_with_gamekeys():
                 if not product.get('isChoiceTier'):
                     # no more choice content, now humble montly data coming from before 2020
                     break
                 subscriptions.append(
                     Subscription(product['title'], owned=True)
                 )
-                if product.is_active_content:
+                if product['isActiveContent']:
                     # assuming only current month has "is_active_content": true
                     current_month_unlocked = True
 
@@ -226,7 +226,7 @@ class HumbleBundlePlugin(Plugin):
             yield parse_and_cache(troves)
 
     async def get_subscription_games(self, subscription_name, context):
-        if SUBSCRIPTIONS(subscription_name) == SUBSCRIPTIONS.TROVE:
+        if subscription_name == SUBSCRIPTIONS.TROVE.value:
             async for troves in self._get_trove_games():
                 yield troves
             return
