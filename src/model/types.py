@@ -13,6 +13,7 @@ class HP(enum.Enum):
     UNITYWASM = 'unitywasm'
     VIDEO = 'video'
     COMEDY = 'comedy'
+    OCULUS = 'oculus-rift'
 
     def __eq__(self, other):
         if type(other) == str:
