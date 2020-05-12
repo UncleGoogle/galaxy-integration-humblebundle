@@ -2,7 +2,6 @@ import enum
 
 
 class HP(enum.Enum):
-    """HumbleBundle platform code name shown in subproducts>download section"""
     WINDOWS = 'windows'
     MAC = 'mac'
     LINUX = 'linux'
@@ -14,6 +13,7 @@ class HP(enum.Enum):
     VIDEO = 'video'
     COMEDY = 'comedy'
     OCULUS = 'oculus-rift'
+    VIVE = 'vive'
 
     def __eq__(self, other):
         if type(other) == str:
@@ -31,9 +31,9 @@ class KEY_TYPE(enum.Enum):
     STEAM = 'steam'
     ORIGIN = 'origin'
     UPLAY = 'uplay'
-    EPIC = 'epic'  # not sure about it
-    BATTLENET = 'battlenet'  # not sure about it
-    GOG = 'gog'  # not sure about it
+    EPIC = 'epic'
+    BATTLENET = 'battlenet'
+    GOG = 'gog'
 
 
 class DeliveryMethod(enum.Enum):
@@ -44,8 +44,3 @@ class DeliveryMethod(enum.Enum):
     BATTLENET = 'battlenet'
     GOG = 'gog'
     DOWNLOAD = 'download'
-
-
-class ExtrasType(enum.Enum):
-    # TODO discover more
-    DRM_FREE = 'DRM-free Game'
