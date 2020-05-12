@@ -95,14 +95,6 @@ class ContentChoice:
             HP(p) for p in data['platforms']
         ]
 
-    @property
-    def machine_name(self):
-        return self.id
-
-    @property
-    def human_name(self):
-        return self.title
-
 
 class Extras:
     def __init__(self, data: dict):
@@ -137,10 +129,16 @@ class ContentChoiceOptions:
         self._content_choices_made = data.get('contentChoicesMade')
 
     @property
-    def content_choices_made(self) -> t.Optional[t.List[str]]:
+    def content_choices_made(self) -> t.List[str]:
         if self._content_choices_made:
             return self._content_choices_made['initial']['choices_made']
-        return None
+        return []
+
+    @property
+    def remained_choices(self) -> int:
+        if self._content_choices_made is None:
+            return self.MAX_CHOICES
+        return self.MAX_CHOICES - len(self._content_choices_made)
 
 
 class MontlyContentData:
@@ -189,10 +187,6 @@ class MontlyContentData:
             Section(s) for s in content['sections']
         ]
 
-    @property
-    def human_name(self) -> str:
-        return self.product_human_name
-
 
 class ChoiceContentData:
     """
@@ -215,17 +209,9 @@ class ChoiceContentData:
         self.content_choice_options = ContentChoiceOptions(data['contentChoiceOptions'])
 
     @property
-    def early_unlock_since(self) -> t.Optional[datetime.datetime]:
+    def active_content_start(self) -> t.Optional[datetime.datetime]:
         try:
             iso = self.pay_early_option['activeContentStart|datetime']
         except KeyError:
             return None
         return datetime.datetime.fromisoformat(iso)
-
-    @property
-    def machine_name(self) -> str:
-        return self.pay_early_option['productMachineName']
-
-    @property
-    def human_name(self) -> str:
-        return self.content_choice_options.title

@@ -242,14 +242,18 @@ class HumbleBundlePlugin(Plugin):
 
         url_part = context[subscription_name]
         choice_data = await self._api.get_choice_content_data(url_part)
+        cc_options = choice_data.content_choice_options
+        made_choices = cc_options.content_choices_made
+        show_all = cc_options.remained_choices > 0
 
-        yield [
-            SubscriptionGame(ch.title, ch.id, choice_data.early_unlock_since.timestamp())
-            for ch in choice_data.content_choice_options.content_choices
+        content_choices = [
+            SubscriptionGame(ch.title, ch.id, choice_data.active_content_start.timestamp())
+            for ch in cc_options.content_choices
+            if show_all or ch.id in cc_options.content_choices_made
         ]
-        yield [
-            SubscriptionGame(extr.human_name, extr.machine_name, choice_data.early_unlock_since.timestamp())
-            for extr in choice_data.extrases
+        extrases = [
+            SubscriptionGame(extr.human_name, extr.machine_name, choice_data.active_content_start.timestamp())
+            for extr in cc_options.extrases
         ]
 
     async def subscription_games_import_complete(self):
