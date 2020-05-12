@@ -86,7 +86,7 @@ class ContentChoice:
         self.title = data['title']
         self.display_item_machine_name = data['display_item_machine_name']
         self.tpkds = [
-            Key(tpkd) for tpkd in data['tpkds']
+            Key(tpkd) for tpkd in data.get('tpkds', [])
         ]
         self.delivery_methods: t.List[DeliveryMethod] = [
             DeliveryMethod(m) for m in data['delivery_methods']
