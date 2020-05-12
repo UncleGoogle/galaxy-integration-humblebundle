@@ -241,15 +241,15 @@ class HumbleBundlePlugin(Plugin):
             return
 
         url_part = context[subscription_name]
-        full_content = await self._api.get_choice_content_data(url_part)
+        choice_data = await self._api.get_choice_content_data(url_part)
 
         yield [
-            SubscriptionGame(ch.title, ch.id, full_content.early_access_since.timestamp())
-            for ch in full_content.content_choices
+            SubscriptionGame(ch.title, ch.id, choice_data.early_unlock_since.timestamp())
+            for ch in choice_data.content_choice_options.content_choices
         ]
         yield [
-            SubscriptionGame(extr.human_name, extr.machine_name, full_content.early_access_since.timestamp())
-            for extr in full_content.extrases
+            SubscriptionGame(extr.human_name, extr.machine_name, choice_data.early_unlock_since.timestamp())
+            for extr in choice_data.extrases
         ]
 
     async def subscription_games_import_complete(self):
@@ -293,8 +293,8 @@ class HumbleBundlePlugin(Plugin):
                 return
 
             try:
-                platform = HP.WINDOWS if IS_WINDOWS else HP.MAC
-                curr_os_download = game.downloads[platform]
+                hp = HP.WINDOWS if IS_WINDOWS else HP.MAC
+                curr_os_download = game.downloads[hp]
             except KeyError:
                 raise UnknownError(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')
 
@@ -384,11 +384,11 @@ class HumbleBundlePlugin(Plugin):
             logging.debug('Skipping perdiodic check for local games as owned/subscription games not found yet.')
             return
 
-        platform = HP.WINDOWS if IS_WINDOWS else HP.MAC
+        hp = HP.WINDOWS if IS_WINDOWS else HP.MAC
         installable_title_id = {
             game.human_name: uid for uid, game
             in self._humble_games.items()
-            if not isinstance(game, Key) and game.os_compatibile(platform)
+            if not isinstance(game, Key) and game.os_compatibile(hp)
         }
         if self._rescan_needed:
             self._rescan_needed = False

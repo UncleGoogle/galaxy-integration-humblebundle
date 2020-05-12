@@ -130,7 +130,7 @@ class ContentChoiceOptions:
             ContentChoice(id, c) for id, c
             in data['contentChoiceData']['initial']['content_choices'].items()
         ]
-        self.extras: t.List[Extras] = [
+        self.extrases: t.List[Extras] = [
             Extras(extras) for extras
             in data['contentChoiceData']['extras']
         ]
