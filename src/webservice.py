@@ -42,7 +42,6 @@ class AuthorizedHumbleAPI:
 
     @property
     def is_authenticated(self) -> bool:
-        logging.debug(f'is authenticated? {bool(self._session.cookie_jar)}')
         return bool(self._session.cookie_jar)
 
     async def _request(self, method, path, *args, **kwargs):
@@ -82,12 +81,8 @@ class AuthorizedHumbleAPI:
         cookie_val = cookie_val.replace('"', '')
         cookie[auth_cookie['name']] = cookie_val
 
-        user_id = self._decode_user_id(cookie_val)
         self._session.cookie_jar.update_cookies(cookie)
-
-        if await self._is_session_valid():
-            return user_id
-        return None
+        return self._decode_user_id(cookie_val)
 
     async def get_gamekeys(self) -> List[str]:
         res = await self._request('get', self._ORDER_LIST_URL)
@@ -160,12 +155,13 @@ class AuthorizedHumbleAPI:
         return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
 
     async def get_choice_month_details(self) -> list:
+        """Parsing ~155K and fast response from server"""
         webpack_id = "webpack-choice-marketing-data"
         data = await self._get_webpack_data(self._SUBSCRIPTION, webpack_id)
         return data['monthDetails']
 
     async def get_choice_content_data(self, product_url_path) -> ChoiceContentData:
-        """
+        """Parsing ~220K
         product_url_path: last element of subscripiton url for example 'february-2020'
         """
         url = 'subscription/' + product_url_path

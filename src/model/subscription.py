@@ -205,13 +205,13 @@ class ChoiceContentData:
     def __init__(self, data: dict):
         self.user_options: dict = data['userOptions']
         self.user_subscription_plan: t.Optional[dict] = data['userSubscriptionPlan']
-        self.pay_early_option: dict = data['payEarlyOptions']
+        self.pay_early_options: dict = data['payEarlyOptions']
         self.content_choice_options = ContentChoiceOptions(data['contentChoiceOptions'])
 
     @property
     def active_content_start(self) -> t.Optional[datetime.datetime]:
         try:
-            iso = self.pay_early_option['activeContentStart|datetime']
+            iso = self.pay_early_options['activeContentStart|datetime']
         except KeyError:
             return None
         return datetime.datetime.fromisoformat(iso)
