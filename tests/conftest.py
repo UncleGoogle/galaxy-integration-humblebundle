@@ -52,6 +52,7 @@ def api_mock_raw():
     mock.sign_url_trove = AsyncMock()
     mock.sign_url_subproduct = AsyncMock()
     mock.close_session = AsyncMock()
+    mock.get_choice_month_details = AsyncMock()
     return mock
 
 

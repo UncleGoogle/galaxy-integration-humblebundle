@@ -1,14 +1,24 @@
 from unittest.mock import MagicMock
 import pytest
 
-from galaxy.api.types import SubscriptionGame
+from galaxy.api.types import SubscriptionGame, Subscription
 from conftest import aiter
 
 from model.game import TroveGame
 
 
 @pytest.mark.asyncio
-async def test_subscription_games_trove(api_mock, plugin):
+async def test_get_subscriptions_never_subscribed(api_mock, plugin):
+    api_mock.had_subscription.return_value = False
+    res = await plugin.get_subscriptions()
+    assert res == [
+        Subscription("Humble Trove", owned=False),
+        Subscription("Humble Choice 2020-03", owned=False)
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_subscription_games_trove(api_mock, plugin):
     parsed_from_page = {
         'newlyAdded': [
             {'human-name': 'A', 'machine_name': 'a'},
