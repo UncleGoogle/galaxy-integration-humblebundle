@@ -8,7 +8,7 @@ import webbrowser
 import pathlib
 import json
 from functools import partial
-from typing import Any, Optional, Dict, Union
+from typing import Any, Optional, Dict, Union, List
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -20,11 +20,12 @@ from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
 from galaxy.api.errors import AuthenticationRequired, InvalidCredentials, UnknownError
 
-from consts import SUBSCRIPTIONS, IS_WINDOWS
+from consts import IS_WINDOWS
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame
 from model.types import HP
+from model.subscription import ChoiceMonth
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -66,7 +67,7 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._settings = Settings()
         self._library_resolver = None
-        self._subscription_months = {}  # {"active_month": {}, "previous_months": []}  # TODO separate type
+        self._subscription_months = List[ChoiceMonth]
 
         self._owned_games: Dict[str, HumbleGame] = {}
         self._trove_games: Dict[str, TroveGame] = {}
@@ -127,10 +128,10 @@ class HumbleBundlePlugin(Plugin):
         logging.info('Stored credentials found')
         user_id = await self._api.authenticate(stored_credentials)
 
-        subscription_infos = await self._api.get_choice_month_details()
-        self._subscription_months = subscription_infos.get('monthDetails', {})
+        subscription_infos = await self._api.get_choice_marketing_data()
+        self._subscription_months = subscription_infos.month_details
         # TODO in separate task
-        # display_id = subscription_infos.get('userOptions', {}).get('email') or user_id
+        # display_id = subscription_infos.user_options.get('email') or user_id
 
         if show_news:
             self._open_config(OPTIONS_MODE.NEWS)
@@ -159,6 +160,25 @@ class HumbleBundlePlugin(Plugin):
             self._owned_games = await self._library_resolver()
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
+    @staticmethod
+    def _normalize_subscription_name(machine_name):
+        month_map = {
+            'january': '01',
+            'february': '02',
+            'march': '03',
+            'april': '04',
+            'may': '05',
+            'june': '06',
+            'july': '07',
+            'august': '08',
+            'september': '09',
+            'octover': '10',
+            'november': '11',
+            'december': '12'
+        }
+        month, year, type_ = machine_name.split('_')
+        return f'Humble {type_.title()} {year}-{month_map(month)}'
+
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
         current_month_unlocked = False
@@ -167,7 +187,10 @@ class HumbleBundlePlugin(Plugin):
         if current_or_former_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
                 subscriptions.append(
-                    Subscription(product.title, owned=True)
+                    Subscription(
+                        self._normalize_subscription_name(product.product_machine_name),
+                        owned=True
+                    )
                 )
                 if product.is_active_content:
                     # assuming only current month has "is_active_content": true
@@ -179,18 +202,18 @@ class HumbleBundlePlugin(Plugin):
             - for subscribers who has not used "Early Unlock" yet:
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
-            active_month = self._subscription_months['active_month']
+            active_month = self._subscription_months.active_month
 
             if current_or_former_subscriber:
                 active_month_content = await self._api.get_choice_content_data(
-                    active_month['monthly_product_page_url'].split('/')[-1]
+                    active_month.last_url_part
                 )
                 if active_month_content.user_subscription_plan is not None:
-                    current_month_unlocked = True
-                end_time = None  # owned subscription never ends
+                    current_month_unlocked = True  # "will be unlocked" to be more precized
+                end_time = None  # already owned subscription never ends
             else:
                 # TODO the nearest first Friday of month at 10 am PT
-                end_time = None  # tell new commers to hurry up
+                end_time = None  # tell new commers to hurry up to subscribe until chance is lost
 
             subscriptions.append(
                 Subscription(
@@ -202,7 +225,7 @@ class HumbleBundlePlugin(Plugin):
 
         subscriptions.append(
             Subscription(
-                subscription_name=SUBSCRIPTIONS.TROVE,
+                subscription_name="Humble Trove",
                 owned=current_month_unlocked
             )
         )
@@ -211,7 +234,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def _get_trove_games(self):
         def parse_and_cache(troves):
-            games: List['SubscriptionGame'] = []
+            games: List[SubscriptionGame] = []
             for trove in troves:
                 try:
                     trove_game = TroveGame(trove)
@@ -227,50 +250,35 @@ class HumbleBundlePlugin(Plugin):
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
 
-    async def prepare_subscription_games_context(self, subscription_names) -> Dict[str, Dict[str, bool]]:
-        #TODO separate data type "MarketingMonth" or sth like that
-        def strip_url(month):
-            return month['montly_product_page_url'].split('/')[-1]
-
+    async def prepare_subscription_games_context(self, subscription_names) -> Dict[str, ChoiceMonth]:
         name_url = {}
-        month = self._subscription_months['active_month']
-        name_url[month['short_human_name']] = {
-            'url_part': strip_url(month),
-            'is_acitve': True
-        }
-        for month in self._subscription_months['previous_months']:
-            name_url[month['short_human_name']] = {
-                'url_part': strip_url(month),
-                'is_active': False
-            }
+        for month in self._subscription_months:
+            name_url[self._normalize_subscription_name(month.machine_name)] = month
         return name_url
 
-    async def get_subscription_games(self, subscription_name, context):
-        if subscription_name == SUBSCRIPTIONS.TROVE.value:
+    async def get_subscription_games(self, subscription_name, context: Dict[str, ChoiceMonth]):
+        if subscription_name == "Humble Trove":
             async for troves in self._get_trove_games():
                 yield troves
             return
 
-        url_part = context[subscription_name]['url_part']
-        is_active = context[subscription_name]['is_active']
-
-        choice_data = await self._api.get_choice_content_data(url_part)
-        cc_options = choice_data.content_choice_options
-        made_choices = cc_options.content_choices_made
-        show_all = cc_options.remained_choices > 0
-        if is_active:
+        month: ChoiceMonth = context[subscription_name]
+        choice_data = await self._api.get_choice_content_data(month.last_url_part)
+        cco = choice_data.content_choice_options
+        show_all = cco.remained_choices > 0
+        if month.is_active:
             start_time = choice_data.active_content_start.timestamp()
         else:
             start_time = None  # TODO assume first friday of month
 
         content_choices = [
             SubscriptionGame(ch.title, ch.id, start_time)
-            for ch in cc_options.content_choices
-            if show_all or ch.id in cc_options.content_choices_made
+            for ch in cco.content_choices
+            if show_all or ch.id in cco.content_choices_made
         ]
         extrases = [
             SubscriptionGame(extr.human_name, extr.machine_name, start_time)
-            for extr in cc_options.extrases
+            for extr in cco.extrases
         ]
 
     async def subscription_games_import_complete(self):

@@ -7,10 +7,6 @@ class PlatformNotSupported(Exception):
     pass
 
 
-class SUBSCRIPTIONS(enum.Enum):
-    TROVE = 'Humble Trove'
-
-
 class SOURCE(enum.Enum):
     DRM_FREE = 'drm-free'
     KEYS = 'keys'

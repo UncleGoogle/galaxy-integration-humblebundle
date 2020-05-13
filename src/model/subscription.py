@@ -6,56 +6,83 @@ from model.game import HumbleGame, Key
 from model.types import HP, DeliveryMethod
 
 
-class ChoiceMonth:
+class ChoiceMarketingData:
+    """Custom class based on `webpack-choice-marketing-data['monthDetails'] from https://www.humblebundle.com/subscription
+    {
+        "monthDetails": {
+            "previous_months": [],
+            "active_month": {}
+        },
+        "userOptions": {
+            "email": str,
+            ...
+        },
+        ...
+    }
     """
+    def __init__(self, data: dict):
+        self.user_options = data['userOptions']
+        self.active_month = ChoiceMonth(data['monthDetails']['active_month'], is_active=True)
+        self.month_details = [self.active_month] + [
+            ChoiceMonth(month, is_active=False)
+            for month in data['monthDetails']['previous_months']
+        ]
+
+
+class ChoiceMonth:
+    """Below example of month from `data['monthDetails']['previous_months']`
     {
         "additional_items_text": "DiRT Rally 2.0 + 3 DLCs, Street Fighter V, Bad North: Jotunn Edition, Trailmakers, Unrailed!, Whispers of a Machine, Them's Fightin' Herds, Mages of Mystralia, and GRIP + 1 DLC",
-        "machine_name": "january_2020_choice",
-        "short_human_name": "January 2020",
+        "machine_name": "january_2020_choice",  # also in active_month
+        "short_human_name": "January 2020",  # also in active_month
         "image_human_names": {
           "grip": "GRIP + 1 DLC",
-          "graveyardkeeper": "Graveyard Keeper",
           "..."
         },
-        "month_string": "February",
+        "month_string": "February",  # also in active_month
         "early_unlock_logos": [
-          "https://hb.imgix.net/9a6a64a968664683d0948c03012adb779c5d59e1.png?auto=compress,format&w=650&s=dd323d59e5db2a4ce5e103e70ff59c70"
+          "https://hb.imgix.net/9a6a6...",
         ],
         "image_grid": {
           "width": 308,
           "size_override": null,
           "displayitem_image_info": {
             "grip": {
-              "standard_url": "https://hb.imgix.net/a8589ac1102547877319717a3a37b02bfc1b6341.jpeg?auto=compress,format&dpr=1&fit=clip&h=177&w=308&s=812e5702ffd184571eab42d45f5bb73d",
+              "standard_url": "https://hb.imgix.net/a8589a...",
               "blocked_territories": [],
               "allowed_territories": null,
               "hide_from_hero_tile": null,
-              "retina_url": "https://hb.imgix.net/a8589ac1102547877319717a3a37b02bfc1b6341.jpeg?auto=compress,format&dpr=2&fit=clip&h=177&w=308&s=fd99859c52ac37a864f106c831d433d2"
+              "retina_url": "https://hb.imgix.net/a858...",
             },
             "...": {}
           },
           "height": 177
         },
-        "charity_logo": "https://hb.imgix.net/ca5838784ea6a6e1f60ee1ef183036548384e75d.png?auto=compress,format&fit=clip&h=165&w=260&s=b58e3c3db87a698ae2563489725d836b",
-        "monthly_product_page_url": "/subscription/january-2020",
+        "charity_logo": "https://hb.imgix.net/ca5...",  # also in active month
+        "monthly_product_page_url": "/subscription/january-2020",  # also in active month
         "grid_display_order": [
           "middleearth_shadowofwar",
           "graveyardkeeper",
           "..."
         ],
-        "charity_name": "Girls Inc.",
+        "charity_name": "Girls Inc.",  # also in active month
         "item_count": 12,
         "msrp|money": {
           "currency": "EUR",
           "amount": 302
         },
-        "charity_video_url": "ngmfbcEktXU"
+        "charity_video_url": "ngmfbcEktXU"  # also in active month
       },
     """
-    def __init__(self, data: dict):
+    def __init__(self, data: dict, is_active: bool = False):
+        self.is_active: bool = is_active
         self.machine_name: str = data['machine_name']
         self.short_human_name: str = data['short_human_name']
-        self.item_count: int = data['item_count']
+        self.monthly_product_page_url: str = data['monthly_product_page_url']
+
+    @property
+    def last_url_part(self):
+        return self.monthly_product_page_url.split('/')[-1]
 
 
 class Section():
