@@ -177,7 +177,7 @@ class HumbleBundlePlugin(Plugin):
             'december': '12'
         }
         month, year, type_ = machine_name.split('_')
-        return f'Humble {type_.title()} {year}-{month_map(month)}'
+        return f'Humble {type_.title()} {year}-{month_map[month]}'
 
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
@@ -202,7 +202,7 @@ class HumbleBundlePlugin(Plugin):
             - for subscribers who has not used "Early Unlock" yet:
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
-            active_month = self._subscription_months.active_month
+            active_month = self._subscription_months[0]
 
             if current_or_former_subscriber:
                 active_month_content = await self._api.get_choice_content_data(
@@ -217,7 +217,7 @@ class HumbleBundlePlugin(Plugin):
 
             subscriptions.append(
                 Subscription(
-                    active_month['short_human_name'],
+                    self._normalize_subscription_name(active_month.machine_name),
                     owned=current_month_unlocked,
                     end_time=end_time
                 )
@@ -280,6 +280,8 @@ class HumbleBundlePlugin(Plugin):
             SubscriptionGame(extr.human_name, extr.machine_name, start_time)
             for extr in cco.extrases
         ]
+        month_choice_games = content_choices + extrases
+        yield month_choice_games
 
     async def subscription_games_import_complete(self):
         sub_games_raw_data = [game.serialize() for game in self._trove_games.values]
