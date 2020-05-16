@@ -67,7 +67,7 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._settings = Settings()
         self._library_resolver = None
-        self._subscription_months = List[ChoiceMonth]
+        self._subscription_months: List[ChoiceMonth] = []
 
         self._owned_games: Dict[str, HumbleGame] = {}
         self._trove_games: Dict[str, TroveGame] = {}
@@ -112,6 +112,14 @@ class HumbleBundlePlugin(Plugin):
             save_cache_callback=partial(self._save_cache, 'library')
         )
 
+    async def _fetch_marketing_data(self) -> Optional[str]:
+        try:
+            subscription_infos = await self._api.get_choice_marketing_data()
+            self._subscription_months = subscription_infos.month_details
+            return subscription_infos.user_options['email']
+        except KeyError:  # extra safety as this data is not crucial
+            return None
+
     async def authenticate(self, stored_credentials=None):
         show_news = self.__is_after_minor_update()
         self._save_cache('last_version', __version__)
@@ -127,22 +135,19 @@ class HumbleBundlePlugin(Plugin):
 
         logging.info('Stored credentials found')
         user_id = await self._api.authenticate(stored_credentials)
-
-        subscription_infos = await self._api.get_choice_marketing_data()
-        self._subscription_months = subscription_infos.month_details
-        # TODO in separate task
-        # display_id = subscription_infos.user_options.get('email') or user_id
+        user_email = await self._fetch_marketing_data()
 
         if show_news:
             self._open_config(OPTIONS_MODE.NEWS)
-        return Authentication(user_id, user_id)
+        return Authentication(user_id, user_email or user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
         user_id = await self._api.authenticate(auth_cookie)
+        user_email = await self._fetch_marketing_data()
         self.store_credentials(auth_cookie)
         self._open_config(OPTIONS_MODE.WELCOME)
-        return Authentication(user_id, user_id)
+        return Authentication(user_id, user_email or user_id)
 
     def __is_after_minor_update(self) -> bool:
         def cut_to_minor(ver: str) -> LooseVersion:
