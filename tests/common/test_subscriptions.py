@@ -5,15 +5,44 @@ from galaxy.api.types import SubscriptionGame, Subscription
 from conftest import aiter
 
 from model.game import TroveGame
+from model.subscription import ChoiceMonth
+
+
+@pytest.fixture
+def plugin_with_sub(plugin):
+    """
+    plugin._subscription_months internal cache is expected to be set at time of getting subscriptions
+    """
+    plugin._subscription_months = [
+        ChoiceMonth({
+            "machine_name": "may_2020_choice",
+            "short_human_name": "May 2020",
+            "monthly_product_page_url": "/subscription/may-2020"
+        }, is_active=True),
+        ChoiceMonth({
+            "machine_name": "april_2020_choice",
+            "short_human_name": "April 2020",
+            "monthly_product_page_url": "/subscription/april-2020",
+            "item_count": 12
+        }, is_active=False),
+        ChoiceMonth({
+            "machine_name": "march_2020_choice",
+            "short_human_name": "March 2020",
+            "monthly_product_page_url": "/subscription/march-2020",
+            "item_count": 12
+        }, is_active=False)
+    ]
+    return plugin
 
 
 @pytest.mark.asyncio
-async def test_get_subscriptions_never_subscribed(api_mock, plugin):
+async def test_get_subscriptions_never_subscribed(api_mock, plugin_with_sub):
     api_mock.had_subscription.return_value = False
-    res = await plugin.get_subscriptions()
+
+    res = await plugin_with_sub.get_subscriptions()
     assert res == [
+        Subscription("Humble Choice 2020-05", owned=False),
         Subscription("Humble Trove", owned=False),
-        Subscription("Humble Choice 2020-03", owned=False)
     ]
 
 
