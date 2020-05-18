@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 import pytest
 
 from galaxy.api.types import SubscriptionGame, Subscription
@@ -44,6 +44,71 @@ async def test_get_subscriptions_never_subscribed(api_mock, plugin_with_sub):
         Subscription("Humble Choice 2020-05", owned=False),
         Subscription("Humble Trove", owned=False),
     ]
+
+
+@pytest.mark.asyncio
+async def test_get_subscriptions_subscriber_all_from_api(api_mock, plugin_with_sub):
+    api_mock.had_subscription.return_value = True
+    content_choice_options = [
+        Mock(**{'product_machine_name': 'may_2020_choice', 'is_active_content': True}),
+        Mock(**{'product_machine_name': 'april_2020_choice', 'is_active_content': False}),
+        Mock(**{'product_machine_name': 'march_2020_choice', 'is_active_content': False}),
+        Mock(**{'product_machine_name': 'february_2020_choice', 'is_active_content': False}),
+        Mock(**{'product_machine_name': 'january_2020_choice', 'is_active_content': False}),
+        Mock(**{'product_machine_name': 'december_2019_choice', 'is_active_content': False}),
+    ]
+    api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
+
+    res = await plugin_with_sub.get_subscriptions()
+    assert sorted(res, key=lambda x: x.subscription_name) == [
+        Subscription("Humble Choice 2019-12", owned=True),
+        Subscription("Humble Choice 2020-01", owned=True),
+        Subscription("Humble Choice 2020-02", owned=True),
+        Subscription("Humble Choice 2020-03", owned=True),
+        Subscription("Humble Choice 2020-04", owned=True),
+        Subscription("Humble Choice 2020-05", owned=True),
+        Subscription("Humble Trove", owned=True),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_get_subscriptions_active_month_not_in_api_response(api_mock, plugin_with_sub):
+    """Testcase: user has active subscription but current month not unlocked yet"""
+    api_mock.had_subscription.return_value = True
+    content_choice_options = [
+        # no active month present
+        Mock(**{'product_machine_name': 'april_2020_choice', 'is_active_content': False}),
+    ]
+    # TODO active_subscription_plan
+    api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
+
+    # res = await plugin_with_sub.get_subscriptions()
+    # assert sorted(res, key=lambda x: x.subscription_name) == [
+    #     Subscription("Humble Choice 2020-05", owned=True),
+    #     Subscription("Humble Choice 2020-04", owned=True),
+    #     Subscription("Humble Trove", owned=True),
+    # ]
+
+
+# @pytest.mark.asyncio
+# async def test_get_subscriptions_past_subscribe(api_mock, plugin_with_sub):
+#     """
+#     Testcase: Currently no subscribtion but was subscriber in the past
+#     Excpected: Active subscription months + Trove & currently active month as not owned
+#     """
+#     api_mock.had_subscription.return_value = True
+#     content_choice_options = [
+#         Mock(**{'product_machine_name': 'march_2020_choice', 'is_active_content': False}),
+#         Mock(**{'product_machine_name': 'february_2020_choice', 'is_active_content': False}),
+#     ]
+#     api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
+    # res = await plugin_with_sub.get_subscriptions()
+    # assert sorted(res, key=lambda x: x.subscription_name) == [
+#         Subscription("Humble Choice 2020-05", owned=False),
+#         Subscription("Humble Choice 2020-03", owned=True),
+#         Subscription("Humble Choice 2020-02", owned=True),
+#         Subscription("Humble Trove", owned=False),
+#     ]
 
 
 @pytest.mark.asyncio

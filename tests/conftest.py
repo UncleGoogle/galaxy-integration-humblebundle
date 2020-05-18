@@ -57,8 +57,11 @@ def api_mock_raw():
     mock.sign_url_trove = AsyncMock()
     mock.sign_url_subproduct = AsyncMock()
     mock.close_session = AsyncMock()
-    mock.get_choice_month_details = AsyncMock()
+
+    mock.get_choice_month_details = DataAsyncMock()
     mock.get_choice_marketing_data = DataAsyncMock()
+    mock.get_subscription_products_with_gamekeys = DataAsyncMock()
+
     return mock
 
 
