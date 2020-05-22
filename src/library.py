@@ -96,7 +96,7 @@ class LibraryResolver:
     @staticmethod
     def __is_const(order):
         """Tells if this order can be safly cached or may change its content in the future"""
-        if order.get('choices_remaining') != 0:
+        if 'choices_remaining' in order and order['choices_remaining'] != 0:
             return False
         for key in order['tpkd_dict']['all_tpks']:
             if 'redeemed_key_val' not in key:
