@@ -1,9 +1,13 @@
-## Unreleased
+## Version 0.8.0 Alpha (pre-release)
 [Fixed]
-- Downloading DRM-free games
+- Downloading DRM-free games #97
+- Not showing claimed choices #113
+
+[Added]
+- Humble Choice support (alpha) #108
 
 [Changed]
-- support for Trove; now it the plugin uses dedicated interface for subscription games
+- Trove as subscription #102; now it is configurable in Galaxy Settings -> Features
 
 
 ## Version 0.7.1
