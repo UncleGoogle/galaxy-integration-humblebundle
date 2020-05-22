@@ -52,13 +52,6 @@ sentry_sdk.init(
 )
 
 
-def find_first_friday(y, m):
-    dt = datetime.date(y, m, 1)
-    next_friday = (1 + (4 - dt.weekday())) % 7
-    dt.replace(day=next_friday)
-    return dt
-
-
 class HumbleBundlePlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
@@ -184,6 +177,10 @@ class HumbleBundlePlugin(Plugin):
         month, year, type_ = machine_name.split('_')
         return f'Humble {type_.title()} {year}-{month_map[month]}'
 
+    async def _get_current_user_subscription_plan(self, active_month_path: str) -> t.Optional[dict]:
+        active_month_content = await self._api.get_choice_content_data(active_month_path)
+        return active_month_content.user_subscription_plan
+
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
         active_content_unlocked = False
@@ -191,12 +188,10 @@ class HumbleBundlePlugin(Plugin):
 
         if current_or_former_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
-                subscriptions.append(
-                    Subscription(
-                        self._normalize_subscription_name(product.product_machine_name),
-                        owned=True
-                    )
-                )
+                subscriptions.append(Subscription(
+                    self._normalize_subscription_name(product.product_machine_name),
+                    owned=True
+                ))
                 if product.is_active_content:  # assuming there is one "active" month at a time
                     active_content_unlocked = True
 
@@ -206,31 +201,21 @@ class HumbleBundlePlugin(Plugin):
             - for subscribers who has not used "Early Unlock" yet:
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
-            active_content_going_to_be_unlocked = False
             active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
-
+            current_user_plan = None
             if current_or_former_subscriber:
-                active_month_content = await self._api.get_choice_content_data(active_month.last_url_part)
-                if active_month_content.user_subscription_plan is not None:
-                    active_content_going_to_be_unlocked = True
+                current_user_plan = await self._get_current_user_subscription_plan(active_month.last_url_part)
 
-            # TODO the nearest first Friday of month at 10 am PT
-            end_time = None  # tell new commers to hurry up to subscribe until chance is lost
+            subscriptions.append(Subscription(
+                self._normalize_subscription_name(active_month.machine_name),
+                owned=bool(current_user_plan),  # task: exclude Lite
+                end_time=None  # task: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+            ))
 
-            subscriptions.append(
-                Subscription(
-                    self._normalize_subscription_name(active_month.machine_name),
-                    owned=active_content_going_to_be_unlocked,
-                    end_time=end_time
-                )
-            )
-
-        subscriptions.append(
-            Subscription(
-                subscription_name="Humble Trove",
-                owned=active_content_unlocked or active_content_going_to_be_unlocked
-            )
-        )
+        subscriptions.append(Subscription(
+            subscription_name="Humble Trove",
+            owned=active_content_unlocked or current_user_plan is not None
+        ))
 
         return subscriptions
 
