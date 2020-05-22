@@ -9,6 +9,9 @@ from model.game import HumbleGame, Subproduct, Key, KeyGame
 from settings import LibrarySettings
 
 
+logger = logging.getLogger(__name__)
+
+
 class LibraryResolver:
     NEXT_FETCH_IN = 3600 * 24 * 14
 
@@ -32,7 +35,7 @@ class LibraryResolver:
             elif source == SOURCE.KEYS:
                 all_games.extend(self._get_keys(orders, self._settings.show_revealed_keys))
 
-        logging.info(f'all_games: {all_games}')
+        logger.info(f'all_games: {all_games}')
 
         # deduplication of the games with the same title
         deduplicated: Dict[str, HumbleGame] = {}
@@ -49,14 +52,14 @@ class LibraryResolver:
         if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
             next_fetch_orders = self._cache.get('next_fetch_orders')
             if next_fetch_orders is None or time.time() > next_fetch_orders:
-                logging.info('Refreshing all orders')
+                logger.info('Refreshing all orders')
                 self._cache['orders'] = await self._fetch_orders([])
                 self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
             else:
                 const_orders = {
                     gamekey: order
                     for gamekey, order in self._cache.get('orders', {}).items()
-                    if self.__all_keys_revealed(order)
+                    if self.__is_const(order)
                 }
                 self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
@@ -87,11 +90,14 @@ class LibraryResolver:
         if len(ok) == 0:
             raise err[0]
         if err and len(err) != len(items):
-            logging.error(f'Exception(s) occured: [{err}].\nSkipping and going forward')
+            logger.error(f'Exception(s) occured: [{err}].\nSkipping and going forward')
         return ok
 
     @staticmethod
-    def __all_keys_revealed(order):
+    def __is_const(order):
+        """Tells if this order can be safly cached or may change its content in the future"""
+        if 'choices_remaining' in order and order['choices_remaining'] != 0:
+            return False
         for key in order['tpkd_dict']['all_tpks']:
             if 'redeemed_key_val' not in key:
                 return False
@@ -103,7 +109,7 @@ class LibraryResolver:
         for details in orders:
             product = Product(details['product'])
             if product.bundle_type in NON_GAME_BUNDLE_TYPES:
-                logging.info(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
+                logger.info(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
                 continue
             filtered.append(details)
         return filtered
@@ -117,7 +123,7 @@ class LibraryResolver:
                 try:
                     sub.in_galaxy_format()  # minimal validation
                 except Exception as e:
-                    logging.warning(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
+                    logger.warning(f"Error while parsing subproduct {repr(e)}: {sub_data}",  extra={'data': sub_data})
                     continue
                 if not set(sub.downloads).isdisjoint(GAME_PLATFORMS):
                     # at least one download exists for supported OS
@@ -133,7 +139,7 @@ class LibraryResolver:
                 try:
                     key.in_galaxy_format()  # minimal validation
                 except Exception as e:
-                    logging.warning(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
+                    logger.warning(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
                 else:
                     if key.key_val is None or show_revealed_keys:
                         keys.extend(key.key_games)
