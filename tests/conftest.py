@@ -60,6 +60,7 @@ def api_mock_raw():
 
     mock.get_choice_month_details = DataAsyncMock()
     mock.get_choice_marketing_data = DataAsyncMock()
+    mock.get_choice_content_data = DataAsyncMock()
     mock.get_subscription_products_with_gamekeys = DataAsyncMock()
 
     return mock
