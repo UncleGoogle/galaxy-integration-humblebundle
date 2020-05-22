@@ -208,8 +208,8 @@ class HumbleBundlePlugin(Plugin):
 
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month.machine_name),
-                owned=bool(current_user_plan),  # task: exclude Lite
-                end_time=None  # task: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+                owned=bool(current_user_plan),  # #116: exclude Lite
+                end_time=None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
 
         subscriptions.append(Subscription(
@@ -367,8 +367,9 @@ class HumbleBundlePlugin(Plugin):
         try:
             game = self._humble_games[game_id]
         except KeyError as e:
-            logging.debug(self._humble_games)
-            logging.error(e, extra={'humble_games': self._humble_games})
+            # silent issues until support for choice games in #93
+            # logging.debug(self._humble_games)
+            # logging.error(e, extra={'humble_games': self._humble_games})
             return None
         else:
             HP_OS_MAP = {
