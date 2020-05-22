@@ -1,8 +1,7 @@
 import typing as t
 import datetime
-import enum
 
-from model.game import HumbleGame, Key
+from model.game import Key
 from model.types import HP, DeliveryMethod
 
 
