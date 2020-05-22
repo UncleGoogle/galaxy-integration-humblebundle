@@ -16,6 +16,10 @@ class ChoiceMarketingData:
             "email": str,
             ...
         },
+        "navbarOptions": {
+            "activeContentEndDate|datetime": "2020-06-05T17:00:00",
+            "productHumanName":	"May 2020 Humble Choice"
+        },
         ...
     }
     """

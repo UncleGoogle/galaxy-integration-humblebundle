@@ -186,7 +186,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
-        has_active_plan = False
+        active_content_unlocked = False
         current_or_former_subscriber = await self._api.had_subscription()
 
         if current_or_former_subscriber:
@@ -197,33 +197,30 @@ class HumbleBundlePlugin(Plugin):
                         owned=True
                     )
                 )
-                if product.is_active_content:
-                    # assuming only current month has "is_active_content": true
-                    has_active_plan = True
+                if product.is_active_content:  # assuming there is one "active" month at a time
+                    active_content_unlocked = True
 
-        if not has_active_plan:
+        if not active_content_unlocked:
             '''
             - for not subscribers as potential discovery of current choice games
             - for subscribers who has not used "Early Unlock" yet:
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
+            active_content_going_to_be_unlocked = False
             active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
 
             if current_or_former_subscriber:
-                active_month_content = await self._api.get_choice_content_data(
-                    active_month.last_url_part
-                )
+                active_month_content = await self._api.get_choice_content_data(active_month.last_url_part)
                 if active_month_content.user_subscription_plan is not None:
-                    has_active_plan = True
-                end_time = None  # already owned subscription never ends
-            else:
-                # TODO the nearest first Friday of month at 10 am PT
-                end_time = None  # tell new commers to hurry up to subscribe until chance is lost
+                    active_content_going_to_be_unlocked = True
+
+            # TODO the nearest first Friday of month at 10 am PT
+            end_time = None  # tell new commers to hurry up to subscribe until chance is lost
 
             subscriptions.append(
                 Subscription(
                     self._normalize_subscription_name(active_month.machine_name),
-                    owned=has_active_plan,
+                    owned=active_content_going_to_be_unlocked,
                     end_time=end_time
                 )
             )
@@ -231,7 +228,7 @@ class HumbleBundlePlugin(Plugin):
         subscriptions.append(
             Subscription(
                 subscription_name="Humble Trove",
-                owned=has_active_plan
+                owned=active_content_unlocked or active_content_going_to_be_unlocked
             )
         )
 
