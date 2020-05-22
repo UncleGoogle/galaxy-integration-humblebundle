@@ -72,26 +72,33 @@ async def test_get_subscriptions_subscriber_all_from_api(api_mock, plugin_with_s
 
 
 @pytest.mark.asyncio
-async def test_get_subscriptions_active_month_not_in_api_response(api_mock, plugin_with_sub):
-    """Testcase: user has active subscription but current month not unlocked yet"""
+async def test_get_subscriptions_current_month_not_unlocked_yet(api_mock, plugin_with_sub):
     api_mock.had_subscription.return_value = True
+    subscription_plan = {
+        "human_name": "Month-to-Month Classic Plan",
+        "length": 1,
+        "machine_name": "monthly_basic",
+        "pricing|money": {
+            "currency": "USD",
+            "amount": 12
+        }
+    }
+    api_mock.get_choice_content_data.return_value = Mock(**{'user_subscription_plan': subscription_plan})
     content_choice_options = [
-        # no active month present
         Mock(**{'product_machine_name': 'april_2020_choice', 'is_active_content': False}),
     ]
-    # TODO active_subscription_plan
     api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
 
-    # res = await plugin_with_sub.get_subscriptions()
-    # assert sorted(res, key=lambda x: x.subscription_name) == [
-    #     Subscription("Humble Choice 2020-05", owned=True),
-    #     Subscription("Humble Choice 2020-04", owned=True),
-    #     Subscription("Humble Trove", owned=True),
-    # ]
+    res = await plugin_with_sub.get_subscriptions()
+    assert sorted(res, key=lambda x: x.subscription_name) == [
+        Subscription("Humble Choice 2020-05", owned=True),  # as it is going to be unlocked
+        Subscription("Humble Choice 2020-04", owned=True),
+        Subscription("Humble Trove", owned=True),
+    ]
 
 
 # @pytest.mark.asyncio
-# async def test_get_subscriptions_past_subscribe(api_mock, plugin_with_sub):
+# async def test_get_subscriptions_past_subscriber(api_mock, plugin_with_sub):
 #     """
 #     Testcase: Currently no subscribtion but was subscriber in the past
 #     Excpected: Active subscription months + Trove & currently active month as not owned
