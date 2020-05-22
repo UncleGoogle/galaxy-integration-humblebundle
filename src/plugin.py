@@ -7,8 +7,8 @@ import datetime
 import webbrowser
 import pathlib
 import json
+import typing as t
 from functools import partial
-from typing import Any, Optional, Dict, Union, List
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -85,19 +85,19 @@ class HumbleBundlePlugin(Plugin):
         self._under_installation = set()
 
     @property
-    def _humble_games(self) -> Dict[str, HumbleGame]:
+    def _humble_games(self) -> t.Dict[str, HumbleGame]:
         """Alias for cached owned and subscription games mapped by id"""
         return {
             **self._owned_games,
             **self._trove_games
         }
 
-    def _save_cache(self, key: str, data: Any):
+    def _save_cache(self, key: str, data: t.Any):
         data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
 
-    def _load_cache(self, key: str, default: Any=None) -> Any:
+    def _load_cache(self, key: str, default: t.Any=None) -> t.Any:
         if key in self.persistent_cache:
             return json.loads(self.persistent_cache[key])
         return default
@@ -112,7 +112,7 @@ class HumbleBundlePlugin(Plugin):
             save_cache_callback=partial(self._save_cache, 'library')
         )
 
-    async def _fetch_marketing_data(self) -> Optional[str]:
+    async def _fetch_marketing_data(self) -> t.Optional[str]:
         try:
             subscription_infos = await self._api.get_choice_marketing_data()
             self._subscription_months = subscription_infos.month_details
@@ -255,13 +255,13 @@ class HumbleBundlePlugin(Plugin):
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
 
-    async def prepare_subscription_games_context(self, subscription_names) -> Dict[str, ChoiceMonth]:
+    async def prepare_subscription_games_context(self, subscription_names) -> t.Dict[str, ChoiceMonth]:
         name_url = {}
         for month in self._subscription_months:
             name_url[self._normalize_subscription_name(month.machine_name)] = month
         return name_url
 
-    async def get_subscription_games(self, subscription_name, context: Dict[str, ChoiceMonth]):
+    async def get_subscription_games(self, subscription_name, context: t.Dict[str, ChoiceMonth]):
         if subscription_name == "Humble Trove":
             async for troves in self._get_trove_games():
                 yield troves
@@ -354,7 +354,7 @@ class HumbleBundlePlugin(Plugin):
         finally:
             self._under_installation.remove(game_id)
 
-    async def get_game_library_settings(self, game_id: str, context: Any) -> GameLibrarySettings:
+    async def get_game_library_settings(self, game_id: str, context: t.Any) -> GameLibrarySettings:
         gls = GameLibrarySettings(game_id, None, None)
         game = self._humble_games[game_id]
         if isinstance(game, Key):
@@ -381,7 +381,7 @@ class HumbleBundlePlugin(Plugin):
         else:
             game.uninstall()
 
-    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
+    async def get_os_compatibility(self, game_id: str, context: t.Any) -> t.Optional[OSCompatibility]:
         try:
             game = self._humble_games[game_id]
         except KeyError as e:

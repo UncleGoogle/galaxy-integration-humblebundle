@@ -1,6 +1,6 @@
 from http.cookies import SimpleCookie
 from http import HTTPStatus
-from typing import List, Optional, Dict
+import typing as t
 import aiohttp
 import json
 import base64
@@ -72,7 +72,7 @@ class AuthorizedHumbleAPI:
         decoded = json.loads(base64.b64decode(info))
         return decoded['user_id']
 
-    async def authenticate(self, auth_cookie: dict) -> Optional[str]:
+    async def authenticate(self, auth_cookie: dict) -> t.Optional[str]:
         # recreate original cookie
         cookie = SimpleCookie()
         cookie_val = bytes(auth_cookie['value'], "utf-8").decode("unicode_escape")
@@ -84,7 +84,7 @@ class AuthorizedHumbleAPI:
         self._session.cookie_jar.update_cookies(cookie)
         return self._decode_user_id(cookie_val)
 
-    async def get_gamekeys(self) -> List[str]:
+    async def get_gamekeys(self) -> t.List[str]:
         res = await self._request('get', self._ORDER_LIST_URL)
         parsed = await res.json()
         logging.info(f"The order list:\n{parsed}")
@@ -123,7 +123,7 @@ class AuthorizedHumbleAPI:
                     return
             cursor = res_json['cursor']
 
-    async def had_subscription(self) -> Optional[bool]:
+    async def had_subscription(self) -> t.Optional[bool]:
         """Based on current behavior of `humblebundle.com/subscription/home`
         that is accesable only by "current and former subscribers"
         """
