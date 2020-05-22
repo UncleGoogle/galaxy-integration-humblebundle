@@ -186,7 +186,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
-        current_month_unlocked = False
+        has_active_plan = False
         current_or_former_subscriber = await self._api.had_subscription()
 
         if current_or_former_subscriber:
@@ -199,22 +199,22 @@ class HumbleBundlePlugin(Plugin):
                 )
                 if product.is_active_content:
                     # assuming only current month has "is_active_content": true
-                    current_month_unlocked = True
+                    has_active_plan = True
 
-        if not current_month_unlocked:
+        if not has_active_plan:
             '''
             - for not subscribers as potential discovery of current choice games
             - for subscribers who has not used "Early Unlock" yet:
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
-            active_month = self._subscription_months[0]
+            active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
 
             if current_or_former_subscriber:
                 active_month_content = await self._api.get_choice_content_data(
                     active_month.last_url_part
                 )
                 if active_month_content.user_subscription_plan is not None:
-                    current_month_unlocked = True  # "will be unlocked" to be more precized
+                    has_active_plan = True
                 end_time = None  # already owned subscription never ends
             else:
                 # TODO the nearest first Friday of month at 10 am PT
@@ -223,7 +223,7 @@ class HumbleBundlePlugin(Plugin):
             subscriptions.append(
                 Subscription(
                     self._normalize_subscription_name(active_month.machine_name),
-                    owned=current_month_unlocked,
+                    owned=has_active_plan,
                     end_time=end_time
                 )
             )
@@ -231,7 +231,7 @@ class HumbleBundlePlugin(Plugin):
         subscriptions.append(
             Subscription(
                 subscription_name="Humble Trove",
-                owned=current_month_unlocked
+                owned=has_active_plan
             )
         )
 
