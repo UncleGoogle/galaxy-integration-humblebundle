@@ -3,9 +3,10 @@ import logging
 import asyncio
 from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine
 
-from consts import SOURCE, NON_GAME_BUNDLE_TYPES, GAME_PLATFORMS
+from consts import SOURCE, NON_GAME_BUNDLE_TYPES
 from model.product import Product
 from model.game import HumbleGame, Subproduct, Key, KeyGame
+from model.types import GAME_PLATFORMS
 from settings import LibrarySettings
 
 

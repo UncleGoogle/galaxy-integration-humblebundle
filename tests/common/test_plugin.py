@@ -5,10 +5,11 @@ import pathlib
 from galaxy.api.consts import OSCompatibility as OSC
 from galaxy.api.types import GameLibrarySettings
 
-from consts import HP, CURRENT_SYSTEM
+from consts import IS_WINDOWS, IS_MAC
 from local.localgame import LocalHumbleGame
 from model.game import Subproduct, KeyGame, TroveGame
 from model.download import TroveDownload
+from model.types import HP
 
 
 @pytest.mark.asyncio
@@ -20,9 +21,9 @@ async def test_launch_game(plugin, overgrowth):
     with patch('subprocess.Popen') as subproc:
         with patch('psutil.Process'):
             await plugin.launch_game(id_)
-            if CURRENT_SYSTEM == HP.WINDOWS:
+            if IS_WINDOWS:
                 subproc.assert_called_once_with('game_dir\\mock.exe', creationflags=8 ,cwd=pathlib.Path('game_dir'))
-            elif CURRENT_SYSTEM == HP.MAC:
+            elif IS_MAC:
                 subproc.assert_called_once()
 
 
@@ -56,7 +57,8 @@ async def test_install_game_drm_free(api_mock, plugin, overgrowth):
 @pytest.mark.asyncio
 async def test_install_game_trove(api_mock, plugin):
     id_ = 'trove_game'
-    game = Mock(spec=TroveGame, downloads={CURRENT_SYSTEM: Mock(spec=TroveDownload)})
+    platform = HP.WINDOWS if IS_WINDOWS else HP.MAC
+    game = Mock(spec=TroveGame, downloads={platform: Mock(spec=TroveDownload)})
     plugin._owned_games = { id_: game }
     expected_url = "https://dl.humble.com/developer/trove_game_012_build-5584-win64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=7f2263e7f3360f3beb112e58521145a0"
     api_mock.sign_url_trove.return_value = {

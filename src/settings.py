@@ -8,7 +8,7 @@ from typing import Any, Dict, Callable, Mapping, Optional, Set
 
 import toml
 
-from consts import SOURCE, HP, CURRENT_SYSTEM
+from consts import SOURCE, IS_WINDOWS, IS_MAC
 
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class UpdateTracker(abc.ABC):
     @abc.abstractmethod
     def _update(self, *args, **kwargs):
         """Validates and updates section"""
-    
+
     @abc.abstractmethod
     def serialize(self) -> Dict[str, Any]:
         """Serialize to "ready to dump" dictionary. Should be compatibile with _update"""
@@ -60,7 +60,7 @@ class LibrarySettings(UpdateTracker):
             self.sources = set([SOURCE(s) for s in sources])
         if show_keys is not None:
             self.show_revealed_keys = show_keys
-    
+
     def serialize(self) -> Dict[str, Any]:
         return {
             "sources": [s.value for s in self.sources],
@@ -96,7 +96,7 @@ class InstalledSettings(UpdateTracker):
 class Settings:
     DEFAULT_CONFIG_FILE = pathlib.Path(__file__).parent / 'config.ini'  # deprecated
 
-    if CURRENT_SYSTEM == HP.WINDOWS:
+    if IS_WINDOWS:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / "AppData/Local/galaxy-hb/galaxy-humble-config.ini"
     else:
         LOCAL_CONFIG_FILE = pathlib.Path.home() / ".config/galaxy-humble.cfg"
@@ -124,9 +124,9 @@ class Settings:
 
     def open_config_file(self):
         logger.info('Opening config file')
-        if CURRENT_SYSTEM == HP.WINDOWS:
+        if IS_WINDOWS:
             os.startfile(self.LOCAL_CONFIG_FILE)
-        elif CURRENT_SYSTEM == HP.MAC:
+        elif IS_MAC:
             subprocess.Popen(['/usr/bin/open', '-t', '-n', str(self.LOCAL_CONFIG_FILE.resolve())])
 
     def reload_config_if_changed(self, initial=False) -> bool:
@@ -174,7 +174,7 @@ class Settings:
             "library": self.library.serialize(),
             "installed": self.installed.serialize()
         }
-    
+
     def _get_config_file_comments(self) -> str:
         """Loads comments from old config.ini file.
         They are be helpful for manual editing with configuration file.

@@ -1,5 +1,5 @@
 from model.game import Subproduct, Key, KeyGame
-from consts import GAME_PLATFORMS, HP
+from model.types import GAME_PLATFORMS, HP
 
 
 def test_game_properties_overgrowth(overgrowth):

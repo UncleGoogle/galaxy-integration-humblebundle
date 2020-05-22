@@ -8,14 +8,14 @@ import abc
 from typing import Dict, Set, Iterable, Union, List, AsyncGenerator, Tuple
 from typing import cast
 
-from consts import CURRENT_SYSTEM
+from consts import IS_WINDOWS
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
 
 
 class BaseAppFinder(abc.ABC):
     def __init__(self, get_close_matches=None, find_best_exe=None):
-        self._pathfinder = PathFinder(CURRENT_SYSTEM)
+        self._pathfinder = PathFinder(IS_WINDOWS)
         self.get_close_matches = get_close_matches or self._get_close_matches
         self.find_best_exe = find_best_exe or self._find_best_exe
 

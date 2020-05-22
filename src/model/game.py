@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Any
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo, SubscriptionGame
 
-from consts import KEY_TYPE, HP
+from model.types import KEY_TYPE, HP
 from model.download import TroveDownload, SubproductDownload
 
 

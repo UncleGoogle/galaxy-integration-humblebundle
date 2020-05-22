@@ -3,11 +3,12 @@ import platform
 import asyncio
 import logging
 import re
+import datetime
 import webbrowser
 import pathlib
 import json
+import typing as t
 from functools import partial
-from typing import Any, Optional, Dict
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -15,14 +16,16 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
-from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
-from galaxy.api.errors import AuthenticationRequired, InvalidCredentials, UnknownError
+from galaxy.api.consts import Platform, OSCompatibility
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
+from galaxy.api.errors import AuthenticationRequired, UnknownError
 
-from consts import HP, CURRENT_SYSTEM, SUBSCRIPTIONS
+from consts import IS_WINDOWS
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame
+from model.types import HP
+from model.subscription import ChoiceMonth
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -57,9 +60,12 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._settings = Settings()
         self._library_resolver = None
+        self._subscription_months: List[ChoiceMonth] = []
 
         self._owned_games: Dict[str, HumbleGame] = {}
         self._trove_games: Dict[str, TroveGame] = {}
+        self._choice_games = {}  # for now model.subscription.ChoiceContet or Extras TODO consider adding to model.game
+
         self._local_games = {}
         self._cached_game_states = {}
 
@@ -72,19 +78,19 @@ class HumbleBundlePlugin(Plugin):
         self._under_installation = set()
 
     @property
-    def _humble_games(self) -> Dict[str, HumbleGame]:
+    def _humble_games(self) -> t.Dict[str, HumbleGame]:
         """Alias for cached owned and subscription games mapped by id"""
         return {
             **self._owned_games,
             **self._trove_games
         }
 
-    def _save_cache(self, key: str, data: Any):
+    def _save_cache(self, key: str, data: t.Any):
         data = json.dumps(data)
         self.persistent_cache[key] = data
         self.push_cache()
 
-    def _load_cache(self, key: str, default: Any=None) -> Any:
+    def _load_cache(self, key: str, default: t.Any=None) -> t.Any:
         if key in self.persistent_cache:
             return json.loads(self.persistent_cache[key])
         return default
@@ -98,6 +104,14 @@ class HumbleBundlePlugin(Plugin):
             cache=self._load_cache('library', {}),
             save_cache_callback=partial(self._save_cache, 'library')
         )
+
+    async def _fetch_marketing_data(self) -> t.Optional[str]:
+        try:
+            subscription_infos = await self._api.get_choice_marketing_data()
+            self._subscription_months = subscription_infos.month_details
+            return subscription_infos.user_options['email']
+        except KeyError:  # extra safety as this data is not crucial
+            return None
 
     async def authenticate(self, stored_credentials=None):
         show_news = self.__is_after_minor_update()
@@ -114,18 +128,19 @@ class HumbleBundlePlugin(Plugin):
 
         logging.info('Stored credentials found')
         user_id = await self._api.authenticate(stored_credentials)
-        if user_id is None:
-            raise InvalidCredentials()
+        user_email = await self._fetch_marketing_data()
+
         if show_news:
             self._open_config(OPTIONS_MODE.NEWS)
-        return Authentication(user_id, user_id)
+        return Authentication(user_id, user_email or user_id)
 
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
         user_id = await self._api.authenticate(auth_cookie)
+        user_email = await self._fetch_marketing_data()
         self.store_credentials(auth_cookie)
         self._open_config(OPTIONS_MODE.WELCOME)
-        return Authentication(user_id, user_id)
+        return Authentication(user_id, user_email or user_id)
 
     def __is_after_minor_update(self) -> bool:
         def cut_to_minor(ver: str) -> LooseVersion:
@@ -143,14 +158,70 @@ class HumbleBundlePlugin(Plugin):
             self._owned_games = await self._library_resolver()
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
+    @staticmethod
+    def _normalize_subscription_name(machine_name):
+        month_map = {
+            'january': '01',
+            'february': '02',
+            'march': '03',
+            'april': '04',
+            'may': '05',
+            'june': '06',
+            'july': '07',
+            'august': '08',
+            'september': '09',
+            'octover': '10',
+            'november': '11',
+            'december': '12'
+        }
+        month, year, type_ = machine_name.split('_')
+        return f'Humble {type_.title()} {year}-{month_map[month]}'
+
+    async def _get_current_user_subscription_plan(self, active_month_path: str) -> t.Optional[dict]:
+        active_month_content = await self._api.get_choice_content_data(active_month_path)
+        return active_month_content.user_subscription_plan
+
     async def get_subscriptions(self):
-        return [
-            Subscription(SUBSCRIPTIONS.TROVE, subscription_discovery=SubscriptionDiscovery.USER_ENABLED)
-        ]
+        subscriptions: List[Subscription] = []
+        active_content_unlocked = False
+        current_or_former_subscriber = await self._api.had_subscription()
+
+        if current_or_former_subscriber:
+            async for product in self._api.get_subscription_products_with_gamekeys():
+                subscriptions.append(Subscription(
+                    self._normalize_subscription_name(product.product_machine_name),
+                    owned=True
+                ))
+                if product.is_active_content:  # assuming there is one "active" month at a time
+                    active_content_unlocked = True
+
+        if not active_content_unlocked:
+            '''
+            - for not subscribers as potential discovery of current choice games
+            - for subscribers who has not used "Early Unlock" yet:
+              https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
+            '''
+            active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
+            current_user_plan = None
+            if current_or_former_subscriber:
+                current_user_plan = await self._get_current_user_subscription_plan(active_month.last_url_part)
+
+            subscriptions.append(Subscription(
+                self._normalize_subscription_name(active_month.machine_name),
+                owned=bool(current_user_plan),  # #116: exclude Lite
+                end_time=None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+            ))
+
+        subscriptions.append(Subscription(
+            subscription_name="Humble Trove",
+            owned=active_content_unlocked or current_user_plan is not None
+        ))
+
+        return subscriptions
 
     async def _get_trove_games(self):
         def parse_and_cache(troves):
-            games: List['SubscriptionGame'] = []
+            games: List[SubscriptionGame] = []
             for trove in troves:
                 try:
                     trove_game = TroveGame(trove)
@@ -166,10 +237,38 @@ class HumbleBundlePlugin(Plugin):
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
 
-    async def get_subscription_games(self, subscription_name, context):
-        if SUBSCRIPTIONS(subscription_name) == SUBSCRIPTIONS.TROVE:
+    async def prepare_subscription_games_context(self, subscription_names) -> t.Dict[str, ChoiceMonth]:
+        name_url = {}
+        for month in self._subscription_months:
+            name_url[self._normalize_subscription_name(month.machine_name)] = month
+        return name_url
+
+    async def get_subscription_games(self, subscription_name, context: t.Dict[str, ChoiceMonth]):
+        if subscription_name == "Humble Trove":
             async for troves in self._get_trove_games():
                 yield troves
+            return
+
+        month: ChoiceMonth = context[subscription_name]
+        choice_data = await self._api.get_choice_content_data(month.last_url_part)
+        cco = choice_data.content_choice_options
+        show_all = cco.remained_choices > 0
+        if month.is_active:
+            start_time = choice_data.active_content_start.timestamp()
+        else:
+            start_time = None  # TODO assume first friday of month
+
+        content_choices = [
+            SubscriptionGame(ch.title, ch.id, start_time)
+            for ch in cco.content_choices
+            if show_all or ch.id in cco.content_choices_made
+        ]
+        extrases = [
+            SubscriptionGame(extr.human_name, extr.machine_name, start_time)
+            for extr in cco.extrases
+        ]
+        month_choice_games = content_choices + extrases
+        yield month_choice_games
 
     async def subscription_games_import_complete(self):
         sub_games_raw_data = [game.serialize() for game in self._trove_games.values]
@@ -212,7 +311,8 @@ class HumbleBundlePlugin(Plugin):
                 return
 
             try:
-                curr_os_download = game.downloads[CURRENT_SYSTEM]
+                hp = HP.WINDOWS if IS_WINDOWS else HP.MAC
+                curr_os_download = game.downloads[hp]
             except KeyError:
                 raise UnknownError(f'{game.human_name} has only downloads for {list(game.downloads.keys())}')
 
@@ -236,7 +336,7 @@ class HumbleBundlePlugin(Plugin):
         finally:
             self._under_installation.remove(game_id)
 
-    async def get_game_library_settings(self, game_id: str, context: Any) -> GameLibrarySettings:
+    async def get_game_library_settings(self, game_id: str, context: t.Any) -> GameLibrarySettings:
         gls = GameLibrarySettings(game_id, None, None)
         game = self._humble_games[game_id]
         if isinstance(game, Key):
@@ -263,12 +363,13 @@ class HumbleBundlePlugin(Plugin):
         else:
             game.uninstall()
 
-    async def get_os_compatibility(self, game_id: str, context: Any) -> Optional[OSCompatibility]:
+    async def get_os_compatibility(self, game_id: str, context: t.Any) -> t.Optional[OSCompatibility]:
         try:
             game = self._humble_games[game_id]
         except KeyError as e:
-            logging.debug(self._humble_games)
-            logging.error(e, extra={'humble_games': self._humble_games})
+            # silent issues until support for choice games in #93
+            # logging.debug(self._humble_games)
+            # logging.error(e, extra={'humble_games': self._humble_games})
             return None
         else:
             HP_OS_MAP = {
@@ -302,10 +403,11 @@ class HumbleBundlePlugin(Plugin):
             logging.debug('Skipping perdiodic check for local games as owned/subscription games not found yet.')
             return
 
+        hp = HP.WINDOWS if IS_WINDOWS else HP.MAC
         installable_title_id = {
             game.human_name: uid for uid, game
             in self._humble_games.items()
-            if not isinstance(game, Key) and game.os_compatibile(CURRENT_SYSTEM)
+            if not isinstance(game, Key) and game.os_compatibile(hp)
         }
         if self._rescan_needed:
             self._rescan_needed = False

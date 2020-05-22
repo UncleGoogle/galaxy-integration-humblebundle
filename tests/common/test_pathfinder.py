@@ -2,13 +2,13 @@ import pytest
 from pathlib import PureWindowsPath
 
 from local.pathfinder import PathFinder
-from consts import HP, CURRENT_SYSTEM
+from consts import IS_WINDOWS
 
 
 @pytest.fixture
 def systemize():
     def fn(executables):
-        if CURRENT_SYSTEM == HP.WINDOWS:
+        if IS_WINDOWS:
             new_execs = [str(x) for x in executables]
         else:
             new_execs = [str(x.as_posix()) for x in executables]
