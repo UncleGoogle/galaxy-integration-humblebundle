@@ -83,7 +83,7 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(api_mock, plugin
             "amount": 12
         }
     }
-    api_mock.get_choice_content_data.return_value = Mock(**{'user_subscription_plan': subscription_plan})
+    api_mock.get_choice_content_data.retrun_value = Mock(**{'user_subscription_plan': subscription_plan})
     content_choice_options = [
         Mock(**{'product_machine_name': 'april_2020_choice', 'is_active_content': False}),
     ]
@@ -91,8 +91,8 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(api_mock, plugin
 
     res = await plugin_with_sub.get_subscriptions()
     assert sorted(res, key=lambda x: x.subscription_name) == [
-        Subscription("Humble Choice 2020-05", owned=True),  # as it is going to be unlocked
         Subscription("Humble Choice 2020-04", owned=True),
+        Subscription("Humble Choice 2020-05", owned=True),  # as it is going to be unlocked
         Subscription("Humble Trove", owned=True),
     ]
 

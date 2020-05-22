@@ -18,11 +18,6 @@ class AsyncMock(MagicMock):
         return super(AsyncMock, self).__call__(*args, **kwargs)
 
 
-class DataAsyncMock(AsyncMock):
-    async def __call__(self, *args, **kwargs):
-        return MagicMock(*args, **kwargs)
-
-
 async def aiter(seq):
     """Helper for mocking asynchonous generators"""
     for item in seq:
@@ -57,11 +52,10 @@ def api_mock_raw():
     mock.sign_url_trove = AsyncMock()
     mock.sign_url_subproduct = AsyncMock()
     mock.close_session = AsyncMock()
-
-    mock.get_choice_month_details = DataAsyncMock()
-    mock.get_choice_marketing_data = DataAsyncMock()
-    mock.get_choice_content_data = DataAsyncMock()
-    mock.get_subscription_products_with_gamekeys = DataAsyncMock()
+    mock.get_choice_content_data = AsyncMock()
+    mock.get_choice_month_details = AsyncMock(return_value=MagicMock())
+    mock.get_choice_marketing_data = AsyncMock(return_value=MagicMock())
+    mock.get_subscription_products_with_gamekeys = AsyncMock(return_value=MagicMock())
 
     return mock
 
