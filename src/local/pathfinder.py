@@ -21,6 +21,7 @@ class PathFinder:
                 whole_path = os.path.join(root, path)
                 if self.is_exe(whole_path):
                     execs.append(whole_path)
+            break
         return execs
 
     def is_exe(self, path: str) -> bool:
