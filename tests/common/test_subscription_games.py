@@ -8,7 +8,7 @@ from model.game import TroveGame
 
 
 @pytest.mark.asyncio
-async def test_get_subscription_games_trove(api_mock, plugin):
+async def test_trove(api_mock, plugin):
     parsed_from_page = {
         'newlyAdded': [
             {'human-name': 'A', 'machine_name': 'a'},
@@ -47,7 +47,7 @@ async def test_get_subscription_games_trove(api_mock, plugin):
 
 
 @pytest.mark.asyncio
-async def test_subscription_games_cache_trove(api_mock, plugin):
+async def test_trove_cache(api_mock, plugin):
     parsed_from_page = {
         'newlyAdded': [
             {'human-name': 'Z', 'machine_name': 'z'}
@@ -72,4 +72,30 @@ async def test_subscription_games_cache_trove(api_mock, plugin):
         'b': TroveGame({'human-name': 'B', 'machine_name': 'b'}),
         'c': TroveGame({'human-name': 'C', 'machine_name': 'c'}),
         'z': TroveGame({'human-name': 'Z', 'machine_name': 'z'}),
+    }
+
+@pytest.mark.asyncio
+async def test_trove_serialize_to_presistent_cache(plugin):
+    plugin._trove_games = {
+        'a': TroveGame({'human-name': 'A', 'machine_name': 'a', 'downloads': {'windows': {}}}),
+        'c': TroveGame({'human-name': 'C', 'machine_name': 'c', 'downloads': {'mac': {}}}),
+    }
+    await plugin.subscription_games_import_complete()
+    assert plugin.persistent_cache['trove_games'] == '[' \
+        '{"human-name": "A", "machine_name": "a", "downloads": {"windows": {}}}, ' \
+        '{"human-name": "C", "machine_name": "c", "downloads": {"mac": {}}}' \
+    ']'
+    plugin.push_cache.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_trove_load_from_persistent_cache(plugin):
+    plugin.persistent_cache['trove_games'] = '[' \
+        '{"human-name": "A", "machine_name": "a", "downloads": {"windows": {}}}, ' \
+        '{"human-name": "C", "machine_name": "c", "downloads": {"mac": {}}}' \
+    ']'
+    plugin.handshake_complete()
+    assert plugin._trove_games == {
+        'a': TroveGame({'human-name': 'A', 'machine_name': 'a', 'downloads': {'windows': {}}}),
+        'c': TroveGame({'human-name': 'C', 'machine_name': 'c', 'downloads': {'mac': {}}}),
     }
