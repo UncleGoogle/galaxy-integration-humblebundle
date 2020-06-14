@@ -6,7 +6,6 @@ import os
 import subprocess
 import shutil
 from pathlib import Path
-from glob import glob
 
 from invoke import task
 import github
