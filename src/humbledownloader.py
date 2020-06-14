@@ -1,4 +1,4 @@
-from model.download import DownloadStructItem, SubproductDownload, TroveDownload
+from model.download import DownloadStructItem, SubproductDownload
 from consts import CURRENT_BITNESS, BITNESS
 
 
