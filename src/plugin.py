@@ -3,7 +3,6 @@ import platform
 import asyncio
 import logging
 import re
-import datetime
 import webbrowser
 import pathlib
 import json
