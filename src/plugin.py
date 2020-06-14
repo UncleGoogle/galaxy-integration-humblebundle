@@ -102,7 +102,7 @@ class HumbleBundlePlugin(Plugin):
     def handshake_complete(self):
         self._last_version = self._load_cache('last_version', default=None)
         self._trove_games = {g['machine_name']: TroveGame(g) for g in self._load_cache('trove_games', [])}
-        self._choice_games = {g['id']: ChoiceGame(*g) for g in self._load_cache('choice_games', [])}
+        self._choice_games = {g['id']: ChoiceGame(**g) for g in self._load_cache('choice_games', [])}
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
