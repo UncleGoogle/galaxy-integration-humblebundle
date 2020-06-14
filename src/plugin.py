@@ -445,7 +445,7 @@ class HumbleBundlePlugin(Plugin):
         self._settings.reload_config_if_changed()
 
         if self._owned_check.done() and self._settings.library.has_changed():
-            self._owned_check = self.create_task(self._check_owned(), 'check owned')
+            self._owned_check = asyncio.create_task(self._check_owned())
 
         if self._settings.installed.has_changed():
             self._rescan_needed = True
@@ -457,6 +457,7 @@ class HumbleBundlePlugin(Plugin):
             self._statuses_check = asyncio.create_task(self._check_statuses())
 
     async def shutdown(self):
+        self._owned_check.cancel()
         self._statuses_check.cancel()
         self._installed_check.cancel()
         await self._api.close_session()
