@@ -25,7 +25,7 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
 from model.types import HP
-from model.subscription import ChoiceMonth, ContentChoice, Extras
+from model.subscription import ChoiceMonth
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -114,6 +114,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             subscription_infos = await self._api.get_choice_marketing_data()
             self._subscription_months = subscription_infos.month_details
+            logger.debug(f'Subscription months: {self._subscription_months}')
             return subscription_infos.user_options['email']
         except KeyError:  # extra safety as this data is not crucial
             return None
@@ -257,7 +258,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             choice_url_id = context[subscription_name]
         except KeyError:
-            raise UnknownError(f'Unrecognized subscription name {subscription_name}')
+            raise UnknownError(f'Unrecognized subscription name: "{subscription_name}"')
 
         choice_data = await self._api.get_choice_content_data(choice_url_id)
         cco = choice_data.content_choice_options
@@ -275,11 +276,9 @@ class HumbleBundlePlugin(Plugin):
         self._choice_games.update(choice_games)
         yield [game.in_galaxy_format() for game in choice_games.values()]
 
-    async def subscription_games_import_complete(self):
-        trove_games_raw_data = [game.serialize() for game in self._trove_games.values()]
-        self._save_cache('trove_games', trove_games_raw_data)
-        choice_games_raw_data = [game.serialize() for game in self._choice_games.values()]
-        self._save_cache('choice_games', choice_games_raw_data)
+    def subscription_games_import_complete(self):
+        self._save_cache('trove_games', [game.serialize() for game in self._trove_games.values()])
+        self._save_cache('choice_games', [game.serialize() for game in self._choice_games.values()])
 
     async def get_local_games(self):
         self._rescan_needed = True

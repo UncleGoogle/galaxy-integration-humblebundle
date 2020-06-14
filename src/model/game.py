@@ -177,14 +177,15 @@ class ChoiceGame(HumbleGame):
         """No downloads for abstract choice games"""
         return {}
 
-    def in_galaxy_format(self):
-        return SubscriptionGame(game_title=self.title, game_id=self.id)
-
+    @property
     def presentation_url(self):
         if self.is_extras:
             return f'https://www.humblebundle.com/subscription/{self.month_id}'
         else:
             return f'https://www.humblebundle.com/subscription/{self.month_id}/{self.id}'
+
+    def in_galaxy_format(self):
+        return SubscriptionGame(game_title=self.title, game_id=self.id)
 
     def serialize(self):
         return asdict(self)
