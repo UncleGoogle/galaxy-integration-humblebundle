@@ -19,7 +19,7 @@ from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
 from galaxy.api.errors import AuthenticationRequired, UnknownError
 
-from consts import IS_WINDOWS
+from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
@@ -218,7 +218,7 @@ class HumbleBundlePlugin(Plugin):
             ))
 
         subscriptions.append(Subscription(
-            subscription_name="Humble Trove",
+            subscription_name=TROVE_SUBSCRIPTION_NAME,
             owned=active_content_unlocked or current_user_plan is not None
         ))
 
@@ -244,8 +244,21 @@ class HumbleBundlePlugin(Plugin):
 
     async def prepare_subscription_games_context(self, subscription_names) -> t.Dict[str, str]:
         name_url_map = {}
-        for month in self._subscription_months:
-            name_url_map[self._normalize_subscription_name(month.machine_name)] = month.last_url_part
+        sub_names = set(subscription_names)
+        sub_names.discard(TROVE_SUBSCRIPTION_NAME)
+
+        def check_sub(month):
+            normalized_name = self._normalize_subscription_name(month.machine_name)
+            sub_names.remove(normalized_name)
+            name_url_map[normalized_name] = month.last_url_part
+
+        try:
+            for cached_month in self._subscription_months:
+                check_sub(cached_month)
+            async for month in self._api.get_previous_subscription_months(cached_month.last_url_part):
+                check_sub(month)
+        except KeyError:  # from `sub_names.remove` - subscription_name not requested - finish
+            pass
         return name_url_map
 
     async def get_subscription_games(self, subscription_name, context: t.Dict[str, str]):
