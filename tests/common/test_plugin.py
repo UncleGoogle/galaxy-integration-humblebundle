@@ -73,7 +73,7 @@ async def test_install_game_trove(api_mock, plugin):
 @pytest.mark.asyncio
 async def test_install_game_choice(plugin):
     id_ = 'game_id'
-    game = ChoiceGame(id_, 'The Game', month_id='may_2020')
+    game = ChoiceGame(id_, 'The Game', 'may_2020')
     plugin._choice_games = { id_: game }
     expected_url = 'https://www.humblebundle.com/subscription/may_2020/game_id'
     with patch('webbrowser.open') as browser_open:
@@ -89,7 +89,7 @@ async def test_install_game_choice_extras(plugin):
     In such case direct download is possible from different game page view.
     """
     id_ = 'game_id'
-    game = ChoiceGame(id_, 'The Game DLC1', month_id='may_2020', is_extras=True)
+    game = ChoiceGame(id_, 'The Game DLC1', 'may_2020', is_extras=True)
     plugin._choice_games = { id_: game }
     expected_url = 'https://www.humblebundle.com/subscription/may_2020'
     with patch('webbrowser.open') as browser_open:

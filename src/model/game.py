@@ -161,7 +161,7 @@ class KeyGame(Key):
 class ChoiceGame(HumbleGame):
     id: str
     title: str
-    month_id: str
+    slug: str
     is_extras: bool = False
 
     @property
@@ -180,9 +180,9 @@ class ChoiceGame(HumbleGame):
     @property
     def presentation_url(self):
         if self.is_extras:
-            return f'https://www.humblebundle.com/subscription/{self.month_id}'
+            return f'https://www.humblebundle.com/subscription/{self.slug}'
         else:
-            return f'https://www.humblebundle.com/subscription/{self.month_id}/{self.id}'
+            return f'https://www.humblebundle.com/subscription/{self.slug}/{self.id}'
 
     def in_galaxy_format(self):
         return SubscriptionGame(game_title=self.title, game_id=self.id)

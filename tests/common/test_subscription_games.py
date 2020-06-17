@@ -6,6 +6,7 @@ from conftest import aiter, AsyncMock
 from galaxy.api.types import SubscriptionGame
 from model.game import TroveGame, ChoiceGame
 from model.subscription import ChoiceContentData, ContentChoiceOptions
+from consts import TROVE_SUBSCRIPTION_NAME
 
 
 @pytest.mark.asyncio
@@ -33,7 +34,7 @@ async def test_trove(api_mock, plugin):
     api_mock.get_trove_details = MagicMock(return_value=aiter(chunks_from_api))
     ctx = None
     trove_games = []
-    async for bunch in plugin.get_subscription_games('Humble Trove', ctx):
+    async for bunch in plugin.get_subscription_games(TROVE_SUBSCRIPTION_NAME, ctx):
         trove_games.extend(bunch)
     assert sorted(trove_games, key=lambda x: x.game_id) \
         == sorted([
@@ -109,9 +110,7 @@ async def test_choice_month_has_remained_choices(api_mock, plugin, cco, choice_d
         Mock(**{'machine_name':'e', 'human_name': 'E'})
     ]
     api_mock.get_choice_content_data = AsyncMock(return_value=choice_data)
-    ctx = {
-        'Humble Choice 2020-05': 'may-2020',
-    }
+    ctx = None
     async for one_month_games in plugin.get_subscription_games('Humble Choice 2020-05', ctx):
         assert one_month_games == [
             SubscriptionGame(game_title='A', game_id='a'),
@@ -120,10 +119,10 @@ async def test_choice_month_has_remained_choices(api_mock, plugin, cco, choice_d
             SubscriptionGame(game_title='E', game_id='e'),
         ]
     assert plugin._choice_games == {  # cache
-        'a': ChoiceGame(id='a', title='A', month_id='may-2020', is_extras=False),
-        'b': ChoiceGame(id='b', title='B', month_id='may-2020', is_extras=False),
-        'c': ChoiceGame(id='c', title='C', month_id='may-2020', is_extras=False),
-        'e': ChoiceGame(id='e', title='E', month_id='may-2020', is_extras=True),
+        'a': ChoiceGame(id='a', title='A', slug='may-2020', is_extras=False),
+        'b': ChoiceGame(id='b', title='B', slug='may-2020', is_extras=False),
+        'c': ChoiceGame(id='c', title='C', slug='may-2020', is_extras=False),
+        'e': ChoiceGame(id='e', title='E', slug='may-2020', is_extras=True),
     }
 
 
@@ -141,17 +140,15 @@ async def test_choice_month_no_remained_choices(api_mock, plugin, cco, choice_da
         Mock(**{'machine_name':'e', 'human_name': 'E'})
     ]
     api_mock.get_choice_content_data = AsyncMock(return_value=choice_data)
-    ctx = {
-        'Humble Choice 2020-05': 'may-2020',
-    }
+    ctx = None
     async for one_month_games in plugin.get_subscription_games('Humble Choice 2020-05', ctx):
         assert one_month_games == [
             SubscriptionGame(game_title='C', game_id='c'),
             SubscriptionGame(game_title='E', game_id='e'),
         ]
     assert plugin._choice_games == {  # cache
-        'c': ChoiceGame(id='c', title='C', month_id='may-2020', is_extras=False),
-        'e': ChoiceGame(id='e', title='E', month_id='may-2020', is_extras=True),
+        'c': ChoiceGame(id='c', title='C', slug='may-2020', is_extras=False),
+        'e': ChoiceGame(id='e', title='E', slug='may-2020', is_extras=True),
     }
 
 
@@ -159,13 +156,13 @@ async def test_choice_month_no_remained_choices(api_mock, plugin, cco, choice_da
 async def test_choice_store_in_presistent_cache(plugin):
     plugin.push_cache.reset_mock()
     plugin._choice_games = {
-        'c': ChoiceGame(id='c', title='C', month_id='may-2020', is_extras=False),
-        'e': ChoiceGame(id='e', title='E', month_id='may-2020', is_extras=True),
+        'c': ChoiceGame(id='c', title='C', slug='may-2020', is_extras=False),
+        'e': ChoiceGame(id='e', title='E', slug='may-2020', is_extras=True),
     }
     plugin.subscription_games_import_complete()
     assert plugin.persistent_cache['choice_games'] == '[' \
-        '{"id": "c", "title": "C", "month_id": "may-2020", "is_extras": false}, ' \
-        '{"id": "e", "title": "E", "month_id": "may-2020", "is_extras": true}' \
+        '{"id": "c", "title": "C", "slug": "may-2020", "is_extras": false}, ' \
+        '{"id": "e", "title": "E", "slug": "may-2020", "is_extras": true}' \
     ']'
     plugin.push_cache.assert_called()
 
@@ -173,11 +170,11 @@ async def test_choice_store_in_presistent_cache(plugin):
 @pytest.mark.asyncio
 async def test_choice_load_from_persistent_cache(plugin):
     plugin.persistent_cache['choice_games'] = '[' \
-        '{"id": "c", "title": "C", "month_id": "may-2020", "is_extras": false}, ' \
-        '{"id": "e", "title": "E", "month_id": "may-2020", "is_extras": true}' \
+        '{"id": "c", "title": "C", "slug": "may-2020", "is_extras": false}, ' \
+        '{"id": "e", "title": "E", "slug": "may-2020", "is_extras": true}' \
     ']'
     plugin.handshake_complete()
     assert plugin._choice_games == {
-        'c': ChoiceGame(id='c', title='C', month_id='may-2020', is_extras=False),
-        'e': ChoiceGame(id='e', title='E', month_id='may-2020', is_extras=True),
+        'c': ChoiceGame(id='c', title='C', slug='may-2020', is_extras=False),
+        'e': ChoiceGame(id='e', title='E', slug='may-2020', is_extras=True),
     }

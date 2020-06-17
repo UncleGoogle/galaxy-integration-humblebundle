@@ -6,6 +6,7 @@ import re
 import webbrowser
 import pathlib
 import json
+import calendar
 import typing as t
 from functools import partial
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
@@ -164,7 +165,7 @@ class HumbleBundlePlugin(Plugin):
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     @staticmethod
-    def _normalize_subscription_name(machine_name):
+    def _normalize_subscription_name(machine_name: str):
         month_map = {
             'january': '01',
             'february': '02',
@@ -181,6 +182,12 @@ class HumbleBundlePlugin(Plugin):
         }
         month, year, type_ = machine_name.split('_')
         return f'Humble {type_.title()} {year}-{month_map[month]}'
+
+    @staticmethod
+    def _choice_name_to_slug(subscription_name: str):
+        _, type_, year_month = subscription_name.split(' ')
+        year, month = year_month.split('-')
+        return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
     async def _get_current_user_subscription_plan(self, active_month_path: str) -> t.Optional[dict]:
         active_month_content = await self._api.get_choice_content_data(active_month_path)
@@ -242,47 +249,24 @@ class HumbleBundlePlugin(Plugin):
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
 
-    async def prepare_subscription_games_context(self, subscription_names) -> t.Dict[str, str]:
-        name_url_map = {}
-        sub_names = set(subscription_names)
-        sub_names.discard(TROVE_SUBSCRIPTION_NAME)
-
-        def check_sub(month):
-            normalized_name = self._normalize_subscription_name(month.machine_name)
-            sub_names.remove(normalized_name)
-            name_url_map[normalized_name] = month.last_url_part
-
-        try:
-            for cached_month in self._subscription_months:
-                check_sub(cached_month)
-            async for month in self._api.get_previous_subscription_months(cached_month.last_url_part):
-                check_sub(month)
-        except KeyError:  # from `sub_names.remove` - subscription_name not requested - finish
-            pass
-        return name_url_map
-
-    async def get_subscription_games(self, subscription_name, context: t.Dict[str, str]):
-        if subscription_name == "Humble Trove":
+    async def get_subscription_games(self, subscription_name, context):
+        if subscription_name == TROVE_SUBSCRIPTION_NAME:
             async for troves in self._get_trove_games():
                 yield troves
             return
 
-        try:
-            choice_url_id = context[subscription_name]
-        except KeyError:
-            raise UnknownError(f'Unrecognized subscription name: "{subscription_name}"')
-
-        choice_data = await self._api.get_choice_content_data(choice_url_id)
+        choice_slug = self._choice_name_to_slug(subscription_name)
+        choice_data = await self._api.get_choice_content_data(choice_slug)
         cco = choice_data.content_choice_options
         show_all = cco.remained_choices > 0
 
         choice_games: t.Dict[str, ChoiceGame] = {
-            ch.id: ChoiceGame(ch.id, ch.title, choice_url_id)
+            ch.id: ChoiceGame(ch.id, ch.title, choice_slug)
             for ch in cco.content_choices
             if show_all or ch.id in cco.content_choices_made
         }
         choice_games.update({
-            extr.machine_name: ChoiceGame(extr.machine_name, extr.human_name, choice_url_id, is_extras=True)
+            extr.machine_name: ChoiceGame(extr.machine_name, extr.human_name, choice_slug, is_extras=True)
             for extr in cco.extrases
         })
         self._choice_games.update(choice_games)
