@@ -1,5 +1,4 @@
 import pytest
-import os
 from pathlib import Path
 
 from local import AppFinder
@@ -33,43 +32,33 @@ def test_get_close_matches_close(dirname, expected, candidates):
     result = AppFinder().get_close_matches(dirname, candidates, similarity=0.8)
     assert expected == result
 
-
 # integration
 
 @pytest.fixture
-def create_mock_walk(mocker):
-    def fn(walk_paths: list):
-        """ Creates mock of os.walk that is a bit more inteligent than simple return_value = iter(...)
-        Also patch Path exists to True
-        paths - expected os.walk result as a list of tuples
+def create_tmp_tree():
+    def fn(paths):
         """
-        mocker.patch.object(Path, 'exists', return_value=True)
-        mock_walk = mocker.patch('os.walk')
-        def side_effect(_):
-            """self reseting generator"""
-            counter = 0
-            while True:
-                try:
-                    yield walk_paths[counter]
-                    counter += 1
-                except IndexError:
-                    counter = 0
-                    return
-        mock_walk.side_effect = side_effect
-        return mock_walk
+        :param paths: iterable of os.walk-like tuples
+        """
+        for root, dirs, files in paths:
+            root.mkdir(exist_ok=True)
+            for d in dirs:
+                (root / d).mkdir()
+            for f in files:
+                (root / f).touch()
+        return root
     return fn
 
 
 @pytest.mark.skipif(not IS_WINDOWS, reason="windows case")
 @pytest.mark.asyncio
-async def test_scan_folder_windows(create_mock_walk):
-    root = 'C:\\Program Files (x86)'
-    paths = [
+async def test_scan_folder_windows(create_tmp_tree, tmp_path):
+    root = tmp_path
+    create_tmp_tree([
         (root, ('Samorost2', 'Shelter'), ()),
-        (root + os.sep + 'Samorost2', ('01intro', '02pokop'), ('Samorost2.exe', 'Samorost2.ico')),
-        (root + os.sep + 'Shelter', ('bin', 'assets'), ('Shelter.exe', 'README.txt'))
-    ]
-    create_mock_walk(paths)
+        (root / 'Samorost2', ('01intro', '02pokop'), ('Samorost2.exe', 'Samorost2.ico')),
+        (root / 'Shelter', ('bin', 'assets'), ('Shelter.exe', 'README.txt'))
+    ])
 
     owned_games = {'Shelter'}
     result = await AppFinder()._scan_folders([root], owned_games)

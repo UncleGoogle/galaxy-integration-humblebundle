@@ -1,3 +1,9 @@
+## Unreleased
+
+[Changed]
+- Installed games detection: limit executable search to root level #119
+
+
 ## Version 0.8.0 Alpha (pre-release)
 [Fixed]
 - Downloading DRM-free games #97
