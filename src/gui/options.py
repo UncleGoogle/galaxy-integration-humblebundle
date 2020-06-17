@@ -106,7 +106,7 @@ class Options(BaseApp):
 
     def _library_section(self) -> toga.Widget:
         desc = "Choose HumbleBundle game types to be shown in your GOG Galaxy library.\n" \
-               "For trove games go to Galaxy Settings->Features"
+               "Subscription games settings are placed in Galaxy Settings->Features"
         source_help = {
             SOURCE.DRM_FREE: "Games from www.humblebundle.com/home/library that have direct download for Windows, Mac or Linux",
             SOURCE.KEYS: "Game keys to be redeemed in foreign services like Steam or Origin."

@@ -4,7 +4,7 @@ import os
 import subprocess
 import abc
 from dataclasses import dataclass, field
-from typing import Any, Dict, Callable, Mapping, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 import toml
 

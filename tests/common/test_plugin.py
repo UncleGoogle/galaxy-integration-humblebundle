@@ -7,7 +7,7 @@ from galaxy.api.types import GameLibrarySettings
 
 from consts import IS_WINDOWS, IS_MAC
 from local.localgame import LocalHumbleGame
-from model.game import Subproduct, KeyGame, TroveGame
+from model.game import Subproduct, KeyGame, TroveGame, ChoiceGame
 from model.download import TroveDownload
 from model.types import HP
 
@@ -65,6 +65,33 @@ async def test_install_game_trove(api_mock, plugin):
         "signed_url": expected_url
     }
 
+    with patch('webbrowser.open') as browser_open:
+        await plugin.install_game(id_)
+        browser_open.assert_called_once_with(expected_url)
+
+
+@pytest.mark.asyncio
+async def test_install_game_choice(plugin):
+    id_ = 'game_id'
+    game = ChoiceGame(id_, 'The Game', 'may_2020')
+    plugin._choice_games = { id_: game }
+    expected_url = 'https://www.humblebundle.com/subscription/may_2020/game_id'
+    with patch('webbrowser.open') as browser_open:
+        await plugin.install_game(id_)
+        browser_open.assert_called_once_with(expected_url)
+
+
+@pytest.mark.asyncio
+async def test_install_game_choice_extras(plugin):
+    """
+    For extrases we just show subscription month url.
+    If extras comes from unlocked month, it should be in owned_games as well in form of Key or Subproduct.
+    In such case direct download is possible from different game page view.
+    """
+    id_ = 'game_id'
+    game = ChoiceGame(id_, 'The Game DLC1', 'may_2020', is_extras=True)
+    plugin._choice_games = { id_: game }
+    expected_url = 'https://www.humblebundle.com/subscription/may_2020'
     with patch('webbrowser.open') as browser_open:
         await plugin.install_game(id_)
         browser_open.assert_called_once_with(expected_url)

@@ -1,4 +1,3 @@
-import pathlib
 import webbrowser
 from typing import Optional
 

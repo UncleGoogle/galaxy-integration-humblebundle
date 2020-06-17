@@ -11,7 +11,7 @@ from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse, UnknownError
 
 from model.download import TroveDownload, DownloadStructItem, SubproductDownload
-from model.subscription import MontlyContentData, ChoiceContentData, ContentChoiceOptions, ChoiceMarketingData
+from model.subscription import MontlyContentData, ChoiceContentData, ContentChoiceOptions, ChoiceMarketingData, ChoiceMonth
 
 
 class AuthorizedHumbleAPI:
@@ -25,6 +25,7 @@ class AuthorizedHumbleAPI:
     _SUBSCRIPTION_HOME = 'subscription/home'
     _SUBSCRIPTION_TROVE = 'subscription/trove'
     _SUBSCRIPTION_PRODUCTS = 'api/v1/subscriptions/humble_monthly/subscription_products_with_gamekeys'
+    _SUBSCRIPTION_HISTORY = 'api/v1/subscriptions/humble_monthly/history?from_product={}'
     _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
     _DOWNLOAD_SIGN = 'api/v1/user/download/sign'
     _HUMBLER_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
@@ -123,6 +124,26 @@ class AuthorizedHumbleAPI:
                     return
             cursor = res_json['cursor']
 
+    async def get_subscription_history(self, from_product: str):
+        """
+        Marketing data of previous subscription months.
+        :param from_product: machine_name of subscription following requested months
+        for example 'february_2020_choice' to got a few month data items including
+        'january_2020_choice', 'december_2019_choice', 'december_2020_monthly'
+        """
+        res = await self._request('GET', self._SUBSCRIPTION_HISTORY.format(from_product))
+        return await res.json()
+
+    async def get_previous_subscription_months(self, from_product: str):
+        """Generator wrapper for get_subscription_history previous months"""
+        while True:
+            res = await self.get_subscription_history(from_product)
+            if res.status == 404:
+                return
+            for month in res['previous_months']:
+                yield ChoiceMonth(month)
+            from_product = month['machine_name']
+
     async def had_subscription(self) -> t.Optional[bool]:
         """Based on current behavior of `humblebundle.com/subscription/home`
         that is accesable only by "current and former subscribers"
@@ -162,7 +183,7 @@ class AuthorizedHumbleAPI:
 
     async def get_choice_content_data(self, product_url_path) -> ChoiceContentData:
         """Parsing ~220K
-        product_url_path: last element of subscripiton url for example 'february-2020'
+        product_url_path: last element of choice subscripiton url for example 'february-2020'
         """
         url = 'subscription/' + product_url_path
         webpack_id = 'webpack-monthly-product-data'

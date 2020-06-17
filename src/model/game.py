@@ -1,5 +1,6 @@
 import abc
 import logging
+from dataclasses import dataclass, asdict
 from typing import Dict, List, Optional, Any
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo, SubscriptionGame
@@ -67,7 +68,7 @@ class TroveGame(HumbleGame):
     def serialize(self):
         return {
             'human-name': self._data['human-name'],
-            'machine_name': self.data['machine_name'],
+            'machine_name': self._data['machine_name'],
             'downloads': self._data['downloads']
         }
 
@@ -87,7 +88,6 @@ class Subproduct(HumbleGame):
 
     @property
     def license(self) -> LicenseInfo:
-        """There is currently not 'subscription' type license"""
         return LicenseInfo(LicenseType.SinglePurchase)
 
 
@@ -155,3 +155,37 @@ class KeyGame(Key):
     @property
     def machine_name(self):
         return self._game_id
+
+
+@dataclass
+class ChoiceGame(HumbleGame):
+    id: str
+    title: str
+    slug: str
+    is_extras: bool = False
+
+    @property
+    def machine_name(self):
+        return self.id
+
+    @property
+    def human_name(self):
+        return self.title
+
+    @property
+    def downloads(self):
+        """No downloads for abstract choice games"""
+        return {}
+
+    @property
+    def presentation_url(self):
+        if self.is_extras:
+            return f'https://www.humblebundle.com/subscription/{self.slug}'
+        else:
+            return f'https://www.humblebundle.com/subscription/{self.slug}/{self.id}'
+
+    def in_galaxy_format(self):
+        return SubscriptionGame(game_title=self.title, game_id=self.id)
+
+    def serialize(self):
+        return asdict(self)

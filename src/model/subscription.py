@@ -25,8 +25,9 @@ class ChoiceMarketingData:
     """
     def __init__(self, data: dict):
         self.user_options = data['userOptions']
+        self.active_month = ChoiceMonth(data['monthDetails']['active_month'], is_active=True)
         self.month_details = [
-            ChoiceMonth(data['monthDetails']['active_month'], is_active=True)
+            self.active_month
         ] + [
             ChoiceMonth(month, is_active=False)
             for month in data['monthDetails']['previous_months']

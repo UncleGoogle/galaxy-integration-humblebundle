@@ -10,10 +10,10 @@
 - Not showing claimed choices #113
 
 [Added]
-- Humble Choice support (alpha) #108
+- Humble Choice support #108
 
 [Changed]
-- Trove as subscription #102; now it is configurable in Galaxy Settings -> Features
+- Trove as subscription #102; trove access is automatically detected but it can be overwritten from Galaxy Settings -> Features
 
 
 ## Version 0.7.1

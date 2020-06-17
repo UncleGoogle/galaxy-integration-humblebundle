@@ -16,6 +16,9 @@ class BITNESS(enum.Enum):
     B64 = 64
     B32 = 32
 
+
+TROVE_SUBSCRIPTION_NAME = "Humble Trove"
+
 NON_GAME_BUNDLE_TYPES = {'mobilebundle', 'softwarebundle', 'bookbundle', 'audiobookbundle', 'comicsbundle', 'rpgbookbundle', 'mangabundle'}
 
 IS_WINDOWS = sys.platform == 'win32'

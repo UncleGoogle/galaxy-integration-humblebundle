@@ -1,12 +1,7 @@
 from typing import Optional
 
 
-class JsonDataclass:
-    def __init__(self, data: dict):
-        self._data = data
-
-
-class Product(JsonDataclass):
+class Product:
     """
         machine_name: str
         category: str
