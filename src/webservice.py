@@ -8,9 +8,9 @@ import logging
 
 import yarl
 from galaxy.http import create_client_session, handle_exception
-from galaxy.api.errors import UnknownBackendResponse, UnknownError
+from galaxy.api.errors import UnknownBackendResponse
 
-from model.download import TroveDownload, DownloadStructItem, SubproductDownload
+from model.download import TroveDownload, DownloadStructItem
 from model.subscription import MontlyContentData, ChoiceContentData, ContentChoiceOptions, ChoiceMarketingData, ChoiceMonth
 
 
