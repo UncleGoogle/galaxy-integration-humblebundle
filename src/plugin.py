@@ -195,10 +195,10 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
-        current_or_former_subscriber = await self._api.had_subscription()
+        historical_subscriber = await self._api.had_subscription()
         active_content_unlocked = False
 
-        if current_or_former_subscriber:
+        if historical_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
                 subscriptions.append(Subscription(
                     self._normalize_subscription_name(product.product_machine_name),
@@ -214,9 +214,8 @@ class HumbleBundlePlugin(Plugin):
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
             active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
-            current_plan = None
-            if current_or_former_subscriber:
-                current_plan = await self._get_subscription_plan(active_month.last_url_part)
+            current_plan = await self._get_subscription_plan(active_month.last_url_part) \
+                           if historical_subscriber else None
 
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month.machine_name),
