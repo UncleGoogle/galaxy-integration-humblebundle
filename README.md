@@ -40,9 +40,9 @@ _Requires `python3.6` or higher_
 
 ### Config window
 
-To open: double click "Install" button from any HumbleBundle game view.
-
 <img src="https://i.gyazo.com/b806e5d01590f5c6c48fbe09f9dddb95.gif" width="640" height="300"/>
+
+To open: double click "Install" button from any HumbleBundle game view.
 
 Contains:
 - Library settings for game types to show
@@ -50,16 +50,15 @@ Contains:
 
 ### Galaxy settings
 
-To open: go to Galaxy menu -> `Settings` -> `Features` -> "HUMBLE BUNDLE".
 <img src="https://i.gyazo.com/21804a7ac7ebffb49d7d810b7d85d0d4.png" width="640">
+
+To open: go to Galaxy menu -> `Settings` -> `Features` -> "HUMBLE BUNDLE".
 
 Contains:
 - Ability to manualy overwrite detected Choice subscription months and Trove
 - Importing predefined tags: `Key`, `Unrevealed` for games that are third party keys
-
-**Note:** this will not automatically add tags for newly added games. You will have to import tags again.
-
-**Note:** Since v0.8 tag `Trove` is not longer imported. Re-importing clears `Trove` tag from Trove games.
+  - **Warning:** this will not automatically add tags for newly added games. You will have to import tags again.
+  - **Note:** since v0.8 tag `Trove` is not longer used; re-import to clear out
 
 ### Recommended Humble Choice view
 
@@ -75,9 +74,9 @@ Contains:
 
 3. Bookmark
 
-<img src="https://i.gyazo.com/edac57087ed101d1133200c4e1e4b9ce.png" width="640">
+<img src="https://i.gyazo.com/d3cb0876788849a9117f739e3b5d875a.png" width="400">
 
-4. Right click on bookmark to rename
+4. Rename a new bookmark with right-click
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
