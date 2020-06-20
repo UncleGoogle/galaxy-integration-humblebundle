@@ -5,6 +5,7 @@ from galaxy.api.types import Subscription
 from conftest import aiter
 
 from model.subscription import ChoiceMonth
+from model.types import Tier
 
 
 @pytest.fixture
@@ -93,28 +94,38 @@ async def test_get_subscriptions_past_subscriber(api_mock, plugin_with_sub):
     ]
 
 
+@pytest.mark.parametrize('current_subscription_plan,current_month_owned,trove_owned', [
+    pytest.param(None, False, False, id='No subscription'),
+    pytest.param(Mock(tier=Tier.LITE), False, True, id='Lite'),
+    pytest.param(Mock(tier=Tier.BASIC), True, True, id='Basic'),
+    pytest.param(Mock(tier=Tier.PREMIUM), True, True, id='Premium'),
+    pytest.param(Mock(tier=Tier.CLASSIC), True, True, id='Classic')
+])
 @pytest.mark.asyncio
-async def test_get_subscriptions_current_month_not_unlocked_yet(api_mock, plugin_with_sub):
+async def test_get_subscriptions_current_month_not_unlocked_yet(
+        current_subscription_plan, current_month_owned, trove_owned,
+        api_mock, plugin_with_sub
+    ):
+    """
+    Technically only unlocked choice months are owned (locked are already payed and can be canceled).
+    But for user convenience plugin marks month as owned if it *is going to* be unloacked if not cancelled untill last Friday.
+    Without this, Galaxy won't display games until user manualy select current month as owned.
+    This would be annoying as, as new subscription month happen... well every month.
+    ---
+    Test rely not only on API thus subscription status must be verified.
+    ---
+    Test checks also logic for Trove ownership base on subscription status.
+    """
     api_mock.had_subscription.return_value = True
-    subscription_plan = {
-        "human_name": "Month-to-Month Classic Plan",
-        "length": 1,
-        "machine_name": "monthly_basic",
-        "pricing|money": {
-            "currency": "USD",
-            "amount": 12
-        }
-    }
-    api_mock.get_choice_content_data.return_value = Mock(**{'user_subscription_plan': subscription_plan})
+    api_mock.get_choice_content_data.return_value = Mock(user_subscription_plan=current_subscription_plan)
     content_choice_options = [
         Mock(**{'product_machine_name': 'april_2020_choice', 'is_active_content': False}),
     ]
     api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
-
     res = await plugin_with_sub.get_subscriptions()
     assert sorted(res, key=lambda x: x.subscription_name) == [
-        Subscription("Humble Choice 2020-04", owned=True),
-        Subscription("Humble Choice 2020-05", owned=True),  # as it is going to be unlocked
-        Subscription("Humble Trove", owned=True),
+        Subscription("Humble Choice 2020-04", owned=True),  # came from api - we're sure that choice month was unlocked
+        Subscription("Humble Choice 2020-05", owned=current_month_owned),
+        Subscription("Humble Trove", owned=trove_owned),
     ]
 
