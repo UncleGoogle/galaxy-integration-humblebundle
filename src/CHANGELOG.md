@@ -1,19 +1,15 @@
-## Unreleased
-
-[Changed]
-- Installed games detection: limit executable search to root level #119
-
-
-## Version 0.8.0 Alpha (pre-release)
-[Fixed]
-- Downloading DRM-free games #97
-- Not showing claimed choices #113
+## Version 0.8.0
 
 [Added]
 - Humble Choice support #108
 
 [Changed]
 - Trove as subscription #102; trove access is automatically detected but it can be overwritten from Galaxy Settings -> Features
+- Installed games detection: limit executable search to root level #119
+
+[Fixed]
+- Downloading DRM-free games #97
+- Not showing claimed choices #113
 
 
 ## Version 0.7.1
