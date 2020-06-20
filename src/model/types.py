@@ -44,3 +44,10 @@ class DeliveryMethod(enum.Enum):
     BATTLENET = 'battlenet'
     GOG = 'gog'
     DOWNLOAD = 'download'
+
+
+class Tier(enum.Enum):
+    LITE = 'lite'
+    BASIC = 'basic'
+    PREMIUM = 'premium'
+    CLASSIC = 'premiumv1'
