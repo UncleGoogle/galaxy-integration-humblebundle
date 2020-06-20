@@ -2,7 +2,23 @@ import typing as t
 import datetime
 
 from model.game import Key
-from model.types import HP, DeliveryMethod
+from model.types import HP, DeliveryMethod, Tier
+
+
+class UserSubscriptionPlan:
+    """
+    {
+        "tier": "premiumv1",
+        "human_name": "Month-to-Month Classic Plan",
+        "length": 1,
+        "machine_name": "monthly_basic",
+        "pricing|money": {"currency": "USD", "amount": 12.0}
+    }
+    """
+    def __init__(self, data: dict):
+        self.tier = Tier(data['tier'])
+        self.machine_name = data['machine_name']
+        self.human_name = data['human_name']
 
 
 class ChoiceMarketingData:
@@ -211,7 +227,8 @@ class MontlyContentData:
     def __init__(self, data: dict):
         base = data['webpack_json']
         self.user_options: dict = base['userOptions']
-        self.user_subscription_plan: t.Optional[dict] = base['userSubscriptionPlan']
+        plan = base['userSubscriptionPlan']
+        self.user_subscription_plan = UserSubscriptionPlan(plan) if plan else None
 
         content = data['navbarOptions']
         self.product_human_name: str = content['product_human_name']
@@ -236,7 +253,8 @@ class ChoiceContentData:
     """
     def __init__(self, data: dict):
         self.user_options: dict = data['userOptions']
-        self.user_subscription_plan: t.Optional[dict] = data['userSubscriptionPlan']
+        plan = data['userSubscriptionPlan']
+        self.user_subscription_plan = UserSubscriptionPlan(plan) if plan else None
         self.pay_early_options: dict = data['payEarlyOptions']
         self.content_choice_options = ContentChoiceOptions(data['contentChoiceOptions'])
 

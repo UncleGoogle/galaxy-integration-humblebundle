@@ -24,8 +24,8 @@ from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
-from model.types import HP
-from model.subscription import ChoiceMonth
+from model.types import HP, Tier
+from model.subscription import ChoiceMonth, UserSubscriptionPlan
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -100,15 +100,15 @@ class HumbleBundlePlugin(Plugin):
         return default
 
     def handshake_complete(self):
-        self._last_version = self._load_cache('last_version', default=None)
-        self._trove_games = {g['machine_name']: TroveGame(g) for g in self._load_cache('trove_games', [])}
-        self._choice_games = {g['id']: ChoiceGame(**g) for g in self._load_cache('choice_games', [])}
         self._library_resolver = LibraryResolver(
             api=self._api,
             settings=self._settings.library,
             cache=self._load_cache('library', {}),
             save_cache_callback=partial(self._save_cache, 'library')
         )
+        self._last_version = self._load_cache('last_version', default=None)
+        self._trove_games = {g['machine_name']: TroveGame(g) for g in self._load_cache('trove_games', [])}
+        self._choice_games = {g['id']: ChoiceGame(**g) for g in self._load_cache('choice_games', [])}
 
     async def _fetch_marketing_data(self) -> t.Optional[str]:
         try:
@@ -189,16 +189,16 @@ class HumbleBundlePlugin(Plugin):
         year, month = year_month.split('-')
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
-    async def _get_current_user_subscription_plan(self, active_month_path: str) -> t.Optional[dict]:
-        active_month_content = await self._api.get_choice_content_data(active_month_path)
-        return active_month_content.user_subscription_plan
+    async def _get_subscription_plan(self, month_path: str) -> t.Optional[UserSubscriptionPlan]:
+        month_content = await self._api.get_choice_content_data(month_path)
+        return month_content.user_subscription_plan
 
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
-        current_or_former_subscriber = await self._api.had_subscription()
+        historical_subscriber = await self._api.had_subscription()
         active_content_unlocked = False
 
-        if current_or_former_subscriber:
+        if historical_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
                 subscriptions.append(Subscription(
                     self._normalize_subscription_name(product.product_machine_name),
@@ -214,19 +214,18 @@ class HumbleBundlePlugin(Plugin):
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
             active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
-            current_user_plan = None
-            if current_or_former_subscriber:
-                current_user_plan = await self._get_current_user_subscription_plan(active_month.last_url_part)
+            current_plan = await self._get_subscription_plan(active_month.last_url_part) \
+                           if historical_subscriber else None
 
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month.machine_name),
-                owned=bool(current_user_plan),  # #116: exclude Lite
+                owned=current_plan is not None and current_plan.tier != Tier.LITE,
                 end_time=None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
 
         subscriptions.append(Subscription(
             subscription_name=TROVE_SUBSCRIPTION_NAME,
-            owned=active_content_unlocked or current_user_plan is not None
+            owned=active_content_unlocked or current_plan is not None
         ))
 
         return subscriptions
