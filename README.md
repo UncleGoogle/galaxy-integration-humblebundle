@@ -38,22 +38,46 @@ _Requires `python3.6` or higher_
 
 ## Configuration
 
-#### Config window
+### Config window
 
-To open double click "Install" button from any HumbleBundle game view.
+To open: double click "Install" button from any HumbleBundle game view.
 
 <img src="https://i.gyazo.com/b806e5d01590f5c6c48fbe09f9dddb95.gif" width="640" height="300"/>
 
-#### Import Tags
+Contains:
+- Library settings for game types to show
+- Local games settings for installed games detection
 
-Predefined tags: `Key`, `Unrevealed` can be imported to your library manually by going to
-Galaxy menu ->
-`Settings` -> `Features` -> `Import` button under "HUMBLE BUNDLE".
-<img src="https://i.gyazo.com/14ee4e4665e6ab96eca6adc47f151c5e.png" width="640">
+### Galaxy settings
 
-**Warning:** this will not automatically add tags for newly added games. You will have to import tags again.
-**Warning:** Since v0.8 tag `Trove` is not longer imported. Re-importing clears `Trove` tag from Trove games.
+To open: go to Galaxy menu -> `Settings` -> `Features` -> "HUMBLE BUNDLE".
+<img src="https://i.gyazo.com/21804a7ac7ebffb49d7d810b7d85d0d4.png" width="640">
 
+Contains:
+- Ability to manualy overwrite detected Choice subscription months and Trove
+- Importing predefined tags: `Key`, `Unrevealed` for games that are third party keys
+
+**Note:** this will not automatically add tags for newly added games. You will have to import tags again.
+
+**Note:** Since v0.8 tag `Trove` is not longer imported. Re-importing clears `Trove` tag from Trove games.
+
+### Recommended Humble Choice view
+
+1. Go to Humble Bundle bookmark
+
+2. Filter to subscriptions
+
+<img src="https://i.gyazo.com/eccd333b76e6ac8b948d9b012bd62301.png" width="640">
+
+3. Group by subscriptions
+
+<img src="https://i.gyazo.com/869901d9dc6d730d4744ea11eb7c0b8f.png" width="640">
+
+3. Bookmark
+
+<img src="https://i.gyazo.com/edac57087ed101d1133200c4e1e4b9ce.png" width="640">
+
+4. Right click on bookmark to rename
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
