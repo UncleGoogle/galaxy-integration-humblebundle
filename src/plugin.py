@@ -214,19 +214,19 @@ class HumbleBundlePlugin(Plugin):
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
             active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
-            current_user_plan = None
+            current_plan = None
             if current_or_former_subscriber:
-                current_user_plan = await self._get_subscription_plan(active_month.last_url_part)
+                current_plan = await self._get_subscription_plan(active_month.last_url_part)
 
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month.machine_name),
-                owned=current_user_plan and current_user_plan.tier != Tier.LITE,
+                owned=current_plan is not None and current_plan.tier != Tier.LITE,
                 end_time=None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
 
         subscriptions.append(Subscription(
             subscription_name=TROVE_SUBSCRIPTION_NAME,
-            owned=active_content_unlocked or current_user_plan is not None
+            owned=active_content_unlocked or current_plan is not None
         ))
 
         return subscriptions
