@@ -24,8 +24,8 @@ from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
-from model.types import HP
-from model.subscription import ChoiceMonth
+from model.types import HP, Tier
+from model.subscription import ChoiceMonth, UserSubscriptionPlan
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -189,9 +189,9 @@ class HumbleBundlePlugin(Plugin):
         year, month = year_month.split('-')
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
-    async def _get_current_user_subscription_plan(self, active_month_path: str) -> t.Optional[dict]:
-        active_month_content = await self._api.get_choice_content_data(active_month_path)
-        return active_month_content.user_subscription_plan
+    async def _get_subscription_plan(self, month_path: str) -> t.Optional[UserSubscriptionPlan]:
+        month_content = await self._api.get_choice_content_data(month_path)
+        return month_content.user_subscription_plan
 
     async def get_subscriptions(self):
         subscriptions: List[Subscription] = []
@@ -216,11 +216,11 @@ class HumbleBundlePlugin(Plugin):
             active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
             current_user_plan = None
             if current_or_former_subscriber:
-                current_user_plan = await self._get_current_user_subscription_plan(active_month.last_url_part)
+                current_user_plan = await self._get_subscription_plan(active_month.last_url_part)
 
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month.machine_name),
-                owned=bool(current_user_plan),  # #116: exclude Lite
+                owned=current_user_plan and current_user_plan.tier != Tier.LITE,
                 end_time=None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
 
