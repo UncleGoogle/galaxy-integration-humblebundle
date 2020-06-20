@@ -46,12 +46,14 @@ To open double click "Install" button from any HumbleBundle game view.
 
 #### Import Tags
 
-Predefined tags: `Key`, `Unrevealed` and `Trove` can be imported to your library manually by going to
+Predefined tags: `Key`, `Unrevealed` can be imported to your library manually by going to
 Galaxy menu ->
 `Settings` -> `Features` -> `Import` button under "HUMBLE BUNDLE".
 <img src="https://i.gyazo.com/14ee4e4665e6ab96eca6adc47f151c5e.png" width="640">
 
 **Warning:** this will not automatically add tags for newly added games. You will have to import tags again.
+**Warning:** Since v0.8 tag `Trove` is not longer imported. Re-importing clears `Trove` tag from Trove games.
+
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
