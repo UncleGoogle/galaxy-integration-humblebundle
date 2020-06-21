@@ -38,20 +38,45 @@ _Requires `python3.6` or higher_
 
 ## Configuration
 
-#### Config window
-
-To open double click "Install" button from any HumbleBundle game view.
+### Config window
 
 <img src="https://i.gyazo.com/b806e5d01590f5c6c48fbe09f9dddb95.gif" width="640" height="300"/>
 
-#### Import Tags
+To open: double click "Install" button from any HumbleBundle game view.
 
-Predefined tags: `Key`, `Unrevealed` and `Trove` can be imported to your library manually by going to
-Galaxy menu ->
-`Settings` -> `Features` -> `Import` button under "HUMBLE BUNDLE".
-<img src="https://i.gyazo.com/14ee4e4665e6ab96eca6adc47f151c5e.png" width="640">
+Contains:
+- Library settings for game types to show
+- Local games settings for installed games detection
 
-**Warning:** this will not automatically add tags for newly added games. You will have to import tags again.
+### Galaxy settings
+
+<img src="https://i.gyazo.com/21804a7ac7ebffb49d7d810b7d85d0d4.png" width="640">
+
+To open: go to Galaxy menu -> `Settings` -> `Features` -> "HUMBLE BUNDLE".
+
+Contains:
+- Ability to manualy overwrite detected Choice subscription months and Trove
+- Importing predefined tags: `Key`, `Unrevealed` for games that are third party keys
+  - **Warning:** this will not automatically add tags for newly added games. You will have to import tags again.
+  - **Note:** since v0.8 tag `Trove` is not longer used; re-import to clear out
+
+### Recommended Humble Choice view
+
+1. Go to Humble Bundle bookmark
+
+2. Filter to subscriptions
+
+<img src="https://i.gyazo.com/eccd333b76e6ac8b948d9b012bd62301.png" width="640">
+
+3. Group by subscriptions
+
+<img src="https://i.gyazo.com/869901d9dc6d730d4744ea11eb7c0b8f.png" width="640">
+
+3. Bookmark
+
+<img src="https://i.gyazo.com/d3cb0876788849a9117f739e3b5d875a.png" width="400">
+
+4. Rename a new bookmark with right-click
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
