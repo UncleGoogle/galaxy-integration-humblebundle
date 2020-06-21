@@ -1,7 +1,8 @@
 ## Version 0.8.0
 
 [Added]
-- Humble Choice support #108
+- Humble Choice support #108; see how to set Humble Choice bookmark:
+https://github.com/UncleGoogle/galaxy-integration-humblebundle#recommended-humble-choice-view
 
 [Changed]
 - Trove as subscription #102; trove access is automatically detected but it can be overwritten from Galaxy Settings -> Features
