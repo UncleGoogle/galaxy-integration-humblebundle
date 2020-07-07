@@ -7,7 +7,7 @@ from galaxy.api.errors import UnknownError
 
 from consts import SOURCE
 from settings import LibrarySettings
-from library import LibraryResolver
+from library import LibraryResolver, KeyInfo
 from model.game import Subproduct, Key, KeyGame
 
 
@@ -156,3 +156,83 @@ async def test_fetch_orders_filter_errors_one_404(plugin, create_resolver, caplo
     assert len(orders) == 1
     assert 'UnknownError' in caplog.text
     assert caplog.records[0].levelname == 'ERROR'
+
+
+# --------test splitting keys -------------------
+
+@pytest.mark.parametrize('human_name, category, blacklist, is_multigame', [
+    ('The Witcher', 'bundle', [], False),  # no coma in human_name
+    ('Gremlins, Inc.', 'storefront', [], False),  # not bundle category
+    ('Gremlins, Inc.', 'bundle', ['Warhammer 40,000', 'Gremlins, I'], False),  # blacklisted
+    ('Gremlins, Inc.', 'bundle', ['Warhammer 40,000', 'Gremlins, no match'], True),
+    ('Warhammer 40,000: Space Wolf', 'bundle', ['Warhammer 40,000'], False), # blacklisted
+    ('Alpha Protocol, Company of Heroes, Rome: Total War, Hell Yeah! Wrath of the Dead Rabbit', 'bundle', [], True),
+])
+def test_is_multigame_key(human_name, category, blacklist, is_multigame):
+    """Most common case where 1 key == 1 game"""
+    key = Key({
+        "machine_name": "mock_machine_name",
+        "human_name": human_name,
+        "key_type_human_name": "Steam Key"
+    })
+    assert LibraryResolver._is_multigame_key(key, category, blacklist) == is_multigame
+
+
+def test_split_multigame_key():
+    tpks = {
+        "machine_name": "sega",
+        "human_name": "Alpha Protocol, Company of Heroes, Rome: Total War, Hell Yeah! Wrath of the Dead Rabbit",
+    }
+    key = Key(tpks)
+    assert LibraryResolver._split_multigame_key(key) == [
+        KeyGame(key, "sega_0", "Alpha Protocol"),
+        KeyGame(key, "sega_1", "Company of Heroes"),
+        KeyGame(key, "sega_2", "Rome: Total War"),
+        KeyGame(key, "sega_3", "Hell Yeah! Wrath of the Dead Rabbit")
+    ]
+
+
+def test_get_key_info():
+    key_data_1 = {
+        "machine_name": "g1",
+        "human_name": 'G1',
+        "key_type_human_name": "Steam Key"
+    }
+    key_data_2 = {
+        "machine_name": "g2",
+        "human_name": 'G2',
+        "key_type_human_name": "Origin Key"
+    }
+    key_data_3 = {
+        "machine_name": "g3",
+        "human_name": 'G3',
+        "key_type_human_name": "Key"
+    }
+    orders = [
+        {
+            'product': {
+                'category': 'bundle'
+            },
+            'tpkd_dict': {
+                'all_tpks': [
+                    key_data_1,
+                    key_data_2
+                ]
+            }
+        },
+        {
+            'product': {
+                'category': 'storefront'
+            },
+            'tpkd_dict': {
+                'all_tpks': [
+                    key_data_3
+                ]
+            }
+        },
+    ]
+    assert LibraryResolver._get_key_infos(orders) == [
+        KeyInfo(Key(key_data_1), 'bundle'),
+        KeyInfo(Key(key_data_2), 'bundle'),
+        KeyInfo(Key(key_data_3), 'storefront'),
+    ]
