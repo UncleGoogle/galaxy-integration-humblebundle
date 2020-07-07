@@ -195,18 +195,15 @@ def test_split_multigame_key():
 def test_get_key_info():
     key_data_1 = {
         "machine_name": "g1",
-        "human_name": 'G1',
-        "key_type_human_name": "Steam Key"
+        "human_name": 'G1'
     }
     key_data_2 = {
         "machine_name": "g2",
-        "human_name": 'G2',
-        "key_type_human_name": "Origin Key"
+        "human_name": 'G2'
     }
     key_data_3 = {
         "machine_name": "g3",
-        "human_name": 'G3',
-        "key_type_human_name": "Key"
+        "human_name": 'G3'
     }
     orders = [
         {
