@@ -1,9 +1,9 @@
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine
+from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple
 
-from consts import SOURCE, NON_GAME_BUNDLE_TYPES
+from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMA_SPLIT_BLACKLIST
 from model.product import Product
 from model.game import HumbleGame, Subproduct, Key, KeyGame
 from model.types import GAME_PLATFORMS
@@ -11,6 +11,11 @@ from settings import LibrarySettings
 
 
 logger = logging.getLogger(__name__)
+
+
+class KeyInfo(NamedTuple):
+    key: Key
+    product_category: str
 
 
 class LibraryResolver:
@@ -34,7 +39,7 @@ class LibraryResolver:
             if source == SOURCE.DRM_FREE:
                 all_games.extend(self._get_subproducts(orders))
             elif source == SOURCE.KEYS:
-                all_games.extend(self._get_keys(orders, self._settings.show_revealed_keys))
+                all_games.extend(self._get_key_games(orders, self._settings.show_revealed_keys))
 
         logger.info(f'all_games: {all_games}')
 
@@ -132,16 +137,48 @@ class LibraryResolver:
         return subproducts
 
     @staticmethod
-    def _get_keys(orders: list, show_revealed_keys: bool) -> List[KeyGame]:
+    def _is_multigame_key(key: Key, product_category: str, blacklist: Iterable[str]) -> bool:
+        if product_category != 'bundle':  # assuming only bundles contain multigame keys
+            return False
+        if ', ' not in key.human_name:
+            return False
+        for i in blacklist:
+            if i in key.human_name:
+                return False
+        return True
+
+    @staticmethod
+    def _split_multigame_key(key: Key) -> List[KeyGame]:
+        """Extract list of KeyGame objects from single Key"""
+        names = key.human_name.split(', ')
+        return [
+            KeyGame(key, f'{key.machine_name}_{i}', name)
+            for i, name in enumerate(names)
+        ]
+
+    @staticmethod
+    def _get_key_infos(orders: list) -> List[KeyInfo]:
         keys = []
         for details in orders:
             for tpks in details['tpkd_dict']['all_tpks']:
                 key = Key(tpks)
                 try:
                     key.in_galaxy_format()  # minimal validation
+                    product_category = details['product']['category']
                 except Exception as e:
                     logger.warning(f"Error while parsing tpks {repr(e)}: {tpks}", extra={'tpks': tpks})
+                    continue
                 else:
-                    if key.key_val is None or show_revealed_keys:
-                        keys.extend(key.key_games)
+                    keys.append(KeyInfo(key, product_category))
         return keys
+
+    def _get_key_games(self, orders: list, show_revealed_keys: bool) -> List[KeyGame]:
+        key_games = []
+        key_infos = self._get_key_infos(orders)
+        for key, product_category in key_infos:
+            if key.key_val is None or show_revealed_keys:
+                if self._is_multigame_key(key, product_category, blacklist=COMA_SPLIT_BLACKLIST):
+                    key_games.extend(self._split_multigame_key(key))
+                else:
+                    key_games.append(KeyGame(key, key.machine_name, key.human_name))
+        return key_games

@@ -8,7 +8,7 @@ from galaxy.api.errors import UnknownError
 from consts import SOURCE
 from settings import LibrarySettings
 from library import LibraryResolver
-from model.game import Subproduct, Key
+from model.game import Subproduct, Key, KeyGame
 
 
 @pytest.fixture
@@ -37,7 +37,7 @@ def get_torchlight(orders_keys):
             torchlight_order = i
     drm_free = Subproduct(torchlight_order['subproducts'][0])
     key = Key(torchlight_order['tpkd_dict']['all_tpks'][0])
-    key_game = key.key_games[0]
+    key_game = KeyGame(key, key.machine_name, key.human_name)
     return torchlight_order, drm_free, key_game
 
 
@@ -65,7 +65,7 @@ async def test_library_cache_key(create_resolver, get_torchlight):
 
 @pytest.mark.asyncio
 async def test_library_cache_orders(plugin, get_torchlight, change_settings):
-    _, drm_free, key = get_torchlight
+    _, drm_free, key_game = get_torchlight
 
     change_settings(plugin, {'sources': ['drm-free'], 'show_revealed_keys': True})
     result = await plugin._library_resolver()
@@ -76,7 +76,7 @@ async def test_library_cache_orders(plugin, get_torchlight, change_settings):
 
     change_settings(plugin, {'sources': ['keys']})
     result = await plugin._library_resolver(only_cache=True)
-    assert result[key.machine_name] == key.key_games[0]
+    assert result[key_game.machine_name] == key_game
     assert drm_free.machine_name not in result
     # no api calls if cache used
     assert plugin._api.get_gamekeys.call_count == 0
@@ -111,7 +111,7 @@ async def test_library_fetch_with_cache_orders(plugin, get_torchlight, change_se
     # refresh only orders that may change - those with any unrevealed key
     change_settings(plugin, {'sources': ['keys'], 'show_revealed_keys': False})
     result = await plugin._library_resolver()
-    assert key.machine_name not in result  # revealed -> removed
+    assert key.machine_name not in result  # revealed key should not be shown
     assert plugin._api.get_gamekeys.call_count == 1
     assert plugin._api.get_order_details.call_count == len(unrevealed_order_keys)
 
