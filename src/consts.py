@@ -34,7 +34,7 @@ COMA_SPLIT_BLACKLIST = [
     "Axe, Bow & Staff",
     "Bolt Riley, A Reggae Adventure - Chapter 1",
     "Borderlands 3: Guns, Love and Tentacles",
-    "Codename: Panzers, Phase"
+    "Codename: Panzers, Phase",
     "Cook, Serve, Delicious!",
     "Dude, Stop",
     "Duke Grabowski, Mighty Swashbuckler",
