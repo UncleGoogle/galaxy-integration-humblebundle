@@ -1,7 +1,7 @@
 import abc
 import logging
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo, SubscriptionGame
 
@@ -30,8 +30,7 @@ class HumbleGame(abc.ABC):
 
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
-        truncated_name = self.human_name[:100]
-        return Game(self.machine_name, truncated_name, dlcs, self.license)
+        return Game(self.machine_name, self.human_name, dlcs, self.license)
 
     def __repr__(self):
         return str(self)
