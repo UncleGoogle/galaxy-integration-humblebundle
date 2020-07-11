@@ -14,6 +14,12 @@ class HP(enum.Enum):
     COMEDY = 'comedy'
     OCULUS = 'oculus-rift'
     VIVE = 'vive'
+    OTHER = 'other'
+    _UNRECOGNIZED = 'unrecognized'
+
+    @classmethod
+    def _missing_(cls, value):
+        return HP._UNRECOGNIZED
 
     def __eq__(self, other):
         if type(other) == str:
