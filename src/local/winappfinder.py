@@ -51,6 +51,14 @@ class WindowsAppFinder(BaseAppFinder):
         # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
 
+    @staticmethod
+    def __location_exists(location: Optional[pathlib.Path]):
+        """Wrapper for Python version < 3.8"""
+        try:
+            return location and location.exists()
+        except OSError:
+            return False
+
     def _find_executable(self, human_name: str, uk: UninstallKey) -> Optional[pathlib.Path]:
         """ Returns most probable app executable of given uk or None if not found.
         """
@@ -67,7 +75,7 @@ class WindowsAppFinder(BaseAppFinder):
             or (ipath.parent if ipath else None)
 
         # find all executables and get best machting (exclude uninstall_path)
-        if location and location.exists():
+        if self.__location_exists(location):
             executables = list(set(self._pathfinder.find_executables(location)) - {str(upath)})
             best_match = self._pathfinder.choose_main_executable(human_name, executables)
             if best_match is None:
