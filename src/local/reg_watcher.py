@@ -1,4 +1,5 @@
-import re 
+import re
+import os
 import logging
 import platform
 import pathlib
@@ -36,6 +37,8 @@ class UninstallKey:
         if not uspath:
             return None
         if uspath.startswith("MsiExec.exe"):
+            return None
+        if uspath.startswith('"' + os.environ['WINDIR']):
             return None
         if '"' not in uspath:
             return pathlib.Path(uspath)
