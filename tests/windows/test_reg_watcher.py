@@ -1,3 +1,4 @@
+import os
 import pytest
 import pathlib
 from unittest.mock import patch
@@ -83,8 +84,9 @@ def test_uk_uninstall_string_path_msi():
 @pytest.mark.parametrize('uninstall_string', [
     R'"C:\WINDOWS\iun504.exe" "C:\Program Files (x86)\Blades of Avernum"',
 ])
-def test_uk_uninstall_string_path_other_uninstallers(uninstall_string):
+def test_uk_uninstall_string_path_other_uninstallers(mocker, uninstall_string):
     """Should ignore uninstalers from system locations"""
+    mocker.patch.dict(os.environ,  {"WINDIR": R"C:\WINDOWS"})
     uk = UninstallKey('', '', uninstall_string=uninstall_string)
     assert None == uk.uninstall_string_path
 
