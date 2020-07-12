@@ -32,18 +32,18 @@ class UninstallKey:
         return pathlib.Path(path)
 
     @property
-    def uninstall_string_path(self) -> Optional[pathlib.Path]:
+    def local_uninstaller_path(self) -> Optional[pathlib.Path]:
         uspath = self.uninstall_string
         if not uspath:
             return None
         if uspath.startswith("MsiExec.exe"):
             return None
-        if uspath.startswith('"' + os.environ['WINDIR']):
-            return None
-        if '"' not in uspath:
+        if '"' not in uspath:  # no quotes => no additional arguments => bare uninstaller path
             return pathlib.Path(uspath)
+        if uspath.startswith('"' + os.environ['WINDIR']):  # system uninstaller
+            return None
         m = re.match(r'"(.+?)"', uspath)
-        if m:
+        if m:  # uninstaller path as first quoted argument
             return pathlib.Path(m.group(1))
         return None
 

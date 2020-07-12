@@ -43,7 +43,7 @@ class WindowsAppFinder(BaseAppFinder):
             if escaped_matches(human_name, location.name):
                 return True
         else:
-            location = uk.uninstall_string_path or uk.display_icon_path
+            location = uk.local_uninstaller_path or uk.display_icon_path
             if location:
                 if escaped_matches(human_name, location.parent.name):
                     return True
@@ -63,7 +63,7 @@ class WindowsAppFinder(BaseAppFinder):
         """ Returns most probable app executable of given uk or None if not found.
         """
         # sometimes display_icon link to main executable
-        upath = uk.uninstall_string_path
+        upath = uk.local_uninstaller_path
         ipath = uk.display_icon_path
         if ipath and ipath.suffix == '.exe':
             if ipath != upath and 'unins' not in str(ipath):  # exclude uninstaller
