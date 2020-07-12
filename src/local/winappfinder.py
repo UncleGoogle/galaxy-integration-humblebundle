@@ -9,6 +9,15 @@ from local.baseappfinder import BaseAppFinder
 from local.reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
+
+def location_exists(location: Optional[pathlib.Path]):
+    """Wrapper for Python version < 3.8"""
+    try:
+        return location and location.exists()
+    except OSError:
+        return False
+
+
 class WindowsAppFinder(BaseAppFinder):
     def __init__(self):
         super().__init__()
@@ -38,31 +47,18 @@ class WindowsAppFinder(BaseAppFinder):
             or uk.key_name.lower().startswith(human_name.lower()):
             return True
 
-        location = uk.install_location_path
+        location = uk.get_install_location()
         if location:
             if escaped_matches(human_name, location.name):
                 return True
-        else:
-            location = uk.local_uninstaller_path or uk.display_icon_path
-            if location:
-                if escaped_matches(human_name, location.parent.name):
-                    return True
 
         # quickfix for Torchlight II ect., until better solution will be provided
         return escaped_matches(norm(human_name), norm(uk.display_name))
 
-    @staticmethod
-    def __location_exists(location: Optional[pathlib.Path]):
-        """Wrapper for Python version < 3.8"""
-        try:
-            return location and location.exists()
-        except OSError:
-            return False
-
     def _find_executable(self, human_name: str, uk: UninstallKey) -> Optional[pathlib.Path]:
-        """ Returns most probable app executable of given uk or None if not found.
+        """Returns most probable app executable of given uk or None if not found.
         """
-        # sometimes display_icon link to main executable
+        # sometimes display_icon links to main executable
         upath = uk.local_uninstaller_path
         ipath = uk.display_icon_path
         if ipath and ipath.suffix == '.exe':
@@ -75,7 +71,7 @@ class WindowsAppFinder(BaseAppFinder):
             or (ipath.parent if ipath else None)
 
         # find all executables and get best machting (exclude uninstall_path)
-        if self.__location_exists(location):
+        if location_exists(location):
             executables = list(set(self._pathfinder.find_executables(location)) - {str(upath)})
             best_match = self._pathfinder.choose_main_executable(human_name, executables)
             if best_match is None:
@@ -108,7 +104,7 @@ class WindowsAppFinder(BaseAppFinder):
             except Exception:
                 self._reg.uninstall_keys.add(uk)
                 raise
-            await asyncio.sleep(0.001)  # makes this method non blocking
+            await asyncio.sleep(0)  # makes this method non blocking
 
         # try to match the rest using folders scan
         if paths is not None:

@@ -45,6 +45,18 @@ class UninstallKey:
             return pathlib.Path(m.group(1))
         return None
 
+    def get_install_location(self) -> Optional[pathlib.Path]:
+        """Find most probable install location from UninstallKey registry element"""
+        ilp = self.install_location_path
+        if ilp:
+            return ilp
+        afile = self.local_uninstaller_path or self.display_icon_path
+        if afile:
+            return afile.parent
+        return None
+
+
+
 
 class WinRegUninstallWatcher:
     _UNINSTALL_LOCATION = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
