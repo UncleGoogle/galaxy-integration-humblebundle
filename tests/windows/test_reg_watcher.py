@@ -86,7 +86,7 @@ def test_uk_local_uninstaller_path_msi():
 ])
 def test_uk_local_uninstaller_path_other_uninstallers(mocker, uninstall_string):
     """Should ignore uninstalers from system locations"""
-    mocker.patch.dict(os.environ,  {"WINDIR": R"C:\WINDOWS"})
+    mocker.patch.dict(os.environ, {"SystemRoot": R"C:\WINDOWS"})
     uk = UninstallKey('', '', uninstall_string=uninstall_string)
     assert None == uk.local_uninstaller_path
 
