@@ -1,4 +1,5 @@
-import re 
+import re
+import os
 import logging
 import platform
 import pathlib
@@ -31,18 +32,30 @@ class UninstallKey:
         return pathlib.Path(path)
 
     @property
-    def uninstall_string_path(self) -> Optional[pathlib.Path]:
+    def local_uninstaller_path(self) -> Optional[pathlib.Path]:
         uspath = self.uninstall_string
         if not uspath:
             return None
-        if uspath.startswith("MsiExec.exe"):
+        if uspath.startswith("MsiExec.exe") or uspath.startswith('"' + os.environ['SystemRoot']):
             return None
-        if '"' not in uspath:
+        if '"' not in uspath:  # no quotes => no additional arguments => bare uninstaller path
             return pathlib.Path(uspath)
         m = re.match(r'"(.+?)"', uspath)
-        if m:
+        if m:  # uninstaller path as first quoted argument
             return pathlib.Path(m.group(1))
         return None
+
+    def get_install_location(self) -> Optional[pathlib.Path]:
+        """Find most probable install location from UninstallKey registry element"""
+        ilp = self.install_location_path
+        if ilp:
+            return ilp
+        afile = self.local_uninstaller_path or self.display_icon_path
+        if afile:
+            return afile.parent
+        return None
+
+
 
 
 class WinRegUninstallWatcher:

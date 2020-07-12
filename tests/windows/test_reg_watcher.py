@@ -1,3 +1,4 @@
+import os
 import pytest
 import pathlib
 from unittest.mock import patch
@@ -56,29 +57,38 @@ def test_uk_display_icon_path():
         assert pathlib.Path("C:\\abc\\s.ico") == uk.display_icon_path
 
 
-def test_uk_uninstall_string_path():
+@pytest.mark.parametrize('uninstall_string', [
+    R'D:\Games\HoMM 3 Complete\unins000.exe',
+    R'"D:\Games\HoMM 3 Complete\unins000.exe"',
+    R'"D:\Games\HoMM 3 Complete\unins000.exe" /SILENT',
+    R'"D:\Games\HoMM 3 Complete\unins000.exe" uninstall extra_path "C:\ProgramData\HoMM\saves"',
+    R'"D:\Games\HoMM 3 Complete\unins000.exe" --lang=esMX --display-name="Heroes 3"'
+])
+def test_uk_local_uninstaller_path(uninstall_string):
     expected = pathlib.Path(R"D:\Games\HoMM 3 Complete\unins000.exe")
-    uninstall_strings = [
-        R'D:\Games\HoMM 3 Complete\unins000.exe',
-        R'"D:\Games\HoMM 3 Complete\unins000.exe"',
-        R'"D:\Games\HoMM 3 Complete\unins000.exe" /SILENT',
-        R'"D:\Games\HoMM 3 Complete\unins000.exe" uninstall extra_path "C:\ProgramData\HoMM\saves"'
-        R'"D:\Games\HoMM 3 Complete\unins000.exe" --lang=esMX, --display-name="Heroes 3"'
-    ]
-    for i in uninstall_strings:
-        uk = UninstallKey('', '', uninstall_string=i)
-        assert expected == uk.uninstall_string_path
+    uk = UninstallKey('', '', uninstall_string=uninstall_string)
+    assert expected == uk.local_uninstaller_path
 
 
-def test_uk_uninstall_string_path_empty():
-    assert None == UninstallKey('', '', uninstall_string='').uninstall_string_path
+def test_uk_local_uninstaller_path_empty():
+    assert None == UninstallKey('', '', uninstall_string='').local_uninstaller_path
 
 
-def test_uk_uninstall_string_path_msi():
+def test_uk_local_uninstaller_path_msi():
     """No support for msi uninstallers for now"""
-    path = 'MsiExec.exe /I{20888FA1-8127-42E3-969F-9BF93245AC83}'
-    uk = UninstallKey('', '', uninstall_string=path)
-    assert None == uk.uninstall_string_path
+    uninstall_string = 'MsiExec.exe /I{20888FA1-8127-42E3-969F-9BF93245AC83}'
+    uk = UninstallKey('', '', uninstall_string=uninstall_string)
+    assert None == uk.local_uninstaller_path
+
+
+@pytest.mark.parametrize('uninstall_string', [
+    R'"C:\WINDOWS\iun504.exe" "C:\Program Files (x86)\Blades of Avernum"',
+])
+def test_uk_local_uninstaller_path_other_uninstallers(mocker, uninstall_string):
+    """Should ignore uninstalers from system locations"""
+    mocker.patch.dict(os.environ, {"SystemRoot": R"C:\WINDOWS"})
+    uk = UninstallKey('', '', uninstall_string=uninstall_string)
+    assert None == uk.local_uninstaller_path
 
 
 # --------- WinRegClient ---------------
