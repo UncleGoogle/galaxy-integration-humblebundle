@@ -6,6 +6,7 @@ import os
 import subprocess
 import shutil
 from pathlib import Path
+from fog.buildtools import buildtools
 
 from invoke import task
 import github
@@ -58,36 +59,9 @@ def install(c, dev=False):
 
 
 @task
-def build(c, output=DIST_PLUGIN):
-    print(f'Preparing build to folder `{output}`')
-
-    output = Path(output).resolve()
-    print('Removing', output)
-    if os.path.exists(output):
-        try:
-            shutil.rmtree(output)
-        except OSError as e:
-            if hasattr(e, 'winerror') and e.winerror in [145, 5]:  # type: ignore
-                # something e.g. antivirus check holds a file. Try to wait to be released for a moment
-                time.sleep(3)
-                shutil.rmtree(output)
-            else:
-                raise
-
-    print('Copying source code to ', str(output))
-    shutil.copytree('src', output, ignore=shutil.ignore_patterns(
-        '__pycache__', '.mypy_cache', 'tests'))
-
-    args = [
-        PYTHON, "-m", "pip", "install",
-        "-r", REQUIREMENTS,
-        "--target", str(output / THIRD_PARTY_RELATIVE_DEST),
-        # "--implementation", "cp",
-        # "--python-version", "37",
-        # "--no-deps"
-    ]
-    print(f'Running `{" ".join(args)}`')
-    subprocess.check_call(args)
+def build(c, output='build'):
+    print(f'Preparing build to `{output}`')
+    buildtools.build(output=output, third_party_output='modules', requirements=REQUIREMENTS)
 
 
 @task
