@@ -150,6 +150,7 @@ class LibraryResolver:
     @staticmethod
     def _split_multigame_key(key: Key) -> List[KeyGame]:
         """Extract list of KeyGame objects from single Key"""
+        logger.info(f'Spliting key {key.machine_name}')
         names = key.human_name.split(', ')
         return [
             KeyGame(key, f'{key.machine_name}_{i}', name)
