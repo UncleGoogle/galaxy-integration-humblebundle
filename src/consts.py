@@ -66,7 +66,5 @@ COMA_SPLIT_BLACKLIST = [
     "The Haunted Island, a Frog Detective Game",
     "Total War Saga: THRONES OF BRITANNIA - Blood, Sweat and Spears",
     "Upwards, Lonely Robot",
-    "Warhammer 40,000",
-    "Warhammer® 40,000",
     "Warlock 2: The Exiled - The Good, the Bad, & the Muddy",
 ]

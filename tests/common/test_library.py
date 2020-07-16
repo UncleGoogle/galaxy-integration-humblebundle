@@ -161,11 +161,10 @@ async def test_fetch_orders_filter_errors_one_404(plugin, create_resolver, caplo
 # --------test splitting keys -------------------
 
 @pytest.mark.parametrize('human_name, category, blacklist, is_multigame', [
-    ('The Witcher', 'bundle', [], False),  # no coma in human_name
+    ('Warhammer 40,000: Space Wolf', 'bundle', [], False),  # no ', ' in human_name
     ('Gremlins, Inc.', 'storefront', [], False),  # not bundle category
-    ('Gremlins, Inc.', 'bundle', ['Warhammer 40,000', 'Gremlins, I'], False),  # blacklisted
-    ('Gremlins, Inc.', 'bundle', ['Warhammer 40,000', 'Gremlins, no match'], True),
-    ('Warhammer 40,000: Space Wolf', 'bundle', ['Warhammer 40,000'], False), # blacklisted
+    ('Gremlins, Inc.', 'bundle', ['Here, there', 'Gremlins, I'], False),  # blacklisted
+    ('Gremlins, Inc.', 'bundle', ['Here, there', 'Gremlins, no match'], True),
     ('Alpha Protocol, Company of Heroes, Rome: Total War, Hell Yeah! Wrath of the Dead Rabbit', 'bundle', [], True),
 ])
 def test_is_multigame_key(human_name, category, blacklist, is_multigame):
