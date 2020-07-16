@@ -144,13 +144,14 @@ class LibraryResolver:
             return False
         for i in blacklist:
             if i in key.human_name:
+                logger.debug(f'{key} split blacklisted by "{i}"')
                 return False
         return True
 
     @staticmethod
     def _split_multigame_key(key: Key) -> List[KeyGame]:
         """Extract list of KeyGame objects from single Key"""
-        logger.info(f'Spliting key {key.machine_name}')
+        logger.info(f'Spliting {key}')
         names = key.human_name.split(', ')
         return [
             KeyGame(key, f'{key.machine_name}_{i}', name)
