@@ -3,7 +3,7 @@ import logging
 import asyncio
 from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple
 
-from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMA_SPLIT_BLACKLIST
+from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMMA_SPLIT_BLACKLIST
 from model.product import Product
 from model.game import HumbleGame, Subproduct, Key, KeyGame
 from model.types import GAME_PLATFORMS
@@ -179,7 +179,7 @@ class LibraryResolver:
         key_infos = self._get_key_infos(orders)
         for key, product_category in key_infos:
             if key.key_val is None or show_revealed_keys:
-                if self._is_multigame_key(key, product_category, blacklist=COMA_SPLIT_BLACKLIST):
+                if self._is_multigame_key(key, product_category, blacklist=COMMA_SPLIT_BLACKLIST):
                     key_games.extend(self._split_multigame_key(key))
                 else:
                     key_games.append(KeyGame(key, key.machine_name, key.human_name))

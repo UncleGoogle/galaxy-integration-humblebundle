@@ -29,7 +29,7 @@ if platform.machine().endswith('64'):
 else:
     CURRENT_BITNESS = BITNESS.B32
 
-COMA_SPLIT_BLACKLIST = [
+COMMA_SPLIT_BLACKLIST = [
     "About Love, Hate and the other ones",
     "Axe, Bow & Staff",
     "Bolt Riley, A Reggae Adventure - Chapter 1",
