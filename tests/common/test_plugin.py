@@ -109,11 +109,20 @@ async def test_get_os_compatibility(plugin, overgrowth):
         'machine_name': no_downloads_id,
         'downloads': []
     })
-    plugin._owned_games= { ovg_id: game, no_downloads_id: no_dw_game}
 
-    ctx = await plugin.prepare_os_compatibility_context([ovg_id, no_downloads_id])
+    key_game_id = 'keyg'
+    key_game = Mock(spec=KeyGame)
+
+    plugin._owned_games = {
+        ovg_id: game,
+        no_downloads_id: no_dw_game,
+        key_game_id: key_game
+    }
+
+    ctx = await plugin.prepare_os_compatibility_context(plugin._owned_games.keys())
     assert await plugin.get_os_compatibility(no_downloads_id, ctx) == None
     assert await plugin.get_os_compatibility(ovg_id, ctx) == OSC.Windows | OSC.MacOS | OSC.Linux
+    assert await plugin.get_os_compatibility(key_game_id, ctx) == OSC.Windows | OSC.MacOS | OSC.Linux
 
 
 @pytest.mark.asyncio

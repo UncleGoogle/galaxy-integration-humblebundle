@@ -374,16 +374,20 @@ class HumbleBundlePlugin(Plugin):
         except KeyError as e:
             logging.error(e, extra={'humble_games': self._humble_games})
             return None
-        else:
-            HP_OS_MAP = {
-                HP.WINDOWS: OSCompatibility.Windows,
-                HP.MAC: OSCompatibility.MacOS,
-                HP.LINUX: OSCompatibility.Linux
-            }
-            osc = OSCompatibility(0)
-            for humble_platform in game.downloads:
-                osc |= HP_OS_MAP.get(humble_platform, OSCompatibility(0))
-            return osc if osc else None
+
+        # treat keys as os independent (enables Install button)
+        if isinstance(game, Key):
+            return OSCompatibility(0b111)
+
+        HP_OS_MAP = {
+            HP.WINDOWS: OSCompatibility.Windows,
+            HP.MAC: OSCompatibility.MacOS,
+            HP.LINUX: OSCompatibility.Linux
+        }
+        osc = OSCompatibility(0)
+        for humble_platform in game.downloads:
+            osc |= HP_OS_MAP.get(humble_platform, OSCompatibility(0))
+        return osc if osc else None
 
     async def _check_owned(self):
         async with self._getting_owned_games:
