@@ -1,3 +1,12 @@
+## Version 0.8.1
+Addressed issues: https://github.com/UncleGoogle/galaxy-integration-humblebundle/milestone/6
+
+[Fixed]
+- Not showing games due to unsupported platform id #125 @ 84a7e50
+- Splitting multigame key by using blacklist #124
+- Show Install button for all keys #132
+- Fix failing on parsing installed games when non-local uninstaller is used ("Blades of Avernum" case) #127
+
 ## Version 0.8.0
 
 [Added]
