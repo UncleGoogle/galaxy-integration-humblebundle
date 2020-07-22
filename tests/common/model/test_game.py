@@ -42,16 +42,6 @@ def test_key_properties(origin_bundle_order):
         key.in_galaxy_format()
 
 
-def test_key_key_games_one_game():
-    """Most common case where 1 key == 1 game"""
-    key = Key({
-        "machine_name": "ww",
-        "human_name": "The Witcher",
-        "key_type_human_name": "Steam Key"
-    })
-    assert key.key_games == [KeyGame(key, "ww", "The Witcher (Steam Key)")]
-
-
 def test_key_key_game_data():
     tpks = {
         "machine_name": "ww",
@@ -59,20 +49,6 @@ def test_key_key_game_data():
     }
     key = Key(tpks)
     assert tpks == KeyGame(key, 'ww', 'sth')._data
-
-
-def test_key_split_key_games():
-    tpks = {
-        "machine_name": "sega",
-        "human_name": "Alpha Protocol, Company of Heroes, Rome: Total War, Hell Yeah! Wrath of the Dead Rabbit",
-    }
-    key = Key(tpks)
-    assert key.key_games == [
-        KeyGame(key, "sega_0", "Alpha Protocol"),
-        KeyGame(key, "sega_1", "Company of Heroes"),
-        KeyGame(key, "sega_2", "Rome: Total War"),
-        KeyGame(key, "sega_3", "Hell Yeah! Wrath of the Dead Rabbit")
-    ]
 
 
 def test_key_game_human_name_changed():

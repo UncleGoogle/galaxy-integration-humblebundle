@@ -1,7 +1,7 @@
 import abc
 import logging
 from dataclasses import dataclass, asdict
-from typing import Dict, List, Optional, Any
+from typing import Dict, Optional, Any
 
 from galaxy.api.types import Game, LicenseType, LicenseInfo, SubscriptionGame
 
@@ -30,8 +30,7 @@ class HumbleGame(abc.ABC):
 
     def in_galaxy_format(self):
         dlcs = []  # not supported for now
-        truncated_name = self.human_name[:100]
-        return Game(self.machine_name, truncated_name, dlcs, self.license)
+        return Game(self.machine_name, self.human_name, dlcs, self.license)
 
     def __repr__(self):
         return str(self)
@@ -118,20 +117,6 @@ class Key(HumbleGame):
     def key_val(self) -> Optional[str]:
         """If returned value is None - the key was not revealed yet"""
         return self._data.get('redeemed_key_val')
-
-    @property
-    def key_games(self) -> List['KeyGame']:
-        """One key can represent multiple games listed in human_name.
-        This property splits those games and returns list of KeyGame objects with incremental id.
-        """
-        names = self.human_name.split(', ')
-        if len(names) == 1:
-            return [KeyGame(self, self.machine_name, self.human_name)]
-        else:
-            return [
-                KeyGame(self, f'{self.machine_name}_{i}', name)
-                for i, name in enumerate(names)
-            ]
 
 
 class KeyGame(Key):
