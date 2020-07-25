@@ -1,3 +1,8 @@
+## Unreleased
+
+[Fixed]
+- Fetching trove games
+
 ## Version 0.8.1
 Addressed issues: https://github.com/UncleGoogle/galaxy-integration-humblebundle/milestone/6
 
