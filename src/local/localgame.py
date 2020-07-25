@@ -1,5 +1,6 @@
 import dataclasses
 import subprocess
+import asyncio
 import pathlib
 import psutil
 from typing import Optional
@@ -14,6 +15,7 @@ DETACHED_PROCESS = 0b0001000
 @dataclasses.dataclass
 class LocalHumbleGame:
     machine_name: str
+    install_dir: pathlib.Path
     executable: pathlib.Path
     uninstall_cmd: Optional[str] = None
     process: Optional[psutil.Process] = None
@@ -75,3 +77,13 @@ class LocalHumbleGame:
 
     def uninstall(self):
         subprocess.Popen(self.uninstall_cmd)
+
+    async def get_size(self):
+        total_size = 0
+        for dirpath, _, filenames in os.walk(self.install_dir):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                if not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
+                    await asyncio.sleep(0)
+        return total_size
