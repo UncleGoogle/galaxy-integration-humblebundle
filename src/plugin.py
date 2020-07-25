@@ -18,7 +18,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
-from galaxy.api.errors import AuthenticationRequired, UnknownError
+from galaxy.api.errors import AuthenticationRequired, UnknownError, BackendError
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
@@ -110,14 +110,15 @@ class HumbleBundlePlugin(Plugin):
         self._trove_games = {g['machine_name']: TroveGame(g) for g in self._load_cache('trove_games', [])}
         self._choice_games = {g['id']: ChoiceGame(**g) for g in self._load_cache('choice_games', [])}
 
-    async def _fetch_marketing_data(self) -> t.Optional[str]:
+    async def _do_auth(self, auth_cookie) -> Authentication:
+        user_id = await self._api.authenticate(auth_cookie)
         try:
             subscription_infos = await self._api.get_choice_marketing_data()
             self._subscription_months = subscription_infos.month_details
-            logger.debug(f'Subscription months: {self._subscription_months}')
-            return subscription_infos.user_options['email']
-        except KeyError:  # extra safety as this data is not crucial
-            return None
+            user_name = subscription_infos.user_options['email'].split('@')[0]
+        except (BackendError, KeyError):  # extra safety as this data is not crucial
+            user_name = user_id
+        return Authentication(user_id, user_name)
 
     async def authenticate(self, stored_credentials=None):
         show_news = self.__is_after_minor_update()
@@ -133,20 +134,17 @@ class HumbleBundlePlugin(Plugin):
                 })
 
         logging.info('Stored credentials found')
-        user_id = await self._api.authenticate(stored_credentials)
-        user_email = await self._fetch_marketing_data()
-
+        auth: Authentication = await self._do_auth(stored_credentials)
         if show_news:
             self._open_config(OPTIONS_MODE.NEWS)
-        return Authentication(user_id, user_email or user_id)
+        return auth
 
     async def pass_login_credentials(self, step, credentials, cookies):
         auth_cookie = next(filter(lambda c: c['name'] == '_simpleauth_sess', cookies))
-        user_id = await self._api.authenticate(auth_cookie)
-        user_email = await self._fetch_marketing_data()
+        auth: Authentication = await self._do_auth(auth_cookie)
         self.store_credentials(auth_cookie)
         self._open_config(OPTIONS_MODE.WELCOME)
-        return Authentication(user_id, user_email or user_id)
+        return auth
 
     def __is_after_minor_update(self) -> bool:
         def cut_to_minor(ver: str) -> LooseVersion:
