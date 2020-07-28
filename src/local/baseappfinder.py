@@ -13,6 +13,9 @@ from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
 
 
+logger = logging.getLogger('local')
+
+
 class BaseAppFinder(abc.ABC):
     def __init__(self, get_close_matches=None, find_best_exe=None):
         self._pathfinder = PathFinder(IS_WINDOWS)
@@ -29,7 +32,7 @@ class BaseAppFinder(abc.ABC):
             owned_title_id[title]: LocalHumbleGame(owned_title_id[title], exe)
             for title, exe in found_games.items()
         }
-        logging.debug(f'=== Scanning folders took {time.time() - start}')
+        logger.debug(f'Scanning folders took {time.time() - start}')
         return local_games
 
     async def _scan_folders(self, paths: Iterable[Union[str, os.PathLike]], app_names: Set[str]) -> Dict[str, pathlib.Path]:
@@ -61,7 +64,7 @@ class BaseAppFinder(abc.ABC):
         :yields:            2-el. tuple of app_name and executable
         """
         root, dirs, _ = next(os.walk(path))
-        logging.debug(f'New scan - similarity: {similarity}, candidates: {list(candidates)}')
+        logger.debug(f'New scan - similarity: {similarity}, candidates: {list(candidates)}')
         for dir_name in dirs:
             await asyncio.sleep(0)
             matches = self.get_close_matches(dir_name, candidates, similarity)
@@ -69,7 +72,7 @@ class BaseAppFinder(abc.ABC):
                 dir_path = pathlib.PurePath(root) / dir_name
                 best_exe = self.find_best_exe(dir_path, app_name)
                 if best_exe is None:
-                    logging.warning('No executable found, moving to next best matched app')
+                    logger.warning('No executable found, moving to next best matched app')
                     continue
                 candidates.remove(app_name)
                 yield app_name, pathlib.Path(best_exe)
@@ -80,7 +83,7 @@ class BaseAppFinder(abc.ABC):
         matches_ = difflib.get_close_matches(dir_name, candidates, cutoff=similarity)
         matches = cast(List[str], matches_)  # as str is Sequence[str] - mypy/issues/5090
         if matches:
-            logging.info(f'found close ({similarity}) matches for {dir_name}: {matches}')
+            logging.info(f'Found close ({similarity}) matches for {dir_name}: {matches}')
         return matches
 
     def _find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):
