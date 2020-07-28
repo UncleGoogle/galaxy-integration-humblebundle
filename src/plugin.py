@@ -366,6 +366,14 @@ class HumbleBundlePlugin(Plugin):
         else:
             game.uninstall()
 
+    async def get_local_size(self, game_id, context) -> t.Optional[int]:
+        try:
+            game = self._local_games[game_id]
+        except KeyError as e:
+            logging.error(e, extra={'local_games': self._local_games})
+            return None
+        return await game.get_size()
+
     async def get_os_compatibility(self, game_id: str, context: t.Any) -> t.Optional[OSCompatibility]:
         try:
             game = self._humble_games[game_id]

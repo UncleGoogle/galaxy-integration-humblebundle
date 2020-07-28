@@ -31,7 +31,7 @@ async def test_launch_game(plugin, overgrowth):
 async def test_uninstall_game(plugin, overgrowth):
     id_ = overgrowth['product']['machine_name']
     plugin._local_games = {
-        id_: LocalHumbleGame(id_, '', uninstall_cmd="unins000.exe")
+        id_: LocalHumbleGame(id_, Mock(), uninstall_cmd="unins000.exe")
     }
     with patch('subprocess.Popen') as subproc:
         await plugin.uninstall_game(id_)

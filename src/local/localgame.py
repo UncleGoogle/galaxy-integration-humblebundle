@@ -1,4 +1,5 @@
 import dataclasses
+import os
 import subprocess
 import asyncio
 import pathlib
@@ -82,7 +83,7 @@ class LocalHumbleGame:
     def uninstall(self):
         subprocess.Popen(self.uninstall_cmd)
 
-    async def get_size(self):
+    async def get_size(self) -> int:
         total_size = 0
         for dirpath, _, filenames in os.walk(self.install_location):
             for f in filenames:
