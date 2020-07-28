@@ -13,7 +13,7 @@ from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
 
 
-logger = logging.getLogger('local')
+logger = logging.getLogger(__name__)
 
 
 class BaseAppFinder(abc.ABC):

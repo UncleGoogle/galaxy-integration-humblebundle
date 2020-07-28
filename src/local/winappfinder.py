@@ -9,6 +9,8 @@ from local.baseappfinder import BaseAppFinder
 from local.reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
+logger = logging.getLogger(__name__)
+
 
 def location_exists(location: Optional[pathlib.Path]):
     """Wrapper for Python version < 3.8"""
