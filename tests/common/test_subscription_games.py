@@ -60,12 +60,12 @@ async def test_trove(api_mock, plugin):
 async def test_trove_store_in_presistent_cache(plugin):
     plugin.push_cache.reset_mock()
     plugin._trove_games = {
-        'a': TroveGame({'human-name': 'A', 'machine_name': 'a', 'downloads': {'windows': {}}}),
+        'a': TroveGame({'human-name': 'A', 'machine_name': 'a', 'downloads': {'windows': {}}, 'date-added': 123456789}),
         'c': TroveGame({'human-name': 'C', 'machine_name': 'c', 'downloads': {'mac': {}}}),
     }
     plugin.subscription_games_import_complete()
     assert plugin.persistent_cache['trove_games'] == '[' \
-        '{"human-name": "A", "machine_name": "a", "downloads": {"windows": {}}}, ' \
+        '{"human-name": "A", "machine_name": "a", "downloads": {"windows": {}}, "date-added": 123456789}, ' \
         '{"human-name": "C", "machine_name": "c", "downloads": {"mac": {}}}' \
     ']'
     plugin.push_cache.assert_called()
