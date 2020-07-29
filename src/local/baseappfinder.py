@@ -92,7 +92,7 @@ class BaseAppFinder(abc.ABC):
             logging.info(f'Found close ({similarity}) matches for {dir_name}: {matches}')
         return matches
 
-    def _find_best_exe(self, dir_path: os.PathLike, app_name: str):
+    def _find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):
         executables = self._pathfinder.find_executables(dir_path)
         if not executables:
             return None
