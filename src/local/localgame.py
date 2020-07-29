@@ -17,13 +17,9 @@ DETACHED_PROCESS = 0b0001000
 class LocalHumbleGame:
     machine_name: str
     executable: pathlib.Path
-    install_location: Optional[pathlib.Path] = None
+    install_location: Optional[os.PathLike] = None
     uninstall_cmd: Optional[str] = None
     process: Optional[psutil.Process] = None
-
-    def __post_init__(self):
-        if self.install_location is None:
-            self.install_location = self.executable.parent
 
     @property
     def id(self):
@@ -85,7 +81,8 @@ class LocalHumbleGame:
 
     async def get_size(self) -> int:
         total_size = 0
-        for dirpath, _, filenames in os.walk(self.install_location):
+        install_location = self.install_location or self.executable.parent
+        for dirpath, _, filenames in os.walk(install_location):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
                 if not os.path.islink(fp):

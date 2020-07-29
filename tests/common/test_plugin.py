@@ -11,6 +11,8 @@ from model.game import Subproduct, KeyGame, TroveGame, ChoiceGame
 from model.download import TroveDownload
 from model.types import HP
 
+from conftest import AsyncMock
+
 
 @pytest.mark.asyncio
 async def test_launch_game(plugin, overgrowth):
@@ -146,3 +148,14 @@ async def test_library_settings_key(plugin):
     assert await plugin.get_game_library_settings('b', ctx) == GameLibrarySettings('b', [], None)
     assert await plugin.get_game_library_settings('c', ctx) == GameLibrarySettings('c', ['Key'], None)
     assert await plugin.get_game_library_settings('d', ctx) == GameLibrarySettings('d', ['Key', 'Unrevealed'], None)
+
+
+@pytest.mark.asyncio
+async def test_local_size(plugin):
+    local_game_mock = Mock(spec=LocalHumbleGame)
+    local_game_mock.get_size = AsyncMock(return_value=100200300)
+    plugin._local_games = {
+        'loc': local_game_mock
+    }
+    ctx = await plugin.prepare_local_size_context(['loc'])
+    assert await plugin.get_local_size('loc', ctx) == 100200300
