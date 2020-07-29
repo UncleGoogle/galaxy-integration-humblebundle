@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 
 from local import AppFinder
+from local.baseappfinder import GameLocation
 from consts import IS_WINDOWS
 
 
@@ -62,14 +63,16 @@ async def test_scan_folder_windows(create_tmp_tree, tmp_path):
 
     owned_games = {'Shelter'}
     result = await AppFinder()._scan_folders([root], owned_games)
-    assert {'Shelter': Path(root) / 'Shelter' / 'Shelter.exe'} == result
+    root_shelter = Path(root) / 'Shelter'
+    assert {'Shelter': GameLocation(root_shelter, root_shelter / 'Shelter.exe')} == result
 
     owned_games = {'Samorost 2'}
     result = await AppFinder()._scan_folders([root], owned_games)
-    assert {'Samorost 2': Path(root) / 'Samorost2' / 'Samorost2.exe'} == result
+    root_samorost = Path(root) / 'Samorost2'
+    assert {'Samorost 2': GameLocation(root_samorost, root_samorost / 'Samorost2.exe')} == result
 
     owned_games = {'Samorost 2', 'Shelter'}
     assert {
-        'Samorost 2': Path(root) / 'Samorost2' / 'Samorost2.exe',
-        'Shelter': Path(root) / 'Shelter' / 'Shelter.exe'
+        'Samorost 2': GameLocation(root_samorost, root_samorost / 'Samorost2.exe'),
+        'Shelter': GameLocation(root_shelter, root_shelter / 'Shelter.exe')
     } == await AppFinder()._scan_folders([root], owned_games)
