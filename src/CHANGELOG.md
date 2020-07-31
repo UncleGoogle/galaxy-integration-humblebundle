@@ -1,3 +1,13 @@
+## Unreleased
+
+[Added]
+- Import game sizes #135
+- start_time for subscription games from Trove #134
+
+[Fixed]
+- Getting Trove games #133
+
+
 ## Version 0.8.1
 Addressed issues: https://github.com/UncleGoogle/galaxy-integration-humblebundle/milestone/6
 
