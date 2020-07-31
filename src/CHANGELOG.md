@@ -2,7 +2,7 @@
 
 [Added]
 - Import game sizes #135
-- start_time for subscription games from Trove #134
+- Info when particular game was added to Trove #134
 
 [Fixed]
 - Getting Trove games #133
