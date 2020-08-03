@@ -61,15 +61,25 @@ class TroveGame(HumbleGame):
     def human_name(self):
         return self._data['human-name']
 
+    @property
+    def date_added(self) -> Optional[int]:
+        try:
+            return int(self._data['date-added'])
+        except (ValueError, KeyError):  # extra safety in case of changed format
+            return None
+
     def in_galaxy_format(self):
-        return SubscriptionGame(game_title=self.human_name, game_id=self.machine_name)
+        return SubscriptionGame(game_title=self.human_name, game_id=self.machine_name, start_time=self.date_added)
 
     def serialize(self):
-        return {
+        data = {
             'human-name': self._data['human-name'],
             'machine_name': self._data['machine_name'],
-            'downloads': self._data['downloads']
+            'downloads': self._data['downloads'],
         }
+        if 'date-added' in self._data:
+            data['date-added'] = self._data['date-added']
+        return data
 
 
 class Subproduct(HumbleGame):

@@ -26,7 +26,7 @@ class AuthorizedHumbleAPI:
     _SUBSCRIPTION_TROVE = 'subscription/trove'
     _SUBSCRIPTION_PRODUCTS = 'api/v1/subscriptions/humble_monthly/subscription_products_with_gamekeys'
     _SUBSCRIPTION_HISTORY = 'api/v1/subscriptions/humble_monthly/history?from_product={}'
-    _TROVE_CHUNK_URL = 'api/v1/trove/chunk?index={}'
+    _TROVE_CHUNK_URL = 'api/v1/trove/chunk?property=popularity&direction=desc&index={}'
     _DOWNLOAD_SIGN = 'api/v1/user/download/sign'
     _HUMBLER_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
 
