@@ -1,11 +1,12 @@
-## Unreleased
+## Version 0.9.0
 
 [Added]
-- Import game sizes #135
+- Importing game sizes #135
 - Info when particular game was added to Trove #134
 
 [Fixed]
 - Getting Trove games #133
+- Loading GUI on Mac by removing non UTF8 character from CHANGELOG @ 9478b62
 
 
 ## Version 0.8.1
