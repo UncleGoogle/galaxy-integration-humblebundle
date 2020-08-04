@@ -1,13 +1,13 @@
 {
-    "tag_name": "v0.8.0",
+    "tag_name": "v0.8.1",
     "assets": [
         {
-            "browser_download_url": "https://github.com/UncleGoogle/galaxy-integration-humblebundle/releases/download/v0.8.0/humble_v0.8.0_win.zip",
-            "name": "humble_v0.8.0_win.zip"
+            "browser_download_url": "https://github.com/UncleGoogle/galaxy-integration-humblebundle/releases/download/v0.8.1/humble_v0.8.1_win.zip",
+            "name": "humble_v0.8.1_win.zip"
         },
         {
-            "browser_download_url": "https://github.com/UncleGoogle/galaxy-integration-humblebundle/releases/download/v0.8.0/humble_v0.8.0_mac.zip",
-            "name": "humble_v0.8.0_mac.zip"
+            "browser_download_url": "https://github.com/UncleGoogle/galaxy-integration-humblebundle/releases/download/v0.8.1/humble_v0.8.1_mac.zip",
+            "name": "humble_v0.8.1_mac.zip"
         }
     ]
 }
