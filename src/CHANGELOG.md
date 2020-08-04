@@ -1,7 +1,12 @@
 ## Unreleased
 
+[Added]
+- Import game sizes #135
+- Info when particular game was added to Trove #134
+
 [Fixed]
-- Fetching trove games
+- Getting Trove games #133
+
 
 ## Version 0.8.1
 Addressed issues: https://github.com/UncleGoogle/galaxy-integration-humblebundle/milestone/6

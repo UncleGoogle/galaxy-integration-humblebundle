@@ -10,7 +10,7 @@ class PathFinder:
     def __init__(self, is_windows: bool):
         self.is_windows = is_windows
 
-    def find_executables(self, path: Union[str, PurePath]) -> List[str]:
+    def find_executables(self, path: Union[str, os.PathLike]) -> List[str]:
         folder = Path(path)
 
         if not folder.exists():

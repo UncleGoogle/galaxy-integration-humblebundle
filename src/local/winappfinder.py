@@ -9,6 +9,8 @@ from local.baseappfinder import BaseAppFinder
 from local.reg_watcher import WinRegUninstallWatcher, UninstallKey
 
 
+logger = logging.getLogger(__name__)
+
 
 def location_exists(location: Optional[pathlib.Path]):
     """Wrapper for Python version < 3.8"""
@@ -75,7 +77,7 @@ class WindowsAppFinder(BaseAppFinder):
             executables = list(set(self._pathfinder.find_executables(location)) - {str(upath)})
             best_match = self._pathfinder.choose_main_executable(human_name, executables)
             if best_match is None:
-                logging.warning(f'Main exe not found for {human_name}; \
+                logger.warning(f'Main exe not found for {human_name}; \
                     loc: {uk.install_location}; up: {upath}; ip: {ipath}; execs: {executables}')
                 return None
             return pathlib.Path(best_match)
@@ -94,12 +96,12 @@ class WindowsAppFinder(BaseAppFinder):
                     if self._matches(human_name, uk):
                         exe = self._find_executable(human_name, uk)
                         if exe is not None:
-                            game = LocalHumbleGame(machine_name, exe, uk.uninstall_string)
-                            logging.info(f'New local game found: {game}')
+                            game = LocalHumbleGame(machine_name, exe, uk.install_location_path, uk.uninstall_string)
+                            logger.info(f'New local game found: {game}')
                             local_games[machine_name] = game
                             del not_found[human_name]
                             break
-                        logging.warning(f"Uninstall key matched, but cannot find \
+                        logger.warning(f"Uninstall key matched, but cannot find \
                             game exe for [{human_name}]; uk: {uk}")
             except Exception:
                 self._reg.uninstall_keys.add(uk)

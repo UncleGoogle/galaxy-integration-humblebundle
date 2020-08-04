@@ -5,12 +5,20 @@ import time
 import os
 import pathlib
 import abc
-from typing import Dict, Set, Iterable, Union, List, AsyncGenerator, Tuple
+from typing import Dict, Set, Iterable, Union, List, AsyncGenerator, Tuple, NamedTuple
 from typing import cast
 
 from consts import IS_WINDOWS
 from local.pathfinder import PathFinder
 from local.localgame import LocalHumbleGame
+
+
+logger = logging.getLogger(__name__)
+
+
+class GameLocation(NamedTuple):
+    root: pathlib.Path
+    exe: pathlib.Path
 
 
 class BaseAppFinder(abc.ABC):
@@ -26,53 +34,54 @@ class BaseAppFinder(abc.ABC):
         start = time.time()
         found_games = await self._scan_folders(paths, set(owned_title_id))
         local_games = {
-            owned_title_id[title]: LocalHumbleGame(owned_title_id[title], exe)
-            for title, exe in found_games.items()
+            owned_title_id[title]: LocalHumbleGame(owned_title_id[title], gl.exe, install_location=gl.root)
+            for title, gl in found_games.items()
         }
-        logging.debug(f'=== Scanning folders took {time.time() - start}')
+        logger.debug(f'Scanning folders took {time.time() - start}')
         return local_games
 
-    async def _scan_folders(self, paths: Iterable[Union[str, os.PathLike]], app_names: Set[str]) -> Dict[str, pathlib.Path]:
+    async def _scan_folders(self, paths: Iterable[Union[str, os.PathLike]], app_names: Set[str]) -> Dict[str, GameLocation]:
         """
         :param paths: all master paths to be scan for app finding
         :param app_names:  app names to be matched with folder names
         :returns:      mapping of app names to found executables
         """
         not_yet_found: Set[str] = app_names.copy()
-        result: Dict[str, pathlib.Path] = {}
-        close_matches: Dict[str, pathlib.Path] = {}
+        result: Dict[str, GameLocation] = {}
+        close_matches: Dict[str, GameLocation] = {}
         # exact matches
         for path in paths:
-            async for app_name, exe in self.__scan(path, not_yet_found, similarity=1):
-                result[app_name] = exe
+            async for app_name, install_dir, exe in self.__scan(path, not_yet_found, similarity=1):
+                result[app_name] = GameLocation(install_dir, exe)
         # close matches
         for path in paths:
-            async for app_name, exe in self.__scan(path, not_yet_found, similarity=0.8):
-                close_matches[app_name] = exe
+            async for app_name, install_dir, exe in self.__scan(path, not_yet_found, similarity=0.8):
+                close_matches[app_name] = GameLocation(install_dir, exe)
         # overwrite close matches with exact results
         close_matches.update(result)
         return close_matches
 
-    async def __scan(self, path: Union[str, os.PathLike], candidates: Set[str], similarity: float) -> AsyncGenerator[Tuple[str, pathlib.Path], None]:
+    async def __scan(self, path: Union[str, os.PathLike], candidates: Set[str], similarity: float) -> \
+        AsyncGenerator[Tuple[str, pathlib.Path, pathlib.Path], None]:
         """One level depth search generator for application execs based on similarity with candidate names.
         :param path:        root dir of which subdirectories will be scanned
         :param candidates:  set of app names used for exact and close matching with directory names
         :param similarity:  cutoff level for difflib.get_close_matches; set 1 for exact matching only
-        :yields:            2-el. tuple of app_name and executable
+        :yields:            3-el. tuple of app_name, install_location and executable
         """
         root, dirs, _ = next(os.walk(path))
-        logging.debug(f'New scan - similarity: {similarity}, candidates: {list(candidates)}')
+        logger.debug(f'New scan - similarity: {similarity}, candidates: {list(candidates)}')
         for dir_name in dirs:
             await asyncio.sleep(0)
             matches = self.get_close_matches(dir_name, candidates, similarity)
             for app_name in matches:
-                dir_path = pathlib.PurePath(root) / dir_name
+                dir_path = pathlib.Path(root) / dir_name
                 best_exe = self.find_best_exe(dir_path, app_name)
                 if best_exe is None:
-                    logging.warning('No executable found, moving to next best matched app')
+                    logger.warning('No executable found, moving to next best matched app')
                     continue
                 candidates.remove(app_name)
-                yield app_name, pathlib.Path(best_exe)
+                yield app_name, dir_path.resolve(), pathlib.Path(best_exe)
                 break
 
     def _get_close_matches(self, dir_name: str, candidates: Set[str], similarity: float) -> List[str]:
@@ -80,7 +89,7 @@ class BaseAppFinder(abc.ABC):
         matches_ = difflib.get_close_matches(dir_name, candidates, cutoff=similarity)
         matches = cast(List[str], matches_)  # as str is Sequence[str] - mypy/issues/5090
         if matches:
-            logging.info(f'found close ({similarity}) matches for {dir_name}: {matches}')
+            logging.info(f'Found close ({similarity}) matches for {dir_name}: {matches}')
         return matches
 
     def _find_best_exe(self, dir_path: pathlib.PurePath, app_name: str):

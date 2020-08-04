@@ -1,4 +1,9 @@
+import logging
+
 from consts import IS_MAC, IS_WINDOWS
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 if IS_WINDOWS:
