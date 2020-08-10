@@ -166,13 +166,19 @@ class ContentChoiceOptions:
 
         self.unlocked_content_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
+        content_choice_data = data['contentChoiceData']
+        try:
+            initial = content_choice_data['initial']
+        except KeyError:  # not unlocked months have 'initial-without-order' field instead
+            initial = content_choice_data['initial-without-order']
+
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c) for id, c
-            in data['contentChoiceData']['initial']['content_choices'].items()
+            in initial['content_choices'].items()
         ]
         self.extrases: t.List[Extras] = [
             Extras(extras) for extras
-            in data['contentChoiceData']['extras']
+            in content_choice_data['extras']
         ]
         self._content_choices_made = data.get('contentChoicesMade')
 
