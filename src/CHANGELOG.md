@@ -1,3 +1,8 @@
+## Version 0.9.1
+
+[Fixed]
+- Showing subscriptions
+
 ## Version 0.9.0
 
 [Added]
