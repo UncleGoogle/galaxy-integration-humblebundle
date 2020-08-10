@@ -32,6 +32,10 @@ class Redirected(Exception):
     pass
 
 
+class WebpackParseError(Exception):
+    pass
+
+
 class AuthorizedHumbleAPI:
     _AUTHORITY = "https://www.humblebundle.com/"
     _PROCESS_LOGIN = "processlogin"
@@ -171,9 +175,9 @@ class AuthorizedHumbleAPI:
         candidate = txt[json_start:].strip()
         try:
             parsed, _ = json.JSONDecoder().raw_decode(candidate)
-        except json.decoder.JSONDecodeError as e:
-            raise UnknownBackendResponse('cannot parse webpack data') from e
-        return parsed
+            return parsed
+        except json.JSONDecodeError as e:
+            raise WebpackParseError() from e
 
     async def get_subscription_plan(self) -> t.Optional[UserSubscriptionPlan]:
         try:
