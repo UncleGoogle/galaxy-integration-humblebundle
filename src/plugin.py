@@ -9,6 +9,7 @@ import json
 import calendar
 import typing as t
 from functools import partial
+from contextlib import suppress
 from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -22,7 +23,7 @@ from galaxy.api.errors import AuthenticationRequired, UnknownBackendResponse, Un
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
-from webservice import AuthorizedHumbleAPI
+from webservice import AuthorizedHumbleAPI, WebpackParseError
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
 from model.types import HP, Tier
 from humbledownloader import HumbleDownloadResolver
@@ -231,27 +232,30 @@ class HumbleBundlePlugin(Plugin):
 
         return subscriptions
 
-    async def _get_trove_games(self):
+    async def _get_trove_games(self, date_to: int):
         def parse_and_cache(troves):
             games: t.List[SubscriptionGame] = []
             for trove in troves:
                 try:
                     trove_game = TroveGame(trove)
-                    games.append(trove_game.in_galaxy_format())
-                    self._trove_games[trove_game.machine_name] = trove_game
+                    if trove_game.date_added is None or trove_game.date_added <= date_to:
+                        games.append(trove_game.in_galaxy_format())
+                        self._trove_games[trove_game.machine_name] = trove_game
                 except Exception as e:
                     logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
             return games
 
-        newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
-        if newly_added:
-            yield parse_and_cache(newly_added)
+        with suppress(WebpackParseError):
+            newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
+            if newly_added:
+                yield parse_and_cache(newly_added)
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
 
     async def get_subscription_games(self, subscription_name, context):
         if subscription_name == TROVE_SUBSCRIPTION_NAME:
-            async for troves in self._get_trove_games():
+            last_subscription_date: int = xxx  # TODO
+            async for troves in self._get_trove_games(last_subscription_date):
                 yield troves
             return
 
