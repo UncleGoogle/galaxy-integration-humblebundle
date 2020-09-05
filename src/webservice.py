@@ -28,10 +28,6 @@ def handle_exception():
             logger.error(e)
 
 
-class Redirected(Exception):
-    pass
-
-
 class WebpackParseError(Exception):
     pass
 
@@ -123,13 +119,57 @@ class AuthorizedHumbleAPI:
 
     async def get_subscription_products_with_gamekeys(self) -> t.AsyncGenerator[dict, None]:
         """
-        Yields list of subscription products (json) - historically backward subscriptions info
+        Yields list of subscription products - historically backward info
         for Humble Choice proceeded by Humble Monthly. Used by HumbleBundle in 
         `https://www.humblebundle.com/subscription/home`
 
         Every product includes only A FEW representative games from given subscription and other data.
-        For Choice: `gamekey` field presence means user has unlocked that month and made choices.
+        For Choice: `gamekey` field presence means user has unlocked that month to make choices;
+        `contentChoicesMade` field contain choosen games grouped by keys from "unlockedContentEvents".
         For Monhly: `download_url` field presence means user has subscribed this month.
+
+        Yields list of products - historically backward subscriptions info.
+        Choice products are in form of:
+        {
+            "contentChoiceData": {
+                "initial": {...},  # includes only 4 `ContentChoice`s
+                "extras": [...]
+            },
+            "gamekey": "wqheRstssFcHGcfP",  # when the month is unlocked already
+            "isActiveContent": false,       # is current month
+            "title": "May 2020",
+            "MAX_CHOICES": 9,
+            "productUrlPath": "may-2020",
+            "includesAnyUplayTpkds": false,
+            "unlockedContentEvents": [
+                "initial",
+                "chessultra"
+            ],
+            "downloadPageUrl": "/downloads?key=wqheRstssFcHGcfP",  # unlocked month
+            "contentChoicesMade": {
+                "initial": {
+                    "choices_made": [
+                        "chessultra"
+                    ]
+                }
+            },
+            "usesChoices": true
+            "canRedeemGames": true,
+            "productMachineName": "may_2020_choice"
+        }
+
+        Monthly products goes after all choices and are in form of:
+        {
+            "machine_name": "september_2019_monthly",
+            "highlights": [
+                "8 Games",
+                "$179.00 Value"
+            ],
+            "order_url": "/downloads?key=Ge882ERvybmawmWd",
+            "short_human_name": "September 2019",
+            "hero_image": "https://hb.imgix.net/a25aa69d4c827d42142d631a716b3fbd89c15733.jpg?auto=compress,format&fit=crop&h=600&w=1200&s=789fedc066299f3d3ed802f6f1e55b6f",
+            "early_unlock_string": "Slay the Spire and Squad (Early Access)"
+        }
         """
         cursor = ''
         while True:

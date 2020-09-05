@@ -7,6 +7,7 @@ import webbrowser
 import pathlib
 import json
 import calendar
+import datetime
 import typing as t
 from functools import partial
 from contextlib import suppress
@@ -253,9 +254,17 @@ class HumbleBundlePlugin(Plugin):
             yield parse_and_cache(troves)
 
     async def get_subscription_games(self, subscription_name, context):
+        def last_second_of_subscription(product_machine_name) -> int:
+            month, year, _ = product_machine_name.split('_')
+            months = {v.lower(): k for k, v in enumerate(calendar.month_name)}
+            last_moment_of_month = datetime.datetime(int(year), months[month] + 1, day=1) - datetime.timedelta(seconds=1)
+            return int(last_moment_of_month.timestamp())
+
         if subscription_name == TROVE_SUBSCRIPTION_NAME:
-            last_subscription_date: int = xxx  # TODO
-            async for troves in self._get_trove_games(last_subscription_date):
+            async for product in self._api.get_subscription_products_with_gamekeys():
+                date_to: int = last_second_of_subscription(product['machine_name'])
+                break
+            async for troves in self._get_trove_games(last_subscription_date, date_to):
                 yield troves
             return
 

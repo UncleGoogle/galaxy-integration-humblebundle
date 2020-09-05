@@ -178,6 +178,23 @@ class ContentChoiceOptions:
         return self.MAX_CHOICES - len(self._content_choices_made)
 
 
+class ContentMonthlyOptions:
+    """
+    "machine_name": "september_2019_monthly",
+    "highlights": [
+        "8 Games",
+        "$179.00 Value"
+    ],
+    "order_url": "/downloads?key=Ge882ERvybaawmWd",
+    "short_human_name": "September 2019",
+    "hero_image": "https://hb.imgix.net/a25aa69d4c827d42142d631a716b3fbd89c15733.jpg?auto=compress,format&fit=crop&h=600&w=1200&s=789fedc066299f3d3ed802f6f1e55b6f",
+    "early_unlock_string": "Slay the Spire and Squad (Early Access)"
+    """
+    def __init__(self, data: dict):
+        for k, v in data.items():
+            setattr(self, k, v)
+
+
 class MontlyContentData:
     """
     "webpack_json": {
