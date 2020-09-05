@@ -1,7 +1,12 @@
+## Version 0.9.2
+
+[Fixed]
+- Showing subscriptions (adjusting to changes in humble API again) #139
+
 ## Version 0.9.1
 
 [Fixed]
-- Showing subscriptions
+- Showing subscriptions #136
 
 ## Version 0.9.0
 
