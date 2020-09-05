@@ -167,10 +167,18 @@ class ContentChoiceOptions:
         self.unlocked_content_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
         content_choice_data = data['contentChoiceData']
-        try:
-            initial = content_choice_data['initial']
-        except KeyError:  # not unlocked months have 'initial-without-order' field instead
-            initial = content_choice_data['initial-without-order']
+        initial_keys = [
+            'initial',
+            'initial-classic',       # since August 2020
+            'initial-without-order'  # for not yet unlocked months
+            # maybe unlockedContentEvents should be inspected instead?
+        ]
+        for key in initial_keys:
+            if key in content_choice_data:
+                initial = content_choice_data[key]
+                break
+        else:
+            raise KeyError(f'Any of expected keys in API response not found: {initial_keys}')
 
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c) for id, c

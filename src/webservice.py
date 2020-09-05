@@ -115,7 +115,11 @@ class AuthorizedHumbleAPI:
             res_json = await res.json()
             for product in res_json['products']:
                 if 'isChoiceTier' in product:
-                    yield ContentChoiceOptions(product)
+                    try:
+                        yield ContentChoiceOptions(product)
+                    except KeyError as e:
+                        logging.warning(repr(e))
+                        continue  # ignore unexpected response without exiting generator
                 else:  # no more choice content, now humble montly goes
                     # yield MontlyContentData(product)
                     return
