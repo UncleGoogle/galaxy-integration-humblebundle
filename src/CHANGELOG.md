@@ -1,4 +1,4 @@
-## Version 0.9.2
+## Unreleased
 
 [Fixed]
 - Showing subscriptions (adjusting to changes in humble API again) #139
