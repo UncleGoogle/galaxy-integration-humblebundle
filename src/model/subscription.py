@@ -167,18 +167,17 @@ class ContentChoiceOptions:
         self.unlocked_content_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
         content_choice_data = data['contentChoiceData']
-        initial_keys = [
-            'initial',
-            'initial-classic',       # since August 2020
-            'initial-without-order'  # for not yet unlocked months
-            # maybe unlockedContentEvents should be inspected instead?
-        ]
-        for key in initial_keys:
-            if key in content_choice_data:
-                initial = content_choice_data[key]
-                break
-        else:
-            raise KeyError(f'Any of expected keys in API response not found: {initial_keys}')
+
+        # Since August 2020 there is no simple 'initial' key, games may be stored under different keys:
+        # 'initial-without-order'  # for not yet unlocked months
+        # 'initial-classic',       # classic plan
+        # 'initial-basic'          # XXX to be confirmed
+        # 'initial-premium'        # XXX to be confirmed
+        try:
+            initial_key = next(filter(lambda x: x.startswith('initial'), content_choice_data))
+        except StopIteration:
+            raise KeyError('initial key or similar not found in contentChoiceData')
+        initial = content_choice_data[initial_key]
 
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c) for id, c
