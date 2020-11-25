@@ -167,10 +167,17 @@ class ContentChoiceOptions:
         self.unlocked_content_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
         content_choice_data = data['contentChoiceData']
+
+        # Since August 2020 there is no simple 'initial' key, games may be stored under different keys:
+        # 'initial-without-order'  # for not yet unlocked months
+        # 'initial-classic',       # classic plan
+        # 'initial-basic'          # XXX to be confirmed
+        # 'initial-premium'        # XXX to be confirmed
         try:
-            initial = content_choice_data['initial']
-        except KeyError:  # not unlocked months have 'initial-without-order' field instead
-            initial = content_choice_data['initial-without-order']
+            initial_key = next(filter(lambda x: x.startswith('initial'), content_choice_data))
+        except StopIteration:
+            raise KeyError('initial key or similar not found in contentChoiceData')
+        initial = content_choice_data[initial_key]
 
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c) for id, c
