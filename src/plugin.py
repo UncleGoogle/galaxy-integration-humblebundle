@@ -174,7 +174,7 @@ class HumbleBundlePlugin(Plugin):
             'july': '07',
             'august': '08',
             'september': '09',
-            'octover': '10',
+            'october': '10',
             'november': '11',
             'december': '12'
         }
