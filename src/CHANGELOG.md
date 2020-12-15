@@ -1,7 +1,8 @@
-## Unreleased
+## Version 0.9.2
 
 [Fixed]
 - Showing subscriptions (adjusting to changes in humble API again) #139
+- Typo in subscription months (thanks @Oxenoth)
 
 ## Version 0.9.1
 
