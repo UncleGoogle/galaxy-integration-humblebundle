@@ -99,30 +99,24 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
 
-    async def get_subscription_products_with_gamekeys(self):
+    async def get_subscription_products_with_gamekeys(self) -> t.AsyncGenerator[dict, None]:
         """
-        Yields list of products - historically backward subscriptions info.
-        Every product includes few representative games from given subscription and other data as:
-        `ContentChoiceOptions` (with gamekey if unlocked and made choices)
-        or `MontlyContentData` (with `download_url` if was subscribed this month)
-        Used in `https://www.humblebundle.com/subscription/home`
+        Yields list of subscription products (json) - historically backward subscriptions info
+        for Humble Choice proceeded by Humble Monthly. Used by HumbleBundle in 
+        `https://www.humblebundle.com/subscription/home`
+
+        Every product includes only A FEW representative games from given subscription and other data.
+        For Choice: `gamekey` field presence means user has unlocked that month and made choices.
+        For Monhly: `download_url` field presence means user has subscribed this month.
         """
         cursor = ''
         while True:
             res = await self._request('GET', self._SUBSCRIPTION_PRODUCTS + f"/{cursor}")
-            if res.status == 404:  # Ends in November 2015
+            if res.status == 404:  # Ends with HumbleMonth in November 2015
                 return
             res_json = await res.json()
             for product in res_json['products']:
-                if 'isChoiceTier' in product:
-                    try:
-                        yield ContentChoiceOptions(product)
-                    except KeyError as e:
-                        logging.warning(repr(e))
-                        continue  # ignore unexpected response without exiting generator
-                else:  # no more choice content, now humble montly goes
-                    # yield MontlyContentData(product)
-                    return
+                yield product
             cursor = res_json['cursor']
 
     async def get_subscription_history(self, from_product: str):

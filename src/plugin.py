@@ -60,7 +60,7 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._settings = Settings()
         self._library_resolver = None
-        self._subscription_months: List[ChoiceMonth] = []
+        self._subscription_months: t.List[ChoiceMonth] = []
 
         self._owned_games: t.Dict[str, HumbleGame] = {}
         self._trove_games: t.Dict[str, TroveGame] = {}
@@ -192,17 +192,21 @@ class HumbleBundlePlugin(Plugin):
         return month_content.user_subscription_plan
 
     async def get_subscriptions(self):
-        subscriptions: List[Subscription] = []
+        subscriptions: t.List[Subscription] = []
         historical_subscriber = await self._api.had_subscription()
         active_content_unlocked = False
 
         if historical_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
-                subscriptions.append(Subscription(
-                    self._normalize_subscription_name(product.product_machine_name),
-                    owned=True
-                ))
-                if product.is_active_content:  # assuming there is only one "active" month at a time
+                if 'webpack_json' in product:  # Humble Monthly data
+                    break  # all Humble Choice months already yield
+
+                if 'gamekey' in product:
+                    subscriptions.append(Subscription(
+                        self._normalize_subscription_name(product.product_machine_name),
+                        owned=True
+                    ))
+                if product.get('isActiveContent'):  # assuming there is only one "active" month at a time
                     active_content_unlocked = True
 
         if not active_content_unlocked:
@@ -230,7 +234,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def _get_trove_games(self):
         def parse_and_cache(troves):
-            games: List[SubscriptionGame] = []
+            games: t.List[SubscriptionGame] = []
             for trove in troves:
                 try:
                     trove_game = TroveGame(trove)
