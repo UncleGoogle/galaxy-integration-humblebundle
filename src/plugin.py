@@ -41,15 +41,17 @@ with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
 logger = logging.getLogger()
 logger.addFilter(SensitiveFilter())
 
-sentry_logging = LoggingIntegration(
-    level=logging.INFO,
-    event_level=logging.ERROR
-)
-sentry_sdk.init(
-    dsn="https://76abb44bffbe45998dd304898327b718@sentry.io/1764525",
-    integrations=[sentry_logging],
-    release=f"hb-galaxy@{__version__}"
-)
+
+def setup_sentry():
+    sentry_logging = LoggingIntegration(
+        level=logging.INFO,
+        event_level=logging.ERROR
+    )
+    sentry_sdk.init(
+        dsn="https://76abb44bffbe45998dd304898327b718@sentry.io/1764525",
+        integrations=[sentry_logging],
+        release=f"hb-galaxy@{__version__}"
+    )
 
 
 class HumbleBundlePlugin(Plugin):
@@ -472,6 +474,7 @@ class HumbleBundlePlugin(Plugin):
 
 
 def main():
+    setup_sentry()
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)
 
 if __name__ == "__main__":
