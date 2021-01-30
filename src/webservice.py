@@ -11,7 +11,7 @@ from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse
 
 from model.download import TroveDownload, DownloadStructItem
-from model.subscription import MontlyContentData, ChoiceContentData, ContentChoiceOptions, ChoiceMarketingData, ChoiceMonth
+from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMarketingData, ChoiceMonth
 
 
 class AuthorizedHumbleAPI:
