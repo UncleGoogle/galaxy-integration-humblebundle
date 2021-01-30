@@ -198,8 +198,8 @@ class HumbleBundlePlugin(Plugin):
 
         if historical_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
-                if 'webpack_json' in product:  # Humble Monthly data
-                    break  # all Humble Choice months already yield
+                if 'contentChoiceData' not in product:
+                    break  # all Humble Choice months already yielded
 
                 if 'gamekey' in product:
                     subscriptions.append(Subscription(
