@@ -203,7 +203,7 @@ class HumbleBundlePlugin(Plugin):
 
                 if 'gamekey' in product:
                     subscriptions.append(Subscription(
-                        self._normalize_subscription_name(product.product_machine_name),
+                        self._normalize_subscription_name(product['productMachineName']),
                         owned=True
                     ))
                 if product.get('isActiveContent'):  # assuming there is only one "active" month at a time
