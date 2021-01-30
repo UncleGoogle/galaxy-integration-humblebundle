@@ -201,11 +201,10 @@ class HumbleBundlePlugin(Plugin):
                 if 'contentChoiceData' not in product:
                     break  # all Humble Choice months already yielded
 
-                if 'gamekey' in product:
-                    subscriptions.append(Subscription(
-                        self._normalize_subscription_name(product['productMachineName']),
-                        owned=True
-                    ))
+                subscriptions.append(Subscription(
+                    self._normalize_subscription_name(product['productMachineName']),
+                    owned='gamekey' in product
+                ))
                 if product.get('isActiveContent'):  # assuming there is only one "active" month at a time
                     active_content_unlocked = True
 
