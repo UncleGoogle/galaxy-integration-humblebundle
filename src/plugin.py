@@ -41,15 +41,17 @@ with open(pathlib.Path(__file__).parent / 'manifest.json') as f:
 logger = logging.getLogger()
 logger.addFilter(SensitiveFilter())
 
-sentry_logging = LoggingIntegration(
-    level=logging.INFO,
-    event_level=logging.ERROR
-)
-sentry_sdk.init(
-    dsn="https://76abb44bffbe45998dd304898327b718@sentry.io/1764525",
-    integrations=[sentry_logging],
-    release=f"hb-galaxy@{__version__}"
-)
+
+def setup_sentry():
+    sentry_logging = LoggingIntegration(
+        level=logging.INFO,
+        event_level=logging.ERROR
+    )
+    sentry_sdk.init(
+        dsn="https://76abb44bffbe45998dd304898327b718@sentry.io/1764525",
+        integrations=[sentry_logging],
+        release=f"hb-galaxy@{__version__}"
+    )
 
 
 class HumbleBundlePlugin(Plugin):
@@ -60,7 +62,7 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._settings = Settings()
         self._library_resolver = None
-        self._subscription_months: List[ChoiceMonth] = []
+        self._subscription_months: t.List[ChoiceMonth] = []
 
         self._owned_games: t.Dict[str, HumbleGame] = {}
         self._trove_games: t.Dict[str, TroveGame] = {}
@@ -192,17 +194,20 @@ class HumbleBundlePlugin(Plugin):
         return month_content.user_subscription_plan
 
     async def get_subscriptions(self):
-        subscriptions: List[Subscription] = []
+        subscriptions: t.List[Subscription] = []
         historical_subscriber = await self._api.had_subscription()
         active_content_unlocked = False
 
         if historical_subscriber:
             async for product in self._api.get_subscription_products_with_gamekeys():
+                if 'contentChoiceData' not in product:
+                    break  # all Humble Choice months already yielded
+
                 subscriptions.append(Subscription(
-                    self._normalize_subscription_name(product.product_machine_name),
-                    owned=True
+                    self._normalize_subscription_name(product['productMachineName']),
+                    owned='gamekey' in product
                 ))
-                if product.is_active_content:  # assuming there is only one "active" month at a time
+                if product.get('isActiveContent'):  # assuming there is only one "active" month at a time
                     active_content_unlocked = True
 
         if not active_content_unlocked:
@@ -230,7 +235,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def _get_trove_games(self):
         def parse_and_cache(troves):
-            games: List[SubscriptionGame] = []
+            games: t.List[SubscriptionGame] = []
             for trove in troves:
                 try:
                     trove_game = TroveGame(trove)
@@ -469,6 +474,7 @@ class HumbleBundlePlugin(Plugin):
 
 
 def main():
+    setup_sentry()
     create_and_run_plugin(HumbleBundlePlugin, sys.argv)
 
 if __name__ == "__main__":

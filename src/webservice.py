@@ -11,7 +11,7 @@ from galaxy.http import create_client_session, handle_exception
 from galaxy.api.errors import UnknownBackendResponse
 
 from model.download import TroveDownload, DownloadStructItem
-from model.subscription import MontlyContentData, ChoiceContentData, ContentChoiceOptions, ChoiceMarketingData, ChoiceMonth
+from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMarketingData, ChoiceMonth
 
 
 class AuthorizedHumbleAPI:
@@ -99,41 +99,36 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
 
-    async def get_subscription_products_with_gamekeys(self):
+    async def get_subscription_products_with_gamekeys(self) -> t.AsyncGenerator[dict, None]:
         """
-        Yields list of products - historically backward subscriptions info.
-        Every product includes few representative games from given subscription and other data as:
-        `ContentChoiceOptions` (with gamekey if unlocked and made choices)
-        or `MontlyContentData` (with `download_url` if was subscribed this month)
-        Used in `https://www.humblebundle.com/subscription/home`
+        Yields list of subscription products (json) - historically backward subscriptions info
+        for Humble Choice proceeded by Humble Monthly. Used by HumbleBundle in 
+        `https://www.humblebundle.com/subscription/home`
+
+        Every product includes only A FEW representative games from given subscription and other data.
+        For Choice: `gamekey` field presence means user has unlocked that month and made choices.
+        For Monhly: `download_url` field presence means user has subscribed this month.
         """
         cursor = ''
         while True:
-            res = await self._request('GET', self._SUBSCRIPTION_PRODUCTS + f"/{cursor}")
-            if res.status == 404:  # Ends in November 2015
+            res = await self._request('GET', self._SUBSCRIPTION_PRODUCTS + f"/{cursor}", raise_for_status=False)
+            if res.status == 404:  # Ends with "Humble Monthly" in November 2015
                 return
+            with handle_exception():
+                res.raise_for_status()
             res_json = await res.json()
             for product in res_json['products']:
-                if 'isChoiceTier' in product:
-                    try:
-                        yield ContentChoiceOptions(product)
-                    except KeyError as e:
-                        logging.warning(repr(e))
-                        continue  # ignore unexpected response without exiting generator
-                else:  # no more choice content, now humble montly goes
-                    # yield MontlyContentData(product)
-                    return
+                yield product
             cursor = res_json['cursor']
 
-    async def get_subscription_history(self, from_product: str):
+    async def get_subscription_history(self, from_product: str) -> aiohttp.ClientResponse:
         """
         Marketing data of previous subscription months.
         :param from_product: machine_name of subscription following requested months
         for example 'february_2020_choice' to got a few month data items including
         'january_2020_choice', 'december_2019_choice', 'december_2020_monthly'
         """
-        res = await self._request('GET', self._SUBSCRIPTION_HISTORY.format(from_product))
-        return await res.json()
+        return await self._request('GET', self._SUBSCRIPTION_HISTORY.format(from_product), raise_for_status=False)
 
     async def get_previous_subscription_months(self, from_product: str):
         """Generator wrapper for get_subscription_history previous months"""
@@ -141,9 +136,14 @@ class AuthorizedHumbleAPI:
             res = await self.get_subscription_history(from_product)
             if res.status == 404:
                 return
-            for month in res['previous_months']:
-                yield ChoiceMonth(month)
-            from_product = month['machine_name']
+            with handle_exception():
+                res.raise_for_status()
+            data = await res.json()
+            if not data['previous_months']:
+                return
+            for prev_month in data['previous_months']:
+                yield ChoiceMonth(prev_month)
+            from_product = prev_month['machine_name']
 
     async def had_subscription(self) -> t.Optional[bool]:
         """Based on current behavior of `humblebundle.com/subscription/home`
