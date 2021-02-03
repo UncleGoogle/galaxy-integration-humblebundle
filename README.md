@@ -78,6 +78,28 @@ Contains:
 
 4. Rename a new bookmark with right-click
 
+## FAQ
+
+### How can I search for games in subscriptions and owned games at the same time?
+
+You have to create an _All games_ bookmark, proceeding as follows:
+
+1. Open the default _Owned games_ bookmark
+
+2. Change the filter selecting both owned games and subcription
+
+  ![Filter Configuration](https://user-images.githubusercontent.com/77177410/106529888-88ca8d00-64eb-11eb-96e2-3c55ff4ddc9b.png)
+
+3. Bookmark the search you just composed
+
+  <img src="https://i.gyazo.com/d3cb0876788849a9117f739e3b5d875a.png" width="400">
+
+4. Now you can normally searchthe new  _All games_ view as you do with all bookmarks view
+
+  ![All games bookmark](https://user-images.githubusercontent.com/77177410/106821639-d7a82c00-667d-11eb-9ee4-9d15628468fe.png)
+
+   Remember you can change the order of your bookmarks, so probably you want to move your new bookmask on top, just under the _Subscriptions_ default bookmark.
+
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
 Personal and sensitive data are not gathered.
