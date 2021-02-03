@@ -1,3 +1,8 @@
+## Version 0.9.3
+
+[Fixed]
+- Show choices before pasued months #148
+
 ## Version 0.9.2
 
 [Fixed]
