@@ -94,7 +94,7 @@ You have to create an _All games_ bookmark, proceeding as follows:
 
   <img src="https://i.gyazo.com/d3cb0876788849a9117f739e3b5d875a.png" width="400">
 
-4. Now you can normally searchthe new  _All games_ view as you do with all bookmarks view
+4. Now you can normally search the new  _All games_ view as you do with all bookmarks view
 
   ![All games bookmark](https://user-images.githubusercontent.com/77177410/106821639-d7a82c00-667d-11eb-9ee4-9d15628468fe.png)
 
