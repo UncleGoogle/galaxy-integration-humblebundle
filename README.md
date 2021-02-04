@@ -40,7 +40,7 @@ _Requires `python3.6` or higher_
 
 ### Config window
 
-<img src="https://i.gyazo.com/b806e5d01590f5c6c48fbe09f9dddb95.gif" width="640" height="300"/>
+![Humble Install](resources/Humble_Install.gif)
 
 To open: double click "Install" button from any HumbleBundle game view.
 
@@ -50,7 +50,7 @@ Contains:
 
 ### Galaxy settings
 
-<img src="https://i.gyazo.com/21804a7ac7ebffb49d7d810b7d85d0d4.png" width="640">
+![Humble Settings](resources/Humble_Settings.png)
 
 To open: go to Galaxy menu -> `Settings` -> `Features` -> "HUMBLE BUNDLE".
 
@@ -66,39 +66,43 @@ Contains:
 
 2. Filter to subscriptions
 
-<img src="https://i.gyazo.com/eccd333b76e6ac8b948d9b012bd62301.png" width="640">
+![Humble Filters](resources/Humble_filters.png)
 
 3. Group by subscriptions
 
-<img src="https://i.gyazo.com/869901d9dc6d730d4744ea11eb7c0b8f.png" width="640">
+![Humble Group By](resources/Humble_Groupby.png)
 
 3. Bookmark
 
-<img src="https://i.gyazo.com/d3cb0876788849a9117f739e3b5d875a.png" width="400">
+![Humble bookmarked](resources/Humble_bookmarked.png)
 
 4. Rename a new bookmark with right-click
 
 ## FAQ
 
-### How can I search for games in subscriptions and owned games at the same time?
+### Can I group my Humble games and Choice games altogether?
 
-You have to create an _All games_ bookmark, proceeding as follows:
+You have to create a new filtered HUble Bungle bookmark, proceeding as follows:
 
-1. Open the default _Owned games_ bookmark
+1. Click on the defauit _Humble Bundle_ bookmark: you see only the owned games in this view, and your goals is to have a similar view that list both owned and subscritptions games.
 
-2. Change the filter selecting both owned games and subcription
+2. Change the view filter selecting the funnel icon, then the Status menu -> and then flagging both _Owned_ and _Subcriptions_
 
-  ![Filter Configuration](https://user-images.githubusercontent.com/77177410/106529888-88ca8d00-64eb-11eb-96e2-3c55ff4ddc9b.png)
+![HumbleBundle_Filters](resources/HumbleBundle_Filters.png)
 
-3. Bookmark the search you just composed
+3. Bookmark the search query you just composed clicking on the small bookmark flag
 
-  <img src="https://i.gyazo.com/d3cb0876788849a9117f739e3b5d875a.png" width="400">
+![Humble bookmarked](resources/Bookmarking.png)
 
-4. Now you can normally searchthe new  _All games_ view as you do with all bookmarks view
+3. The view that you just created will show in the bookmark list as an _Humble Bundle_ duplicate, so you want to rename it. To do so click with right mouse button on the new bookmark itself and select _Rename bookmark_ changing name with something you like as for example _Humble Store & Subsc_.
 
-  ![All games bookmark](https://user-images.githubusercontent.com/77177410/106821639-d7a82c00-667d-11eb-9ee4-9d15628468fe.png)
+![Humble Rename Bookmark](resources/Bookmark_rename.png)
 
-   Remember you can change the order of your bookmarks, so probably you want to move your new bookmask on top, just under the _Subscriptions_ default bookmark.
+4. Now when you select the new bookmark you can view (and search!) both owned and subscription Humble Bundle games.
+
+  ![Hmmble Store and Subsc](resources/Bookmark_renamed.png)
+
+Tip: you can also create an _All games_ bookmark in a similar way to include also subscriptions games as they were owned games.
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
