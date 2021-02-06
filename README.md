@@ -82,9 +82,9 @@ Contains:
 
 ### Can I group my Humble games and Choice games altogether?
 
-You have to create a new filtered HUble Bungle bookmark, proceeding as follows:
+You have to create a new filtered Humble Bundle bookmark, proceeding as follows:
 
-1. Click on the defauit _Humble Bundle_ bookmark: you see only the owned games in this view, and your goals is to have a similar view that list both owned and subscritptions games.
+1. Click on the defauit _Humble Bundle_ bookmark: you see only the owned games in this view, and your goals is to have a similar view that lists both owned and subscritptions games.
 
 2. Change the view filter selecting the funnel icon, then the Status menu -> and then flagging both _Owned_ and _Subcriptions_
 
@@ -94,15 +94,13 @@ You have to create a new filtered HUble Bungle bookmark, proceeding as follows:
 
 ![Humble bookmarked](resources/Bookmarking.png)
 
-3. The view that you just created will show in the bookmark list as an _Humble Bundle_ duplicate, so you want to rename it. To do so click with right mouse button on the new bookmark itself and select _Rename bookmark_ changing name with something you like as for example _Humble Store & Subsc_.
+3. The view that you've just created will show in the bookmark list as an _Humble Bundle_ duplicate, so you want to rename it. To do so click with right mouse button on the new bookmark itself and select _Rename bookmark_ changing name with something you like as for example _Humble Owned + Choices_.
 
 ![Humble Rename Bookmark](resources/Bookmark_rename.png)
 
 4. Now when you select the new bookmark you can view (and search!) both owned and subscription Humble Bundle games.
 
   ![Hmmble Store and Subsc](resources/Bookmark_renamed.png)
-
-Tip: you can also create an _All games_ bookmark in a similar way to include also subscriptions games as they were owned games.
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
