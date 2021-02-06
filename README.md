@@ -102,7 +102,7 @@ You have to create a new filtered HUble Bungle bookmark, proceeding as follows:
 
   ![Hmmble Store and Subsc](resources/Bookmark_renamed.png)
 
-Tip: you can also create an _All games_ bookmark in a similar way to include also subscriptions games as they were owned games.
+Tip: you can also create an _All games_ bookmark for all other platforms in a similar way.
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
