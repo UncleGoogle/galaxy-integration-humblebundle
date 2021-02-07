@@ -84,7 +84,7 @@ Contains:
 
 You have to create a new filtered Humble Bundle bookmark, proceeding as follows:
 
-1. Click on the defauit _Humble Bundle_ bookmark: you see only the owned games in this view, and your goals is to have a similar view that lists both owned and subscritptions games.
+1. Click on the default _Humble Bundle_ bookmark: you see only the owned games in this view, and your goal is to have a similar view that lists both owned and subscription games.
 
 2. Change the view filter selecting the funnel icon, then the Status menu -> and then flagging both _Owned_ and _Subcriptions_
 
