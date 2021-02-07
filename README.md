@@ -74,7 +74,7 @@ Contains:
 
 3. Bookmark
 
-![Humble bookmarked](resources/Humble_bookmarked.png)
+![Humble bookmarked](resources/Humble_Bookmarked.png)
 
 4. Rename a new bookmark with right-click
 
