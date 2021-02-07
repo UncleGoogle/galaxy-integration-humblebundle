@@ -94,7 +94,7 @@ You have to create a new filtered Humble Bundle bookmark, proceeding as follows:
 
 ![Humble bookmarked](resources/Bookmarking.png)
 
-3. The view that you've just created will show in the bookmark list as an _Humble Bundle_ duplicate, so you want to rename it. To do so click with right mouse button on the new bookmark itself and select _Rename bookmark_ changing name with something you like as for example _Humble Owned + Choices_.
+3. The view that you've just created will appear in the bookmark list as an _Humble Bundle_ duplicate, so you want to rename it. To do so, click with right mouse button on the new bookmark itself and select _Rename bookmark_ changing name with something you like as for example _Humble Owned + Choices_.
 
 ![Humble Rename Bookmark](resources/Bookmark_rename.png)
 
