@@ -40,7 +40,7 @@ _Requires `python3.6` or higher_
 
 ### Config window
 
-![Humble Install](resources/Humble_Install.gif)
+![Humble_Install](https://user-images.githubusercontent.com/12197825/107127801-df9fe000-68b8-11eb-9d20-80d32be7a062.gif)
 
 To open: double click "Install" button from any HumbleBundle game view.
 
@@ -50,7 +50,7 @@ Contains:
 
 ### Galaxy settings
 
-![Humble Settings](resources/Humble_Settings.png)
+![Humble_Settings](https://user-images.githubusercontent.com/12197825/107127798-de6eb300-68b8-11eb-8f3e-ac62d2fdbaf2.png)
 
 To open: go to Galaxy menu -> `Settings` -> `Features` -> "HUMBLE BUNDLE".
 
@@ -66,15 +66,15 @@ Contains:
 
 2. Filter to subscriptions
 
-![Humble Filters](resources/Humble_filters.png)
+![Humble_filters](https://user-images.githubusercontent.com/12197825/107127796-dca4ef80-68b8-11eb-82a0-d3c23484ee60.png)
 
 3. Group by subscriptions
 
-![Humble Group By](resources/Humble_Groupby.png)
+![Humble_Groupby](https://user-images.githubusercontent.com/12197825/107127803-e0d10d00-68b8-11eb-9f1e-cb476112bf7f.png)
 
 3. Bookmark
 
-![Humble bookmarked](resources/Humble_Bookmarked.png)
+![Humble_Bookmarked](https://user-images.githubusercontent.com/12197825/107127806-e2023a00-68b8-11eb-8607-6f6c0647977d.png)
 
 4. Rename a new bookmark with right-click
 
@@ -88,19 +88,19 @@ You have to create a new filtered Humble Bundle bookmark, proceeding as follows:
 
 2. Change the view filter selecting the funnel icon, then the Status menu -> and then flagging both _Owned_ and _Subcriptions_.
 
-![HumbleBundle_Filters](resources/HumbleBundle_Filters.png)
+![HumbleBundle_Filters](https://user-images.githubusercontent.com/12197825/107127807-e3336700-68b8-11eb-9a98-648874c6f637.png)
 
 3. Bookmark the search query you've just composed clicking on the small bookmark flag.
 
-![Humble bookmarked](resources/Bookmarking.png)
+![Bookmarking](https://user-images.githubusercontent.com/12197825/107127808-e4fd2a80-68b8-11eb-818c-e48e10b6e811.png)
 
 3. The view that you've just created will appear in the bookmark list as an _Humble Bundle_ duplicate, so you want to rename it. To do so, click with right mouse button on the new bookmark itself and select _Rename bookmark_ changing name with something you like as for example _Humble Owned + Choices_.
 
-![Humble Rename Bookmark](resources/Bookmark_rename.png)
+![Bookmark_rename](https://user-images.githubusercontent.com/12197825/107127814-f47c7380-68b8-11eb-8e41-a42898d7df79.png)
 
 4. Now when you select the new bookmark you can view (and search!) both owned and subscription Humble Bundle games.
 
-  ![Hmmble Store and Subsc](resources/Bookmark_renamed.png)
+![Bookmark_renamed](https://user-images.githubusercontent.com/12197825/107127812-f21a1980-68b8-11eb-9eba-e8c03a518b20.png)
 
 ## Bug Reporting
 This integrations uses sentry.io to report anonymous error reports.
