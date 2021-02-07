@@ -90,7 +90,7 @@ You have to create a new filtered Humble Bundle bookmark, proceeding as follows:
 
 ![HumbleBundle_Filters](resources/HumbleBundle_Filters.png)
 
-3. Bookmark the search query you just composed clicking on the small bookmark flag
+3. Bookmark the search query you've just composed clicking on the small bookmark flag.
 
 ![Humble bookmarked](resources/Bookmarking.png)
 
