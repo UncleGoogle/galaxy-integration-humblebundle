@@ -1,7 +1,11 @@
+## Unreleased
+[Fixed]
+- Plugin being offline for subscribers
+
 ## Version 0.9.3
 
 [Fixed]
-- Show choices before pasued months #148
+- Showing choices before pasued months #148
 
 ## Version 0.9.2
 
@@ -13,7 +17,6 @@
 
 [Fixed]
 - Showing subscriptions #136
-
 ## Version 0.9.0
 
 [Added]
