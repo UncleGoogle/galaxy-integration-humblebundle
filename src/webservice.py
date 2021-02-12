@@ -159,12 +159,15 @@ class AuthorizedHumbleAPI:
             return None
 
     async def _get_webpack_data(self, path: str, webpack_id: str) -> dict:
-        res = await self._request('GET', path)
+        res = await self._request('GET', path, allow_redirects=False)
         txt = await res.text()
         search = f'<script id="{webpack_id}" type="application/json">'
         json_start = txt.find(search) + len(search)
         candidate = txt[json_start:].strip()
-        parsed, _ = json.JSONDecoder().raw_decode(candidate)
+        try:
+            parsed, _ = json.JSONDecoder().raw_decode(candidate)
+        except json.decoder.JSONDecodeError as e:
+            raise UnknownBackendResponse('cannot parse webpack data') from e
         return parsed
 
     async def get_montly_trove_data(self) -> dict:

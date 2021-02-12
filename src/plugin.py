@@ -18,7 +18,7 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
-from galaxy.api.errors import AuthenticationRequired, UnknownError, BackendError
+from galaxy.api.errors import AuthenticationRequired, UnknownBackendResponse, UnknownError, BackendError
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
@@ -118,7 +118,7 @@ class HumbleBundlePlugin(Plugin):
             subscription_infos = await self._api.get_choice_marketing_data()
             self._subscription_months = subscription_infos.month_details
             user_name = subscription_infos.user_options['email'].split('@')[0]
-        except (BackendError, KeyError):  # extra safety as this data is not crucial
+        except (BackendError, KeyError, UnknownBackendResponse):  # extra safety as this data is not crucial
             user_name = user_id
         return Authentication(user_id, user_name)
 
