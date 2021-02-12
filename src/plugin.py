@@ -124,6 +124,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def authenticate(self, stored_credentials=None):
         show_news = self.__is_after_minor_update()
+        just_after_broken_sub_version = self.__is_after_broken_subscriptions_version()  # remove after ~04.2021
         self._save_cache('last_version', __version__)
 
         if not stored_credentials:
@@ -137,6 +138,13 @@ class HumbleBundlePlugin(Plugin):
 
         logging.info('Stored credentials found')
         auth: Authentication = await self._do_auth(stored_credentials)
+        
+        # To be removed around 04.2021
+        # After fixing bug with offline plugin for subscribers (#151),
+        # reconnection is need to make Galaxy recognize `get_subscriptions` feature again.
+        if just_after_broken_sub_version and await self._api.had_subscription():
+            show_news = True
+
         if show_news:
             self._open_config(OPTIONS_MODE.NEWS)
         return auth
@@ -147,6 +155,10 @@ class HumbleBundlePlugin(Plugin):
         self.store_credentials(auth_cookie)
         self._open_config(OPTIONS_MODE.WELCOME)
         return auth
+
+    def __is_after_broken_subscriptions_version(self):
+        """Returns True once after update from pre 0.9.4"""
+        return __version__ == '0.9.4' and self._last_version is not None and __version__ != self._last_version
 
     def __is_after_minor_update(self) -> bool:
         def cut_to_minor(ver: str) -> LooseVersion:
