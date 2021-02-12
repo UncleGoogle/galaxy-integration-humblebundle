@@ -159,7 +159,7 @@ class AuthorizedHumbleAPI:
             return None
 
     async def _get_webpack_data(self, path: str, webpack_id: str) -> dict:
-        res = await self._request('GET', path)
+        res = await self._request('GET', path, allow_redirects=False)
         txt = await res.text()
         search = f'<script id="{webpack_id}" type="application/json">'
         json_start = txt.find(search) + len(search)
