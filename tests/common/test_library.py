@@ -166,6 +166,7 @@ async def test_fetch_orders_filter_errors_one_404(plugin, create_resolver, caplo
     ('Gremlins, Inc.', 'bundle', ['Here, there', 'Gremlins, I'], False),  # blacklisted
     ('Gremlins, Inc.', 'bundle', ['Here, there', 'Gremlins, no match'], True),
     ('Alpha Protocol, Company of Heroes, Rome: Total War, Hell Yeah! Wrath of the Dead Rabbit', 'bundle', [], True),
+    ('Star Wars™ Battlefront™ II (Classic, 2005)', 'bundle', ['STAR WARS™ Battlefront™ II (Classic, 2005)'], False), # Casing in name changed
 ])
 def test_is_multigame_key(human_name, category, blacklist, is_multigame):
     """Most common case where 1 key == 1 game"""

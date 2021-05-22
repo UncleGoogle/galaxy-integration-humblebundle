@@ -142,8 +142,8 @@ class LibraryResolver:
             return False
         if ', ' not in key.human_name:
             return False
-        for i in blacklist:
-            if i in key.human_name:
+        for i in map(str.casefold, blacklist):
+            if i in key.human_name.casefold():
                 logger.debug(f'{key} split blacklisted by "{i}"')
                 return False
         return True
