@@ -190,6 +190,17 @@ def test_split_multigame_key():
         KeyGame(key, "sega_3", "Hell Yeah! Wrath of the Dead Rabbit")
     ]
 
+    # Many bundle keys add the word 'and' before the last game title
+    tpks = {
+        "machine_name": "deepsilver_bundle_initial_steam",
+        "human_name": "Metro 2033, Risen, and Sacred Citadel",
+    }
+    key = Key(tpks)
+    assert LibraryResolver._split_multigame_key(key) == [
+        KeyGame(key, "deepsilver_bundle_initial_steam_0", "Metro 2033"),
+        KeyGame(key, "deepsilver_bundle_initial_steam_1", "Risen"),
+        KeyGame(key, "deepsilver_bundle_initial_steam_2", "Sacred Citadel"),
+    ]
 
 def test_get_key_info():
     key_data_1 = {

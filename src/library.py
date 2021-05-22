@@ -153,10 +153,15 @@ class LibraryResolver:
         """Extract list of KeyGame objects from single Key"""
         logger.info(f'Spliting {key}')
         names = key.human_name.split(', ')
-        return [
-            KeyGame(key, f'{key.machine_name}_{i}', name)
-            for i, name in enumerate(names)
-        ]
+        games = []
+
+        for i, name in enumerate(names):
+            # Multi-game packs have the word "and" in front of the last game name
+            first, _, rest = name.partition(" ")
+            if first == "and": name = rest or first
+            logger.debug(f"Split game: {name}")
+            games.append(KeyGame(key, f'{key.machine_name}_{i}', name))
+        return games
 
     @staticmethod
     def _get_key_infos(orders: list) -> List[KeyInfo]:
@@ -173,7 +178,7 @@ class LibraryResolver:
                 else:
                     keys.append(KeyInfo(key, product_category))
         return keys
-
+    
     def _get_key_games(self, orders: list, show_revealed_keys: bool) -> List[KeyGame]:
         key_games = []
         key_infos = self._get_key_infos(orders)
