@@ -190,6 +190,25 @@ def test_split_multigame_key():
         KeyGame(key, "sega_3", "Hell Yeah! Wrath of the Dead Rabbit")
     ]
 
+@pytest.mark.parametrize('machine_name, human_name, expected', [
+    ('deepsilver_bundle_initial_steam', 'Metro 2033, Risen, and Sacred Citadel', ['Metro 2033', 'Risen', 'Sacred Citadel']),
+    ('test_bundle_a', 'Some Game, Ori and Blind Forest', ['Some Game', 'Ori and Blind Forest']),
+    ('test_bundle_b', 'Some Game 1, and Some Game 2, and One More', ['Some Game 1', 'Some Game 2', 'One More']),
+    ('test_bundle_c', 'Game 1, And Yet It Moves', ['Game 1', 'And Yet It Moves']),
+    ('test_bundle_d', 'And Yet It Moves, and And Yet It Moves', ['And Yet It Moves', 'And Yet It Moves']),
+])
+def test_split_multigame_key_and(machine_name, human_name, expected):
+    # Many bundle keys add the word 'and' before the last game title
+    tpks = {
+        "machine_name": machine_name,
+        "human_name": human_name,
+    }
+    key = Key(tpks)
+    key_games = LibraryResolver._split_multigame_key(key)
+    assert len(key_games) == len(expected)
+
+    for idx in range(0, len(expected)):
+        assert key_games[idx] == KeyGame(key, f'{key.machine_name}_{idx}', expected[idx])
 
 def test_get_key_info():
     key_data_1 = {
