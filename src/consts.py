@@ -68,3 +68,12 @@ COMMA_SPLIT_BLACKLIST = [
     "Upwards, Lonely Robot",
     "Warlock 2: The Exiled - The Good, the Bad, & the Muddy",
 ]
+
+PLATFORM_TITLES_TO_REMOVE = [
+    "(Steam)",
+    "Steam Key",
+    "(Origin)",
+    "Origin Key",
+    "(Uplay)",
+    "(Humble Original)",
+]

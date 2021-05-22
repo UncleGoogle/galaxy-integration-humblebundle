@@ -3,7 +3,7 @@ import logging
 import asyncio
 from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple
 
-from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMMA_SPLIT_BLACKLIST
+from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMMA_SPLIT_BLACKLIST, PLATFORM_TITLES_TO_REMOVE
 from model.product import Product
 from model.game import HumbleGame, Subproduct, Key, KeyGame
 from model.types import GAME_PLATFORMS
@@ -110,6 +110,14 @@ class LibraryResolver:
         return True
 
     @staticmethod
+    def _strip_platform_from_name(human_name: str):
+        for platform in PLATFORM_TITLES_TO_REMOVE:
+            if platform in human_name:
+                logger.debug(f"Stripping {platform} from {human_name}")
+                return human_name.replace(platform, "").rstrip()
+        return human_name
+
+    @staticmethod
     def __filter_out_not_game_bundles(orders: list) -> list:
         filtered = []
         for details in orders:
@@ -160,7 +168,7 @@ class LibraryResolver:
             first, _, rest = name.partition(" ")
             if first == "and": name = rest or first
             logger.debug(f"Split game: {name}")
-            games.append(KeyGame(key, f'{key.machine_name}_{i}', name))
+            games.append(KeyGame(key, f'{key.machine_name}_{i}', LibraryResolver._strip_platform_from_name(name)))
         return games
 
     @staticmethod
@@ -187,5 +195,5 @@ class LibraryResolver:
                 if self._is_multigame_key(key, product_category, blacklist=COMMA_SPLIT_BLACKLIST):
                     key_games.extend(self._split_multigame_key(key))
                 else:
-                    key_games.append(KeyGame(key, key.machine_name, key.human_name))
+                    key_games.append(KeyGame(key, key.machine_name, self._strip_platform_from_name(key.human_name)))
         return key_games

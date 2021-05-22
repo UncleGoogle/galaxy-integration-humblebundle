@@ -203,6 +203,17 @@ def test_split_multigame_key():
         KeyGame(key, "deepsilver_bundle_initial_steam_2", "Sacred Citadel"),
     ]
 
+@pytest.mark.parametrize('human_name, expected', [
+    ('TerraTech Deluxe Edition (Steam)', 'TerraTech Deluxe Edition'),
+    ('Saints Row: The Third Steam Key', 'Saints Row: The Third'),
+    ("Assassin's Creed® Origins (Uplay)", "Assassin's Creed® Origins"),
+    ('Crysis 2 Maximum Edition (Origin)', 'Crysis 2 Maximum Edition'),
+    ('Steamworld Heist', 'Steamworld Heist'),
+    ('Tailwind: Prologue (Humble Original)', 'Tailwind: Prologue'),
+])
+def test_strip_platform_from_name(human_name, expected):
+    assert LibraryResolver._strip_platform_from_name(human_name) == expected
+
 def test_get_key_info():
     key_data_1 = {
         "machine_name": "g1",
