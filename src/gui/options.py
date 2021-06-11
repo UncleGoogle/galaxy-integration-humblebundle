@@ -174,7 +174,7 @@ class Options(BaseApp):
         labels = [
             toga.Label("Galaxy integration for HumbleBundle", style=lbl_style),
             LinkLabel("https://github.com/UncleGoogle/galaxy-integration-humblebundle", style=lbl_style),
-            toga.Label("Copyright (C) 2019 UncleGoogle", style=lbl_style)
+            toga.Label("Copyright (C) 2019-2021 UncleGoogle", style=lbl_style)
         ]
         box = toga.Box(children=labels)
         box.style.padding = (self.SIZE[1] // 4, self.SIZE[1] // 4)
