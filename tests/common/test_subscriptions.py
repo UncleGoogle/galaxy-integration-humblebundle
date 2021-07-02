@@ -133,7 +133,7 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(
     Technically only unlocked choice months are owned (locked are not already payed and can be canceled).
     But for user convenience plugin marks month as owned if it *is going to* be unloacked (if not cancelled untill last Friday).
     Without this, Galaxy won't display games until user manualy select current month as owned.
-    This would be annoying as, as new subscription month happen... well every month.
+    This would be annoying, as a new subscription month happen... well every month.
     ---
     Test checks also logic for Trove ownership base on subscription status.
     """
