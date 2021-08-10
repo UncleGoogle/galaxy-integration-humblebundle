@@ -17,7 +17,7 @@ class BITNESS(enum.Enum):
     B32 = 32
 
 
-TROVE_SUBSCRIPTION_NAME = "Humble Trove"
+TROVE_SUBSCRIPTION_NAME = "Humble 💎 Trove"      
 
 NON_GAME_BUNDLE_TYPES = {'mobilebundle', 'softwarebundle', 'bookbundle', 'audiobookbundle', 'comicsbundle', 'rpgbookbundle', 'mangabundle'}
 

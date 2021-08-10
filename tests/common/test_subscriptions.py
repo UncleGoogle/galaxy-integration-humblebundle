@@ -41,8 +41,8 @@ async def test_get_subscriptions_never_subscribed(api_mock, plugin_with_sub):
 
     res = await plugin_with_sub.get_subscriptions()
     assert res == [
-        Subscription("Humble Choice 2020-05", owned=False),
-        Subscription("Humble Trove", owned=False),
+        Subscription("Humble Choice ✦ 2020-05", owned=False),
+        Subscription("Humble 💎 Trove", owned=False),
     ]
 
 
@@ -66,8 +66,8 @@ async def test_get_subscriptions_multiple_where_one_paused(api_mock, plugin_with
         Subscription("Humble Choice 2020-02", owned=True),
         Subscription("Humble Choice 2020-03", owned=False),  # paused month
         Subscription("Humble Choice 2020-04", owned=True),
-        Subscription("Humble Choice 2020-05", owned=True),
-        Subscription("Humble Trove", owned=True),
+        Subscription("Humble Choice ✦ 2020-05", owned=True),
+        Subscription("Humble 💎 Trove", owned=True),
     ]
 
 
@@ -89,8 +89,8 @@ async def test_get_subscriptions_humble_choice_and_humble_monthly(api_mock, plug
     res = await plugin_with_sub.get_subscriptions()
     assert sorted(res, key=lambda x: x.subscription_name) == [
         Subscription("Humble Choice 2019-12", owned=True),
-        Subscription("Humble Choice 2020-01", owned=True),
-        Subscription("Humble Trove", owned=True),
+        Subscription("Humble Choice ✦ 2020-01", owned=True),
+        Subscription("Humble 💎 Trove", owned=True),
     ]
 
 
@@ -112,8 +112,8 @@ async def test_get_subscriptions_past_subscriber(api_mock, plugin_with_sub):
     assert sorted(res, key=lambda x: x.subscription_name) == [
         Subscription("Humble Choice 2020-02", owned=True),
         Subscription("Humble Choice 2020-03", owned=True),
-        Subscription("Humble Choice 2020-05", owned=False),
-        Subscription("Humble Trove", owned=False),
+        Subscription("Humble Choice ✦ 2020-05", owned=False),
+        Subscription("Humble 💎 Trove", owned=False),
     ]
 
 
@@ -146,7 +146,7 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(
     res = await plugin_with_sub.get_subscriptions()
     assert sorted(res, key=lambda x: x.subscription_name) == [
         Subscription("Humble Choice 2020-04", owned=True),  # came from api - we're sure that choice month was unlocked
-        Subscription("Humble Choice 2020-05", owned=current_month_owned),
-        Subscription("Humble Trove", owned=trove_owned),
+        Subscription("Humble Choice ✦ 2020-05", owned=current_month_owned),
+        Subscription("Humble 💎 Trove", owned=trove_owned),
     ]
 
