@@ -112,7 +112,7 @@ class Options(BaseApp):
             SOURCE.KEYS: "Game keys to be redeemed in foreign services like Steam or Origin."
         }
         show_revealed_help = 'Check to show all game keys as separate games.\n' \
-            'Uncheck to show only game keys that are already revealed\n' \
+            'Uncheck to show only game keys that are not revealed yet\n' \
             '(redeemed keys are usually reported by other Galaxy plugins).'
 
         description = toga.Label(desc, style=Pack(font_size=self.TEXT_SIZE_BIG, padding_bottom=12))
