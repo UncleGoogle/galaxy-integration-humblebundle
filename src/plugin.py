@@ -62,7 +62,6 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._settings = Settings()
         self._library_resolver = None
-        self._subscription_months: t.List[ChoiceMonth] = []
 
         self._owned_games: t.Dict[str, HumbleGame] = {}
         self._trove_games: t.Dict[str, TroveGame] = {}
@@ -111,15 +110,18 @@ class HumbleBundlePlugin(Plugin):
         self._last_version = self._load_cache('last_version', default=None)
         self._trove_games = {g['machine_name']: TroveGame(g) for g in self._load_cache('trove_games', [])}
         self._choice_games = {g['id']: ChoiceGame(**g) for g in self._load_cache('choice_games', [])}
-
+    
+    async def _get_user_name(self) -> str:
+        try:
+            marketing_data = await self._api.get_choice_marketing_data()
+            return marketing_data['userOptions']['email'].split('@')[0]
+        except (BackendError, KeyError, UnknownBackendResponse) as e:
+            logger.error(repr(e))
+            return ""
+    
     async def _do_auth(self, auth_cookie) -> Authentication:
         user_id = await self._api.authenticate(auth_cookie)
-        try:
-            subscription_infos = await self._api.get_choice_marketing_data()
-            self._subscription_months = subscription_infos.month_details
-            user_name = subscription_infos.user_options['email'].split('@')[0]
-        except (BackendError, KeyError, UnknownBackendResponse):  # extra safety as this data is not crucial
-            user_name = user_id
+        user_name = await self._get_user_name() or "Humble User"
         return Authentication(user_id, user_name)
 
     async def authenticate(self, stored_credentials=None):
@@ -190,26 +192,26 @@ class HumbleBundlePlugin(Plugin):
         year, month = year_month.split('-')
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
-    async def _get_subscription_plan(self, month_path: str) -> t.Optional[UserSubscriptionPlan]:
-        month_content = await self._api.get_choice_content_data(month_path)
-        return month_content.user_subscription_plan
+    async def _get_active_month_machine_name(self) -> str:
+        marketing_data = await self._api.get_choice_marketing_data()
+        return marketing_data['activeContentMachineName']
 
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
-        historical_subscriber = await self._api.had_subscription()
+        current_plan = await self._api.get_subscription_plan()
         active_content_unlocked = False
 
-        if historical_subscriber:
+        if current_plan is not None:
             async for product in self._api.get_subscription_products_with_gamekeys():
                 if 'contentChoiceData' not in product:
                     break  # all Humble Choice months already yielded
 
+                is_active = product.get('isActiveContent', False)
                 subscriptions.append(Subscription(
                     self._normalize_subscription_name(product['productMachineName']),
                     owned='gamekey' in product
                 ))
-                if product.get('isActiveContent'):  # assuming there is only one "active" month at a time
-                    active_content_unlocked = True
+                active_content_unlocked |= is_active  # assuming there is only one "active" month at a time
 
         if not active_content_unlocked:
             '''
@@ -217,19 +219,16 @@ class HumbleBundlePlugin(Plugin):
             - for subscribers who has not used "Early Unlock" yet:
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
-            active_month = next(filter(lambda m: m.is_active == True, self._subscription_months))
-            current_plan = await self._get_subscription_plan(active_month.last_url_part) \
-                           if historical_subscriber else None
-
+            active_month_machine_name = await self._get_active_month_machine_name()
             subscriptions.append(Subscription(
-                self._normalize_subscription_name(active_month.machine_name),
-                owned=current_plan is not None and current_plan.tier != Tier.LITE,
-                end_time=None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+                self._normalize_subscription_name(active_month_machine_name),
+                owned = current_plan is not None and current_plan.tier != Tier.LITE,  # TODO: last month of not payed subs are still returned
+                end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
 
         subscriptions.append(Subscription(
-            subscription_name=TROVE_SUBSCRIPTION_NAME,
-            owned=active_content_unlocked or current_plan is not None
+            subscription_name = TROVE_SUBSCRIPTION_NAME,
+            owned = current_plan is not None
         ))
 
         return subscriptions

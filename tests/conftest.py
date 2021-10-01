@@ -47,7 +47,7 @@ def api_mock_raw():
     mock.get_order_details = AsyncMock()
     mock.get_gamekeys = AsyncMock()
     mock.get_montly_trove_data = AsyncMock()
-    mock.had_subscription = AsyncMock()
+    mock.get_subscription_plan = AsyncMock()
     mock.get_trove_details = AsyncMock()
     mock.sign_url_trove = AsyncMock()
     mock.sign_url_subproduct = AsyncMock()
@@ -75,7 +75,6 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
     mock.TROVES_PER_CHUNK = 20
     mock.get_gamekeys.return_value = [i['gamekey'] for i in mock.orders]
     mock.get_order_details.side_effect = get_details
-    mock.had_subscription.return_value = True
     mock.get_trove_details.side_effect = lambda from_chunk: get_troves(from_chunk)
 
     return mock
