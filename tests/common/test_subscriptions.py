@@ -4,40 +4,23 @@ import pytest
 from galaxy.api.types import Subscription
 from conftest import aiter
 
-from model.subscription import ChoiceMonth
+from model.subscription import UserSubscriptionPlan
 from model.types import Tier
 
 
 @pytest.fixture
-def plugin_with_sub(plugin):
-    """
-    plugin._subscription_months internal cache is expected to be set at time of getting subscriptions
-    """
-    plugin._subscription_months = [
-        ChoiceMonth({
-            "machine_name": "may_2020_choice",
-            "short_human_name": "May 2020",
-            "monthly_product_page_url": "/subscription/may-2020"
-        }, is_active=True),
-        ChoiceMonth({
-            "machine_name": "april_2020_choice",
-            "short_human_name": "April 2020",
-            "monthly_product_page_url": "/subscription/april-2020",
-            "item_count": 12
-        }, is_active=False),
-        ChoiceMonth({
-            "machine_name": "march_2020_choice",
-            "short_human_name": "March 2020",
-            "monthly_product_page_url": "/subscription/march-2020",
-            "item_count": 12
-        }, is_active=False)
-    ]
+def plugin_with_sub(plugin, api_mock):
+    api_mock.get_subscription_plan.return_value = Mock(UserSubscriptionPlan, name="unspecified subscription")
+    api_mock.get_choice_marketing_data.return_value = {
+        "activeContentMachineName": "may_2020_choice"
+    }
     return plugin
 
 
 @pytest.mark.asyncio
 async def test_get_subscriptions_never_subscribed(api_mock, plugin_with_sub):
     api_mock.get_subscription_plan.return_value = None
+    api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter([]))
 
     res = await plugin_with_sub.get_subscriptions()
     assert res == [
@@ -48,7 +31,6 @@ async def test_get_subscriptions_never_subscribed(api_mock, plugin_with_sub):
 
 @pytest.mark.asyncio
 async def test_get_subscriptions_multiple_where_one_paused(api_mock, plugin_with_sub):
-    api_mock.get_subscription_plan.return_value = {"tier": "mock_any"}
     content_choice_options = [
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'may_2020_choice', 'isActiveContent': True},
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'april_2020_choice', 'isActiveContent': False},
@@ -77,7 +59,6 @@ async def test_get_subscriptions_humble_choice_and_humble_monthly(api_mock, plug
     The subscription_products_with_gamekeys API returns firstly Choice months data, then old Humble Monthly subscription data.
     Expected: Plugin should ignore Humble Montly subscription months.
     """
-    api_mock.get_subscription_plan.return_value = {"tier": "mock_any"}
     content_choice_options = [
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'january_2020_choice', 'isActiveContent': True},
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'december_2019_choice', 'isActiveContent': False},
@@ -97,11 +78,11 @@ async def test_get_subscriptions_humble_choice_and_humble_monthly(api_mock, plug
 @pytest.mark.asyncio
 async def test_get_subscriptions_past_subscriber(api_mock, plugin_with_sub):
     """
-    Testcase: Currently no subscriptiion but user was subscriber in the past
-    Expected: Active subscription months + not owned Trove & and owned active month
+    Testcase: Currently no subscription but user was subscriber in the past
+    Expected: Active subscription months + not owned Trove & and not owned active month
     """
-    api_mock.get_subscription_plan.return_value = {"tier": "mock_any"}
     api_mock.get_choice_content_data.return_value = Mock(**{'user_subscription_plan': None})
+    api_mock.get_subscription_plan.return_value = None
     content_choice_options = [
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'march_2020_choice', 'isActiveContent': False},
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'february_2020_choice', 'isActiveContent': False},
@@ -137,8 +118,8 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(
     ---
     Test checks also logic for Trove ownership base on subscription status.
     """
-    api_mock.get_subscription_plan.return_value = {"tier": "mock_any"}
     api_mock.get_choice_content_data.return_value = Mock(user_subscription_plan=current_subscription_plan)
+    api_mock.get_subscription_plan.return_value = current_subscription_plan
     content_choice_options = [
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'april_2020_choice', 'isActiveContent': False}
     ]

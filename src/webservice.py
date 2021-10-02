@@ -183,22 +183,7 @@ class AuthorizedHumbleAPI:
             logger.error(repr(e))
             return None
 
-    # async def _had_subscription(self) -> t.Optional[bool]:
-    #     """Based on current behavior of `humblebundle.com/subscription/home`
-    #     that is accesable only by "current and former subscribers"
-    #     """
-    #     res = await self._request('get', self._SUBSCRIPTION_HOME, allow_redirects=False)
-    #     if res.status == 200:
-    #         return True
-    #     elif res.status == 302:
-    #         return False
-    #     else:
-    #         logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
-    #         return None
-
     async def get_subscriber_hub_data(self) -> dict:
-        # if self._had_subscription == False:
-        #     return None
         webpack_id = "webpack-subscriber-hub-data"
         return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
 

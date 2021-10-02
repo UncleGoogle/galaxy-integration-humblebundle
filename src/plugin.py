@@ -200,17 +200,16 @@ class HumbleBundlePlugin(Plugin):
         current_plan = await self._api.get_subscription_plan()
         active_content_unlocked = False
 
-        if current_plan is not None:
-            async for product in self._api.get_subscription_products_with_gamekeys():
-                if 'contentChoiceData' not in product:
-                    break  # all Humble Choice months already yielded
+        async for product in self._api.get_subscription_products_with_gamekeys():
+            if 'contentChoiceData' not in product:
+                break  # all Humble Choice months already yielded
 
-                is_active = product.get('isActiveContent', False)
-                subscriptions.append(Subscription(
-                    self._normalize_subscription_name(product['productMachineName']),
-                    owned='gamekey' in product
-                ))
-                active_content_unlocked |= is_active  # assuming there is only one "active" month at a time
+            is_active = product.get('isActiveContent', False)
+            subscriptions.append(Subscription(
+                self._normalize_subscription_name(product['productMachineName']),
+                owned='gamekey' in product
+            ))
+            active_content_unlocked |= is_active  # assuming there is only one "active" month at a time
 
         if not active_content_unlocked:
             '''
