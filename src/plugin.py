@@ -166,7 +166,7 @@ class HumbleBundlePlugin(Plugin):
             return [g.in_galaxy_format() for g in self._owned_games.values()]
 
     @staticmethod
-    def _normalize_subscription_name(machine_name: str):
+    def _normalize_subscription_name(machine_name: str, is_active: bool):
         month_map = {
             'january': '01',
             'february': '02',
@@ -182,7 +182,7 @@ class HumbleBundlePlugin(Plugin):
             'december': '12'
         }
         month, year, type_ = machine_name.split('_')
-        return f'Humble {type_.title()} {year}-{month_map[month]}'
+        return f'Humble {type_.title()}{"★" if is_active else ""} {year}-{month_map[month]}'
 
     @staticmethod
     def _choice_name_to_slug(subscription_name: str):
@@ -204,12 +204,13 @@ class HumbleBundlePlugin(Plugin):
                 if 'contentChoiceData' not in product:
                     break  # all Humble Choice months already yielded
 
-                subscriptions.append(Subscription(
-                    self._normalize_subscription_name(product['productMachineName']),
-                    owned='gamekey' in product
-                ))
                 if product.get('isActiveContent'):  # assuming there is only one "active" month at a time
+                    is_active = True
                     active_content_unlocked = True
+
+                subscriptions.append(Subscription(
+                    self._normalize_subscription_name(product['productMachineName'], is_active),
+                    owned='gamekey' in product))
 
         if not active_content_unlocked:
             '''
@@ -222,7 +223,7 @@ class HumbleBundlePlugin(Plugin):
                            if historical_subscriber else None
 
             subscriptions.append(Subscription(
-                self._normalize_subscription_name(active_month.machine_name),
+                self._normalize_subscription_name(active_month.machine_name, is_active=True),
                 owned=current_plan is not None and current_plan.tier != Tier.LITE,
                 end_time=None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
