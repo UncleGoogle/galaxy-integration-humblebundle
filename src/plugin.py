@@ -25,7 +25,6 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
 from model.types import HP, Tier
-from model.subscription import ChoiceMonth, UserSubscriptionPlan
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
