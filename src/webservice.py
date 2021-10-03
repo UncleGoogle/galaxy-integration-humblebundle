@@ -179,9 +179,11 @@ class AuthorizedHumbleAPI:
         try:
             sub_hub_data = await self.get_subscriber_hub_data()
             return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
-        except (UnknownBackendResponse, KeyError) as e:
-            logger.warning("Can't fetch userSubscriptionPlan details: %s", repr(e))
+        except UnknownBackendResponse as e:
+            logger.debug("Can't fetch user subscription plan. Assuming user hasn't been a subscriber")
             return None
+        except KeyError as e:
+            raise UnknownBackendResponse("Can't fetch user subscription plan: %s", repr(e))
 
     async def get_subscriber_hub_data(self) -> dict:
         webpack_id = "webpack-subscriber-hub-data"

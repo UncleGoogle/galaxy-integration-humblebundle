@@ -197,8 +197,12 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
-        current_plan = await self._api.get_subscription_plan()
         active_content_unlocked = False
+        try:
+            current_plan = await self._api.get_subscription_plan()
+        except Exception as e:
+            logger.error("Can't fetch user subscription plan: %s", repr(e))
+            current_plan = None
 
         async for product in self._api.get_subscription_products_with_gamekeys():
             if 'contentChoiceData' not in product:
@@ -220,7 +224,8 @@ class HumbleBundlePlugin(Plugin):
             active_month_machine_name = await self._get_active_month_machine_name()
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month_machine_name),
-                owned = current_plan is not None and current_plan.tier != Tier.LITE,  # TODO: last month of not payed subs are still returned
+                # TODO: last month of not payed subs are still returned
+                owned = current_plan is not None and current_plan.tier != Tier.LITE, 
                 end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
 
