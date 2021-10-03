@@ -1,5 +1,6 @@
 from http.cookies import SimpleCookie
 from http import HTTPStatus
+from contextlib import contextmanager
 import typing as t
 import aiohttp
 import json
@@ -7,11 +8,28 @@ import base64
 import logging
 
 import yarl
-from galaxy.http import create_client_session, handle_exception
+import galaxy.http
 from galaxy.api.errors import UnknownBackendResponse
 
 from model.download import TroveDownload, DownloadStructItem
-from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMarketingData, ChoiceMonth
+from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth, UserSubscriptionPlan
+
+
+logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def handle_exception():
+    """Wrapper over galaxy.http to log error details"""
+    with galaxy.http.handle_exception():
+        try:
+            yield
+        except Exception as e:
+            logger.error(e)
+
+
+class Redirected(Exception):
+    pass
 
 
 class AuthorizedHumbleAPI:
@@ -38,7 +56,7 @@ class AuthorizedHumbleAPI:
     }
 
     def __init__(self):
-        self._session = create_client_session(headers=self._DEFAULT_HEADERS)
+        self._session = galaxy.http.create_client_session(headers=self._DEFAULT_HEADERS)
 
     @property
     def is_authenticated(self) -> bool:
@@ -46,7 +64,7 @@ class AuthorizedHumbleAPI:
 
     async def _request(self, method, path, *args, **kwargs):
         url = self._AUTHORITY + path
-        logging.debug(f'{method}, {url}, {args}, {kwargs}')
+        logger.debug(f'{method}, {url}, {args}, {kwargs}')
         with handle_exception():
             return await self._session.request(method, url, *args, **kwargs)
 
@@ -85,7 +103,7 @@ class AuthorizedHumbleAPI:
     async def get_gamekeys(self) -> t.List[str]:
         res = await self._request('get', self._ORDER_LIST_URL)
         parsed = await res.json()
-        logging.info(f"The order list:\n{parsed}")
+        logger.info(f"The order list:\n{parsed}")
         gamekeys = [it["gamekey"] for it in parsed]
         return gamekeys
 
@@ -145,19 +163,6 @@ class AuthorizedHumbleAPI:
                 yield ChoiceMonth(prev_month)
             from_product = prev_month['machine_name']
 
-    async def had_subscription(self) -> t.Optional[bool]:
-        """Based on current behavior of `humblebundle.com/subscription/home`
-        that is accesable only by "current and former subscribers"
-        """
-        res = await self._request('get', self._SUBSCRIPTION_HOME, allow_redirects=False)
-        if res.status == 200:
-            return True
-        elif res.status == 302:
-            return False
-        else:
-            logging.warning(f'{self._SUBSCRIPTION_HOME}, Status code: {res.status}')
-            return None
-
     async def _get_webpack_data(self, path: str, webpack_id: str) -> dict:
         res = await self._request('GET', path, allow_redirects=False)
         txt = await res.text()
@@ -170,6 +175,18 @@ class AuthorizedHumbleAPI:
             raise UnknownBackendResponse('cannot parse webpack data') from e
         return parsed
 
+    async def get_subscription_plan(self) -> t.Optional[UserSubscriptionPlan]:
+        try:
+            sub_hub_data = await self.get_subscriber_hub_data()
+            return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
+        except (UnknownBackendResponse, KeyError) as e:
+            logger.warning("Can't fetch userSubscriptionPlan details. %s", repr(e))
+            return None
+
+    async def get_subscriber_hub_data(self) -> dict:
+        webpack_id = "webpack-subscriber-hub-data"
+        return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
+
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
         Returns json containing "newlyAdded" trove games and "standardProducts" that is
@@ -179,11 +196,10 @@ class AuthorizedHumbleAPI:
         webpack_id = "webpack-monthly-trove-data"
         return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
 
-    async def get_choice_marketing_data(self) -> ChoiceMarketingData:
+    async def get_choice_marketing_data(self) -> dict:
         """Parsing ~155K and fast response from server"""
         webpack_id = "webpack-choice-marketing-data"
-        data = await self._get_webpack_data(self._SUBSCRIPTION, webpack_id)
-        return ChoiceMarketingData(data)
+        return await self._get_webpack_data(self._SUBSCRIPTION, webpack_id)
 
     async def get_choice_content_data(self, product_url_path) -> ChoiceContentData:
         """Parsing ~220K
@@ -208,10 +224,10 @@ class AuthorizedHumbleAPI:
         while True:
             chunk_details = await self._get_trove_details(index)
             if type(chunk_details) != list:
-                logging.debug(f'chunk_details: {chunk_details}')
-                raise UnknownBackendResponse()
+                logger.debug(f'chunk_details: {chunk_details}')
+                raise UnknownBackendResponse("Unrecognized trove chunks structure")
             elif len(chunk_details) == 0:
-                logging.debug('No more chunk pages')
+                logger.debug('No more chunk pages')
                 return
             yield chunk_details
             index += 1
@@ -250,7 +266,7 @@ class AuthorizedHumbleAPI:
             await self._reedem_download(
                 download_machine_name, {'download_url_file': filename})
         except Exception as e:
-            logging.error(repr(e) + '. Error ignored')
+            logger.error(repr(e) + '. Error ignored')
         return urls
 
     async def sign_url_trove(self, download: TroveDownload, product_machine_name: str):
@@ -261,7 +277,7 @@ class AuthorizedHumbleAPI:
             await self._reedem_download(
                 download.machine_name, {'product': product_machine_name})
         except Exception as e:
-            logging.error(repr(e) + '. Error ignored')
+            logger.error(repr(e) + '. Error ignored')
         return urls
 
     async def close_session(self):

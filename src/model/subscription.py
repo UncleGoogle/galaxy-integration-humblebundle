@@ -1,4 +1,5 @@
 import typing as t
+import json
 import datetime
 
 from model.game import Key
@@ -19,35 +20,6 @@ class UserSubscriptionPlan:
         self.tier = Tier(data['tier'])
         self.machine_name = data['machine_name']
         self.human_name = data['human_name']
-
-
-class ChoiceMarketingData:
-    """Custom class based on `webpack-choice-marketing-data['monthDetails'] from https://www.humblebundle.com/subscription
-    {
-        "monthDetails": {
-            "previous_months": [],
-            "active_month": {}
-        },
-        "userOptions": {
-            "email": str,
-            ...
-        },
-        "navbarOptions": {
-            "activeContentEndDate|datetime": "2020-06-05T17:00:00",
-            "productHumanName":	"May 2020 Humble Choice"
-        },
-        ...
-    }
-    """
-    def __init__(self, data: dict):
-        self.user_options = data['userOptions']
-        self.active_month = ChoiceMonth(data['monthDetails']['active_month'], is_active=True)
-        self.month_details = [
-            self.active_month
-        ] + [
-            ChoiceMonth(month, is_active=False)
-            for month in data['monthDetails']['previous_months']
-        ]
 
 
 class ChoiceMonth:
@@ -96,10 +68,14 @@ class ChoiceMonth:
       },
     """
     def __init__(self, data: dict, is_active: bool = False):
+        self._data = data
         self.is_active: bool = is_active
         self.machine_name: str = data['machine_name']
         self.short_human_name: str = data['short_human_name']
         self.monthly_product_page_url: str = data['monthly_product_page_url']
+    
+    def __repr__(self) -> str:
+        return json.dumps(self._data, indent=4)
 
     @property
     def last_url_part(self):
