@@ -90,7 +90,7 @@ class AuthorizedHumbleAPI:
 
     async def authenticate(self, auth_cookie: dict) -> t.Optional[str]:
         # recreate original cookie
-        cookie = SimpleCookie()
+        cookie: SimpleCookie = SimpleCookie()
         cookie_val = bytes(auth_cookie['value'], "utf-8").decode("unicode_escape")
         # some users have cookies with escaped characters, some not...
         # for the first group strip quotes:
@@ -180,7 +180,7 @@ class AuthorizedHumbleAPI:
             sub_hub_data = await self.get_subscriber_hub_data()
             return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
         except (UnknownBackendResponse, KeyError) as e:
-            logger.warning("Can't fetch userSubscriptionPlan details. %s", repr(e))
+            logger.warning("Can't fetch userSubscriptionPlan details: %s", repr(e))
             return None
 
     async def get_subscriber_hub_data(self) -> dict:
