@@ -1,3 +1,4 @@
+from build.model.subscription import UserSubscriptionPlan
 import sys
 import platform
 import asyncio
@@ -16,15 +17,15 @@ sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.consts import Platform, OSCompatibility
+from galaxy.api.consts import Platform, OSCompatibility, SubscriptionDiscovery
 from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
 from galaxy.api.errors import AuthenticationRequired, UnknownBackendResponse, UnknownError, BackendError
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
-from webservice import AuthorizedHumbleAPI
+from webservice import AuthorizedHumbleAPI, NeverSubscriberError
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
-from model.types import HP, Tier
+from model.types import HP, Tier, SubscriptionStatus
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -194,15 +195,27 @@ class HumbleBundlePlugin(Plugin):
     async def _get_active_month_machine_name(self) -> str:
         marketing_data = await self._api.get_choice_marketing_data()
         return marketing_data['activeContentMachineName']
-
+    
     async def get_subscriptions(self):
+        # TODO - before deciding on data structures, check how expired subs work and how to know if it is expired
         subscriptions: t.List[Subscription] = []
-        active_content_unlocked = False
+        sub_status: SubscriptionStatus
+        sub_plan: t.Optional[UserSubscriptionPlan] = None
+        is_active_content_unlocked: bool = False
+
         try:
-            current_plan = await self._api.get_subscription_plan()
+            sub_plan = await self._api.get_subscription_plan()
+        except NeverSubscriberError:
+            sub_status = SubscriptionStatus.NeverSubscribed
         except Exception as e:
             logger.error("Can't fetch user subscription plan: %s", repr(e))
-            current_plan = None
+            sub_status = SubscriptionStatus.Unknown
+        else:
+            sub_status = SubscriptionStatus.Active
+        
+        discovery = SubscriptionDiscovery.USER_ENABLED
+        if sub_status != SubscriptionStatus.Unknown:
+            discovery |= SubscriptionDiscovery.AUTOMATIC
 
         async for product in self._api.get_subscription_products_with_gamekeys():
             if 'contentChoiceData' not in product:
@@ -211,27 +224,35 @@ class HumbleBundlePlugin(Plugin):
             is_active = product.get('isActiveContent', False)
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(product['productMachineName']),
-                owned='gamekey' in product
+                owned = 'gamekey' in product,
+                subscription_discovery = discovery
             ))
-            active_content_unlocked |= is_active  # assuming there is only one "active" month at a time
+            is_active_content_unlocked |= is_active  # assuming there is only one "active" month at a time
 
-        if not active_content_unlocked:
+        if not is_active_content_unlocked:
             '''
-            - for not subscribers as potential discovery of current choice games
+            - for not this month subscribers as potential discovery of current choice games
             - for subscribers who has not used "Early Unlock" yet:
               https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
             '''
             active_month_machine_name = await self._get_active_month_machine_name()
+            if sub_status == SubscriptionStatus.Unknown:
+                active_month_owned = None
+            else:
+                active_month_owned = sub_status == SubscriptionStatus.Active and sub_plan.tier != Tier.LITE,
+
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month_machine_name),
                 # TODO: last month of not payed subs are still returned
-                owned = current_plan is not None and current_plan.tier != Tier.LITE, 
-                end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+                owned = active_month_owned,
+                end_time = None,  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+                subscription_discovery = discovery
             ))
 
         subscriptions.append(Subscription(
             subscription_name = TROVE_SUBSCRIPTION_NAME,
-            owned = current_plan is not None
+            owned = sub_status == SubscriptionStatus.Active,
+            subscription_discovery = discovery
         ))
 
         return subscriptions

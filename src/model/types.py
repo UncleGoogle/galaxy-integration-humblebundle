@@ -57,3 +57,11 @@ class Tier(enum.Enum):
     BASIC = 'basic'
     PREMIUM = 'premium'
     CLASSIC = 'premiumv1'
+
+
+class SubscriptionStatus(enum.Enum):
+    NeverSubscribed = enum.auto()
+    Expired = enum.auto()
+    Active = enum.auto()
+    Unknown = enum.auto()
+    

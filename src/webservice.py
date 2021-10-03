@@ -32,6 +32,10 @@ class Redirected(Exception):
     pass
 
 
+class NeverSubscriberError(Exception):
+    pass
+
+
 class AuthorizedHumbleAPI:
     _AUTHORITY = "https://www.humblebundle.com/"
     _PROCESS_LOGIN = "processlogin"
@@ -175,14 +179,13 @@ class AuthorizedHumbleAPI:
             raise UnknownBackendResponse('cannot parse webpack data') from e
         return parsed
 
-    async def get_subscription_plan(self) -> t.Optional[UserSubscriptionPlan]:
+    async def get_subscription_plan(self) -> UserSubscriptionPlan:
         try:
             sub_hub_data = await self.get_subscriber_hub_data()
             return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
         except UnknownBackendResponse as e:
-            logger.debug("Can't fetch user subscription plan. Assuming user hasn't been a subscriber")
-            return None
-        except KeyError as e:
+            raise NeverSubscriberError("Can't fetch user subscription plan: %s", repr(e))
+        except KeyError:
             raise UnknownBackendResponse("Can't fetch user subscription plan: %s", repr(e))
 
     async def get_subscriber_hub_data(self) -> dict:
