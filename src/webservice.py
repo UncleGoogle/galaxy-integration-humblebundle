@@ -180,7 +180,7 @@ class AuthorizedHumbleAPI:
             sub_hub_data = await self.get_subscriber_hub_data()
             return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
         except (UnknownBackendResponse, KeyError) as e:
-            logger.error(repr(e))
+            logger.warning("Can't fetch userSubscriptionPlan details. %s", repr(e))
             return None
 
     async def get_subscriber_hub_data(self) -> dict:
@@ -225,7 +225,7 @@ class AuthorizedHumbleAPI:
             chunk_details = await self._get_trove_details(index)
             if type(chunk_details) != list:
                 logger.debug(f'chunk_details: {chunk_details}')
-                raise UnknownBackendResponse()
+                raise UnknownBackendResponse("Unrecognized trove chunks structure")
             elif len(chunk_details) == 0:
                 logger.debug('No more chunk pages')
                 return
