@@ -1,3 +1,9 @@
+## Version 0.9.5
+(!) WARNING: If you're Humble subscriber, plugin reconnection is needed to sync subscriptions again (!)
+
+[Fixed]
+- Error while loading a subscriptions list (humble choice and Trove games not visible) #161
+
 ## Version 0.9.4
 (!) WARNING: If you're Humble subscriber, plugin reconnection is needed to sync subscriptions again (!)
 
