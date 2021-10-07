@@ -3,6 +3,9 @@
 
 [Fixed]
 - Error while loading a subscriptions list (humble choice and Trove games not visible) #161
+- Multi-game keys from bundles: no longer returns game title with leading "and" #157 @ 5dd53f0 by @Gwindalmir
+- Mutli-game keys from bundles: list of games titles that should not be splitted is now case insensitive #157 @ d95cd550 by @Gwindalmir
+- GUI: misleading tooltip information @ f96edbd
 
 ## Version 0.9.4
 (!) WARNING: If you're Humble subscriber, plugin reconnection is needed to sync subscriptions again (!)
