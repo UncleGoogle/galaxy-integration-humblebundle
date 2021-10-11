@@ -27,6 +27,7 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI, WebpackParseError
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
 from model.types import HP, Tier
+from model.subscription import datetime_parse
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -233,15 +234,14 @@ class HumbleBundlePlugin(Plugin):
 
         return subscriptions
 
-    async def _get_trove_games(self, date_to: int):
+    async def _get_trove_games(self) -> t.AsyncGenerator[t.List[SubscriptionGame], None]:
         def parse_and_cache(troves):
             games: t.List[SubscriptionGame] = []
             for trove in troves:
                 try:
                     trove_game = TroveGame(trove)
-                    if trove_game.date_added is None or trove_game.date_added <= date_to:
-                        games.append(trove_game.in_galaxy_format())
-                        self._trove_games[trove_game.machine_name] = trove_game
+                    games.append(trove_game.in_galaxy_format())
+                    self._trove_games[trove_game.machine_name] = trove_game
                 except Exception as e:
                     logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
             return games
@@ -252,19 +252,16 @@ class HumbleBundlePlugin(Plugin):
                 yield parse_and_cache(newly_added)
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
+    
+    async def _get_trove_games_added_before_user_subscription_expired(self):
+        subscriber_info = await self._api.get_subscriber_hub_data()
+        expires_at = datetime_parse(subscriber_info["subscriptionExpires|datetime"])
+        async for troves in self._get_trove_games():
+            yield [t for t in troves if t.start_time is None or t.start_time <= expires_at]
 
     async def get_subscription_games(self, subscription_name, context):
-        def last_second_of_subscription(product_machine_name) -> int:
-            month, year, _ = product_machine_name.split('_')
-            months = {v.lower(): k for k, v in enumerate(calendar.month_name)}
-            last_moment_of_month = datetime.datetime(int(year), months[month] + 1, day=1) - datetime.timedelta(seconds=1)
-            return int(last_moment_of_month.timestamp())
-
         if subscription_name == TROVE_SUBSCRIPTION_NAME:
-            async for product in self._api.get_subscription_products_with_gamekeys():
-                date_to: int = last_second_of_subscription(product['machine_name'])
-                break
-            async for troves in self._get_trove_games(last_subscription_date, date_to):
+            async for troves in self._get_trove_games_added_before_user_subscription_expired():
                 yield troves
             return
 

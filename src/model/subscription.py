@@ -6,6 +6,13 @@ from model.game import Key
 from model.types import HP, DeliveryMethod, Tier
 
 
+Timestamp = int
+
+
+def datetime_parse(dt: str) -> Timestamp:
+    return int(datetime.datetime.fromisoformat(dt).timestamp())
+
+
 class UserSubscriptionPlan:
     """
     {
@@ -265,9 +272,9 @@ class ChoiceContentData:
         self.content_choice_options = ContentChoiceOptions(data['contentChoiceOptions'])
 
     @property
-    def active_content_start(self) -> t.Optional[datetime.datetime]:
+    def active_content_start(self) -> t.Optional[Timestamp]:
         try:
-            iso = self.pay_early_options['activeContentStart|datetime']
+            dt = self.pay_early_options['activeContentStart|datetime']
         except KeyError:
             return None
-        return datetime.datetime.fromisoformat(iso)
+        return datetime_parse(dt)
