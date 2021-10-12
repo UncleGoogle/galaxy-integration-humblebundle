@@ -253,15 +253,9 @@ class HumbleBundlePlugin(Plugin):
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
     
-    async def _get_trove_games_added_before_user_subscription_expired(self):
-        subscriber_info = await self._api.get_subscriber_hub_data()
-        expires_at = datetime_parse(subscriber_info["subscriptionExpires|datetime"])
-        async for troves in self._get_trove_games():
-            yield [t for t in troves if t.start_time is None or t.start_time <= expires_at]
-
     async def get_subscription_games(self, subscription_name, context):
         if subscription_name == TROVE_SUBSCRIPTION_NAME:
-            async for troves in self._get_trove_games_added_before_user_subscription_expired():
+            async for troves in self._get_trove_games():
                 yield troves
             return
 
