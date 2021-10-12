@@ -26,6 +26,7 @@ def handle_exception():
             yield
         except Exception as e:
             logger.error(e)
+            raise
 
 
 class WebpackParseError(Exception):
