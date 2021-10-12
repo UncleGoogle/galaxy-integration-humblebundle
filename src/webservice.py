@@ -224,13 +224,17 @@ class AuthorizedHumbleAPI:
         try:
             sub_hub_data = await self.get_subscriber_hub_data()
             return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
-        except (UnknownBackendResponse, KeyError) as e:
+        except (WebpackParseError, KeyError) as e:
             logger.warning("Can't fetch userSubscriptionPlan details. %s", repr(e))
             return None
 
     async def get_subscriber_hub_data(self) -> dict:
         webpack_id = "webpack-subscriber-hub-data"
-        return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
+        try:
+            return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
+        except WebpackParseError as e:
+            # TODO test this in reality with never-sub account
+            raise WebpackParseError("Apparently user has never been a subscriber") from e
 
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
