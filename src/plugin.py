@@ -1,5 +1,6 @@
 import sys
 import platform
+import datetime
 import asyncio
 import logging
 import re
@@ -7,11 +8,12 @@ import webbrowser
 import pathlib
 import json
 import calendar
-import datetime
 import typing as t
 from functools import partial
 from contextlib import suppress
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
+from distutils.version import LooseVersion
+
+from model.subscription import UserSubscriptionInfo  # pylint: disable=no-name-in-module,import-error
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
@@ -27,7 +29,6 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI, WebpackParseError
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
 from model.types import HP, Tier
-from model.subscription import datetime_parse
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -190,7 +191,7 @@ class HumbleBundlePlugin(Plugin):
 
     @staticmethod
     def _choice_name_to_slug(subscription_name: str):
-        _, type_, year_month = subscription_name.split(' ')
+        _, _, year_month = subscription_name.split(' ')
         year, month = year_month.split('-')
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
@@ -200,36 +201,44 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
-        current_plan = await self._api.get_subscription_plan()
-        active_content_unlocked = False
+        subscriber_hub = await self._api.get_subscriber_info_optional()
 
+        is_active_month_fetched = False
         async for product in self._api.get_subscription_products_with_gamekeys():
             if 'contentChoiceData' not in product:
                 break  # all Humble Choice months already yielded
 
-            is_active = product.get('isActiveContent', False)
+            is_unlocked = 'gamekey' in product
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(product['productMachineName']),
-                owned='gamekey' in product
+                owned = is_unlocked
             ))
-            active_content_unlocked |= is_active  # assuming there is only one "active" month at a time
+            is_active_month_fetched |= product.get('isActiveContent', False)
 
-        if not active_content_unlocked:
-            '''
-            - for not subscribers as potential discovery of current choice games
-            - for subscribers who has not used "Early Unlock" yet:
-              https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
-            '''
-            active_month_machine_name = await self._get_active_month_machine_name()
+        if not is_active_month_fetched:
+            if subscriber_hub:
+                '''
+                for Lite tier subscribers, former subscribers or those who not used "Early Unlock" yet:
+                https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
+                '''
+                active_month_machine_name = subscriber_hub.active_content_product_machine_name
+                mark_owned = subscriber_hub.user_plan.tier != Tier.LITE and not subscriber_hub.subscription_expired()
+            else:
+                '''
+                for not subscribers as potential discovery of current choice games
+                '''
+                active_month_machine_name = await self._get_active_month_machine_name(subscriber_hub)
+                mark_owned = False
+
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(active_month_machine_name),
-                owned = current_plan is not None and current_plan.tier != Tier.LITE,  # TODO: last month of not payed subs are still returned
+                owned = mark_owned,
                 end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
             ))
 
         subscriptions.append(Subscription(
             subscription_name = TROVE_SUBSCRIPTION_NAME,
-            owned = current_plan is not None
+            owned = subscriber_hub is not None
         ))
 
         return subscriptions

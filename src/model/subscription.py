@@ -6,11 +6,43 @@ from model.game import Key
 from model.types import HP, DeliveryMethod, Tier
 
 
-Timestamp = int
+Timestamp = float
 
 
 def datetime_parse(dt: str) -> Timestamp:
-    return int(datetime.datetime.fromisoformat(dt).timestamp())
+    return Timestamp(datetime.datetime.fromisoformat(dt).timestamp())
+
+
+def _now_time() -> Timestamp:
+    return Timestamp(datetime.datetime.now().timestamp())
+
+
+class UserSubscriptionInfo:
+    def __init__(self, data: dict) -> None:
+        self._data = data
+    
+    @property
+    def user_plan(self) -> "UserSubscriptionPlan":
+        return UserSubscriptionPlan(self._data["userSubscriptionPlan"])
+
+    @property
+    def active_content_product_machine_name(self) -> str:
+        return self._data["payEarlyOptions"]["productMachineName"]
+
+    @property
+    def active_content_start(self) -> Timestamp:
+        return datetime_parse(self._data["payEarlyOptions"]["activeContentStart|datetime"])
+
+    @property
+    def subcription_join_date(self) -> Timestamp:
+        return datetime_parse(self._data["subscriptionJoinDate|datetime"])
+
+    @property
+    def subscription_expires(self) -> Timestamp:
+        return datetime_parse(self._data["subscriptionExpires|datetime"])
+    
+    def subscription_expired(self) -> bool:
+        return _now_time() > self.subscription_expires
 
 
 class UserSubscriptionPlan:

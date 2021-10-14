@@ -12,7 +12,7 @@ import galaxy.http
 from galaxy.api.errors import UnknownBackendResponse
 
 from model.download import TroveDownload, DownloadStructItem
-from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth, UserSubscriptionPlan
+from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth, UserSubscriptionInfo
 
 
 logger = logging.getLogger(__name__)
@@ -220,21 +220,19 @@ class AuthorizedHumbleAPI:
         except json.JSONDecodeError as e:
             raise WebpackParseError() from e
 
-    async def get_subscription_plan(self) -> t.Optional[UserSubscriptionPlan]:
+    async def get_subscriber_info_optional(self) -> t.Optional[UserSubscriptionInfo]:
         try:
-            sub_hub_data = await self.get_subscriber_hub_data()
-            return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
-        except (WebpackParseError, KeyError) as e:
-            logger.warning("Can't fetch userSubscriptionPlan details. %s", repr(e))
-            return None
+            raw = await self.get_subscriber_hub_data()
+            return UserSubscriptionInfo(raw)
+        except WebpackParseError as e:
+            logger.warning("Cannot get subscriber info: probably user has never been a subscriber")
+        except KeyError as e:
+            logger.error(f"Parse error while fetching subscriber data: {e!r}")
+        return None
 
     async def get_subscriber_hub_data(self) -> dict:
         webpack_id = "webpack-subscriber-hub-data"
-        try:
-            return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
-        except WebpackParseError as e:
-            # TODO test this in reality with never-sub account
-            raise WebpackParseError("Apparently user has never been a subscriber") from e
+        return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
 
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
