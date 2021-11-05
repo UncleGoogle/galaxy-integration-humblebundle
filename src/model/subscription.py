@@ -21,7 +21,7 @@ class UserSubscriptionPlan:
         self.machine_name = data['machine_name']
         self.human_name = data['human_name']
 
-
+    
 class ChoiceMonth:
     """Below example of month from `data['monthDetails']['previous_months']`
     {

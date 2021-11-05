@@ -33,6 +33,10 @@ class Redirected(Exception):
     pass
 
 
+class NeverSubscriberError(Exception):
+    pass
+
+
 class AuthorizedHumbleAPI:
     _AUTHORITY = "https://www.humblebundle.com/"
     _PROCESS_LOGIN = "processlogin"
@@ -91,7 +95,7 @@ class AuthorizedHumbleAPI:
 
     async def authenticate(self, auth_cookie: dict) -> t.Optional[str]:
         # recreate original cookie
-        cookie = SimpleCookie()
+        cookie: SimpleCookie = SimpleCookie()
         cookie_val = bytes(auth_cookie['value'], "utf-8").decode("unicode_escape")
         # some users have cookies with escaped characters, some not...
         # for the first group strip quotes:
@@ -176,13 +180,14 @@ class AuthorizedHumbleAPI:
             raise UnknownBackendResponse('cannot parse webpack data') from e
         return parsed
 
-    async def get_subscription_plan(self) -> t.Optional[UserSubscriptionPlan]:
+    async def get_subscription_plan(self) -> UserSubscriptionPlan:
         try:
             sub_hub_data = await self.get_subscriber_hub_data()
             return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
-        except (UnknownBackendResponse, KeyError) as e:
-            logger.warning("Can't fetch userSubscriptionPlan details. %s", repr(e))
-            return None
+        except UnknownBackendResponse as e:
+            raise NeverSubscriberError("Can't fetch user subscription plan: %s", repr(e))
+        except KeyError:
+            raise UnknownBackendResponse("Can't fetch user subscription plan: %s", repr(e))
 
     async def get_subscriber_hub_data(self) -> dict:
         webpack_id = "webpack-subscriber-hub-data"
