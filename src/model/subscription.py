@@ -42,6 +42,10 @@ class UserSubscriptionInfo:
         return datetime_parse(self._data["subscriptionExpires|datetime"])
     
     def subscription_expired(self) -> bool:
+        """
+        Due date of the last, already payed period.
+        Note that it may return False for user that hasn't used Early Unlock to get active month content.
+        """
         return _now_time() > self.subscription_expires
 
 
