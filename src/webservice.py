@@ -29,7 +29,7 @@ def handle_exception():
             raise
 
 
-class WebpackParseError(Exception):
+class WebpackParseError(UnknownBackendResponse):
     pass
 
 
@@ -40,6 +40,7 @@ class AuthorizedHumbleAPI:
     _ORDER_URL = "/api/v1/order/{}"
 
     TROVES_PER_CHUNK = 20
+    _MAIN_PAGE = ""
     _SUBSCRIPTION = 'subscription'
     _SUBSCRIPTION_HOME = 'subscription/home'
     _SUBSCRIPTION_TROVE = 'subscription/trove'
@@ -242,6 +243,10 @@ class AuthorizedHumbleAPI:
         """
         webpack_id = "webpack-monthly-trove-data"
         return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
+
+    async def get_main_page_webpack_data(self) -> dict:
+        webpack_id = "webpack-json-data"
+        return await self._get_webpack_data(self._MAIN_PAGE, webpack_id)
 
     async def get_choice_marketing_data(self) -> dict:
         """Parsing ~155K and fast response from server"""

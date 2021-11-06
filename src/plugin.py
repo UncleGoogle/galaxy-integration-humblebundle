@@ -114,7 +114,7 @@ class HumbleBundlePlugin(Plugin):
     
     async def _get_user_name(self) -> str:
         try:
-            marketing_data = await self._api.get_choice_marketing_data()
+            marketing_data = await self._api.get_main_page_webpack_data()
             return marketing_data['userOptions']['email'].split('@')[0]
         except (BackendError, KeyError, UnknownBackendResponse) as e:
             logger.error(repr(e))
@@ -200,7 +200,7 @@ class HumbleBundlePlugin(Plugin):
         try:
             marketing_data = await self._api.get_choice_marketing_data()
             return marketing_data['activeContentMachineName']
-        except (KeyError, WebpackParseError) as e:
+        except (KeyError, UnknownBackendResponse) as e:
             logger.error(repr(e))
             return None
 
