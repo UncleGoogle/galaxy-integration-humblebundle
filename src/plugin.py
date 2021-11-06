@@ -13,8 +13,6 @@ from functools import partial
 from contextlib import suppress
 from distutils.version import LooseVersion
 
-from model.subscription import UserSubscriptionInfo  # pylint: disable=no-name-in-module,import-error
-
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
 import sentry_sdk
@@ -186,7 +184,10 @@ class HumbleBundlePlugin(Plugin):
             'november': '11',
             'december': '12'
         }
-        month, year, type_ = machine_name.split('_')
+        try:
+            month, year, type_ = machine_name.split('_')
+        except Exception:
+            assert False, f"is {machine_name}"
         return f'Humble {type_.title()} {year}-{month_map[month]}'
 
     @staticmethod
@@ -195,13 +196,23 @@ class HumbleBundlePlugin(Plugin):
         year, month = year_month.split('-')
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
-    async def _get_active_month_machine_name(self) -> str:
-        marketing_data = await self._api.get_choice_marketing_data()
-        return marketing_data['activeContentMachineName']
+    async def _find_active_month_machine_name(self) -> t.Optional[str]:
+        try:
+            marketing_data = await self._api.get_choice_marketing_data()
+            return marketing_data['activeContentMachineName']
+        except (KeyError, WebpackParseError) as e:
+            logger.error(repr(e))
+            return None
 
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
         subscriber_hub = await self._api.get_subscriber_info_optional()
+
+        has_active_subscription = subscriber_hub is not None and not subscriber_hub.subscription_expired()
+        subscriptions.append(Subscription(
+            subscription_name = TROVE_SUBSCRIPTION_NAME,
+            owned = has_active_subscription
+        ))
 
         is_active_month_fetched = False
         async for product in self._api.get_subscription_products_with_gamekeys():
@@ -217,29 +228,21 @@ class HumbleBundlePlugin(Plugin):
 
         if not is_active_month_fetched:
             if subscriber_hub:
-                '''
-                for Lite tier subscribers, former subscribers or those who not used "Early Unlock" yet:
-                https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
-                '''
+                # for Lite tier subscribers, former subscribers or those who not used "Early Unlock" yet:
+                # https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
                 active_month_machine_name = subscriber_hub.active_content_product_machine_name
-                mark_owned = subscriber_hub.user_plan.tier != Tier.LITE and not subscriber_hub.subscription_expired()
+                active_month_marked_as_owned = has_active_subscription and subscriber_hub.user_plan.tier != Tier.LITE
             else:
-                '''
-                for not subscribers as potential discovery of current choice games
-                '''
-                active_month_machine_name = await self._get_active_month_machine_name(subscriber_hub)
-                mark_owned = False
+                # for not subscribers as potential discovery of current choice games
+                active_month_machine_name = await self._find_active_month_machine_name()
+                active_month_marked_as_owned = False
 
-            subscriptions.append(Subscription(
-                self._normalize_subscription_name(active_month_machine_name),
-                owned = mark_owned,
-                end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
-            ))
-
-        subscriptions.append(Subscription(
-            subscription_name = TROVE_SUBSCRIPTION_NAME,
-            owned = subscriber_hub is not None
-        ))
+            if active_month_machine_name:
+                subscriptions.append(Subscription(
+                    self._normalize_subscription_name(active_month_machine_name),
+                    owned = active_month_marked_as_owned,
+                    end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+                ))
 
         return subscriptions
 
