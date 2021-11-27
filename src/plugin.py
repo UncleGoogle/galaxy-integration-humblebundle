@@ -1,6 +1,5 @@
 import sys
 import platform
-import datetime
 import asyncio
 import logging
 import re
@@ -27,6 +26,7 @@ from settings import Settings
 from webservice import AuthorizedHumbleAPI, WebpackParseError
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
 from model.types import HP, Tier
+from model.subscription import UserSubscriptionInfo
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
@@ -203,37 +203,45 @@ class HumbleBundlePlugin(Plugin):
         except (KeyError, UnknownBackendResponse) as e:
             logger.error(repr(e))
             return None
-
+    
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
-        subscriber_hub = await self._api.get_subscriber_info_optional()
+        subscription_state = await self._api.get_user_subscription_state()
+        # perks are Trove and store discount; paused month makes perks "inactive"
+        has_active_subscription = subscription_state.get("perksStatus") == "active"
+        owns_active_content = subscription_state.get("monthlyOwnsActiveContent")
 
-        has_active_subscription = subscriber_hub is not None and not subscriber_hub.subscription_expired()
         subscriptions.append(Subscription(
             subscription_name = TROVE_SUBSCRIPTION_NAME,
             owned = has_active_subscription
         ))
 
-        is_active_month_fetched = False
         async for product in self._api.get_subscription_products_with_gamekeys():
             if 'contentChoiceData' not in product:
                 break  # all Humble Choice months already yielded
-
-            is_unlocked = 'gamekey' in product
+            is_product_unlocked = 'gamekey' in product
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(product['productMachineName']),
-                owned = is_unlocked
+                owned = is_product_unlocked
             ))
-            is_active_month_fetched |= product.get('isActiveContent', False)
 
-        if not is_active_month_fetched:
-            if subscriber_hub:
-                # for Lite tier subscribers, former subscribers or those who not used "Early Unlock" yet:
+        if not owns_active_content:
+            early_unlock_info_fetch_success = False
+            if has_active_subscription:
+                # for Choice subscribers who not used "Early Unlock" yet:
                 # https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
-                active_month_machine_name = subscriber_hub.active_content_product_machine_name
-                active_month_marked_as_owned = has_active_subscription and subscriber_hub.user_plan.tier != Tier.LITE
-            else:
-                # for not subscribers as potential discovery of current choice games
+                try:
+                    raw = await self._api.get_subscriber_hub_data()
+                    subscriber_hub = UserSubscriptionInfo(raw)
+                    active_month_machine_name = subscriber_hub.pay_early_options.active_content_product_machine_name
+                    active_month_marked_as_owned = subscriber_hub.user_plan.tier != Tier.LITE
+                except (WebpackParseError, KeyError, AttributeError, ValueError) as e:
+                    logger.error(f"Can't get info about not-yet-unlocked subscription month: {e!r}")
+                else:
+                    early_unlock_info_fetch_success = True
+
+            if not early_unlock_info_fetch_success:
+                # for those who have no "choices" as a potential discovery of current choice games
                 active_month_machine_name = await self._find_active_month_machine_name()
                 active_month_marked_as_owned = False
 

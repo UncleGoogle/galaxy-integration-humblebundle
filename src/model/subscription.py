@@ -26,12 +26,8 @@ class UserSubscriptionInfo:
         return UserSubscriptionPlan(self._data["userSubscriptionPlan"])
 
     @property
-    def active_content_product_machine_name(self) -> str:
-        return self._data["payEarlyOptions"]["productMachineName"]
-
-    @property
-    def active_content_start(self) -> Timestamp:
-        return datetime_parse(self._data["payEarlyOptions"]["activeContentStart|datetime"])
+    def pay_early_options(self) -> "PayEarlyOptions":
+        return PayEarlyOptions(self._data.get("payEarlyOptions", {}))
 
     @property
     def subcription_join_date(self) -> Timestamp:
@@ -63,6 +59,19 @@ class UserSubscriptionPlan:
         self.tier = Tier(data['tier'])
         self.machine_name = data['machine_name']
         self.human_name = data['human_name']
+
+
+class PayEarlyOptions:
+    def __init__(self, data: dict) -> None:
+        self._data = data
+
+    @property
+    def active_content_product_machine_name(self) -> str:
+        return self._data["productMachineName"]
+
+    @property
+    def active_content_start(self) -> Timestamp:
+        return datetime_parse(self._data["activeContentStart|datetime"])
 
 
 class ChoiceMonth:

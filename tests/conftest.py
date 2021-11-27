@@ -53,8 +53,9 @@ def api_mock_raw():
     mock.close_session = AsyncMock()
     mock.get_choice_content_data = AsyncMock()
     mock.get_subscriber_hub_data = AsyncMock()
-    mock.get_subscriber_info_optional = AsyncMock(return_value=MagicMock())
+    mock.get_user_subscription_state = AsyncMock(return_value=MagicMock())
     mock.get_choice_month_details = AsyncMock(return_value=MagicMock())
+    mock.get_main_page_webpack_data = AsyncMock(return_value=MagicMock())
     mock.get_choice_marketing_data = AsyncMock(return_value=MagicMock())
     mock.get_subscription_products_with_gamekeys = AsyncMock(return_value=MagicMock())
 

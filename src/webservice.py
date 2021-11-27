@@ -12,7 +12,7 @@ import galaxy.http
 from galaxy.api.errors import UnknownBackendResponse
 
 from model.download import TroveDownload, DownloadStructItem
-from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth, UserSubscriptionInfo
+from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth
 
 
 logger = logging.getLogger(__name__)
@@ -220,20 +220,42 @@ class AuthorizedHumbleAPI:
             return parsed
         except json.JSONDecodeError as e:
             raise WebpackParseError() from e
-
-    async def get_subscriber_info_optional(self) -> t.Optional[UserSubscriptionInfo]:
+    
+    async def get_user_subscription_state(self) -> dict:
+        """
+        for not subscriber:
+        {"newestOwnedTier": null, "nextBilledPlan": "", "consecutiveContentDropCount": 0, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "inactive", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": null, "willReceiveFutureMonths": false, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": null, "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": null, "failedBillingMonths": 0, "wasPaused": false, "monthlyPurchasedAnyContent": false, "monthlyNewestOwnedContentEnd": null, "monthlyOwnsAnyContent": false}
+        ---
+        for subscriber with not unlocked active content:
+        {"newestOwnedTier": "basic", "nextBilledPlan": "monthly_v2_basic", "consecutiveContentDropCount": 12, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "active", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": "october_2021_choice", "willReceiveFutureMonths": true, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": "january_2021_choice", "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": "***", "failedBillingMonths": 0, "monthlyNewestSkippedContentEnd": "2021-02-05T18:00:00", "wasPaused": false, "monthlyPurchasedAnyContent": true, "monthlyNewestOwnedContentEnd": "2021-11-02T17:00:00", "monthlyOwnsAnyContent": true)}
+        ---
+        at the time of creating this method, this data is attached to every humble page
+        
+        """
+        return await self._get_window_models(self._MAIN_PAGE, "userSubscriptionState")
+    
+    async def _get_window_models(self, path: str, model_name: str) -> dict:
+        res = await self._request('GET', path)
+        txt = await res.text()
+        search = f'window.models.{model_name} = '
+        json_start = txt.find(search) + len(search)
+        candidate = txt[json_start:].strip()
         try:
-            raw = await self.get_subscriber_hub_data()
-            return UserSubscriptionInfo(raw)
-        except WebpackParseError as e:
-            logger.warning("Cannot get subscriber info: probably user has never been a subscriber")
-        except KeyError as e:
-            logger.error(f"Parse error while fetching subscriber data: {e!r}")
-        return None
-
+            parsed, _ = json.JSONDecoder().raw_decode(candidate)
+            return parsed
+        except json.JSONDecodeError as e:
+            raise WebpackParseError() from e
+        
     async def get_subscriber_hub_data(self) -> dict:
+        """
+        Raises `WebpackParseError` when user was never a subscriber
+        """
         webpack_id = "webpack-subscriber-hub-data"
-        return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
+        try:
+            return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
+        except WebpackParseError:
+            logger.warning("Cannot get subscriber info: probably user has never been a subscriber")
+            raise
 
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
