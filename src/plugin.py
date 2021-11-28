@@ -12,6 +12,8 @@ from functools import partial
 from contextlib import suppress
 from distutils.version import LooseVersion
 
+from active_month_resolver import ActiveMonthResolverStrategy, SubscriberActiveMonthResolverStrategy
+
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
 import sentry_sdk
@@ -226,29 +228,19 @@ class HumbleBundlePlugin(Plugin):
             ))
 
         if not owns_active_content:
-            early_unlock_info_fetch_success = False
+            strategy = SubscriberActiveMonthResolverStrategy()
+            active_month_resolver = ActiveMonthResolverStrategy()
+
             if has_active_subscription:
-                # for Choice subscribers who not used "Early Unlock" yet:
-                # https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
-                try:
-                    raw = await self._api.get_subscriber_hub_data()
-                    subscriber_hub = UserSubscriptionInfo(raw)
-                    active_month_machine_name = subscriber_hub.pay_early_options.active_content_product_machine_name
-                    active_month_marked_as_owned = subscriber_hub.user_plan.tier != Tier.LITE
-                except (WebpackParseError, KeyError, AttributeError, ValueError) as e:
-                    logger.error(f"Can't get info about not-yet-unlocked subscription month: {e!r}")
-                else:
-                    early_unlock_info_fetch_success = True
-
-            if not early_unlock_info_fetch_success:
-                # for those who have no "choices" as a potential discovery of current choice games
-                active_month_machine_name = await self._find_active_month_machine_name()
-                active_month_marked_as_owned = False
-
-            if active_month_machine_name:
+                active_month_resolver = SubscriberHubBasedActiveMonthInfoResolver()
+            else:
+                active_month_resolver = MarketingBasedActiveMonthInfoResolver()
+            await active_month_resolver.resolve()
+                
+            if active_month_resolver.machine_name:
                 subscriptions.append(Subscription(
-                    self._normalize_subscription_name(active_month_machine_name),
-                    owned = active_month_marked_as_owned,
+                    self._normalize_subscription_name(active_month_resolver.machine_name),
+                    owned = active_month_resolver.marked_as_owned,
                     end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
                 ))
 
