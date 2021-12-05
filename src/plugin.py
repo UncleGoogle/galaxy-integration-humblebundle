@@ -25,12 +25,15 @@ from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
 from webservice import AuthorizedHumbleAPI, WebpackParseError
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
-from model.types import HP, Tier
-from model.subscription import UserSubscriptionInfo
+from model.types import HP
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
 from privacy import SensitiveFilter
+from active_month_resolver import (
+    ActiveMonthInfoByUser,
+    ActiveMonthResolver,
+)
 from utils.decorators import double_click_effect
 from gui.options import OPTIONS_MODE
 import guirunner as gui
@@ -196,14 +199,6 @@ class HumbleBundlePlugin(Plugin):
         year, month = year_month.split('-')
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
-    async def _find_active_month_machine_name(self) -> t.Optional[str]:
-        try:
-            marketing_data = await self._api.get_choice_marketing_data()
-            return marketing_data['activeContentMachineName']
-        except (KeyError, UnknownBackendResponse) as e:
-            logger.error(repr(e))
-            return None
-    
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
         subscription_state = await self._api.get_user_subscription_state()
@@ -226,29 +221,13 @@ class HumbleBundlePlugin(Plugin):
             ))
 
         if not owns_active_content:
-            early_unlock_info_fetch_success = False
-            if has_active_subscription:
-                # for Choice subscribers who not used "Early Unlock" yet:
-                # https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
-                try:
-                    raw = await self._api.get_subscriber_hub_data()
-                    subscriber_hub = UserSubscriptionInfo(raw)
-                    active_month_machine_name = subscriber_hub.pay_early_options.active_content_product_machine_name
-                    active_month_marked_as_owned = subscriber_hub.user_plan.tier != Tier.LITE
-                except (WebpackParseError, KeyError, AttributeError, ValueError) as e:
-                    logger.error(f"Can't get info about not-yet-unlocked subscription month: {e!r}")
-                else:
-                    early_unlock_info_fetch_success = True
-
-            if not early_unlock_info_fetch_success:
-                # for those who have no "choices" as a potential discovery of current choice games
-                active_month_machine_name = await self._find_active_month_machine_name()
-                active_month_marked_as_owned = False
-
-            if active_month_machine_name:
+            active_month_resolver = ActiveMonthResolver(has_active_subscription)
+            active_month_info: ActiveMonthInfoByUser = await active_month_resolver.resolve(self._api)
+            
+            if active_month_info.machine_name:
                 subscriptions.append(Subscription(
-                    self._normalize_subscription_name(active_month_machine_name),
-                    owned = active_month_marked_as_owned,
+                    self._normalize_subscription_name(active_month_info.machine_name),
+                    owned = active_month_info.is_or_will_be_owned,
                     end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
                 ))
 
