@@ -38,6 +38,7 @@ class AuthorizedHumbleAPI:
     _PROCESS_LOGIN = "processlogin"
     _ORDER_LIST_URL = "api/v1/user/order"
     _ORDER_URL = "/api/v1/order/{}"
+    _ORDERS_BULK_URL = "/api/v1/orders/"
 
     TROVES_PER_CHUNK = 20
     _MAIN_PAGE = ""
@@ -112,6 +113,13 @@ class AuthorizedHumbleAPI:
     async def get_order_details(self, gamekey) -> dict:
         res = await self._request('get', self._ORDER_URL.format(gamekey), params={
             'all_tpkds': 'true'
+        })
+        return await res.json()
+    
+    async def get_orders_bulk_details(self, gamekeys: t.Iterable) -> t.List[dict]:
+        res = await self._request('get', self._ORDERS_BULK_URL, params={
+            'all_tpkds': 'true',
+            'gamekeys': gamekeys
         })
         return await res.json()
 

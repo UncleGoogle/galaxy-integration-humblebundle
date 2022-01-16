@@ -1,7 +1,7 @@
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple
+from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple, TypeVar
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMMA_SPLIT_BLACKLIST
 from model.product import Product
@@ -11,6 +11,9 @@ from settings import LibrarySettings
 
 
 logger = logging.getLogger(__name__)
+
+
+T = TypeVar('T')
 
 
 class KeyInfo(NamedTuple):
@@ -77,6 +80,19 @@ class LibraryResolver:
         orders = await self.__gather_no_exceptions(order_tasks)
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
+
+    @staticmethod
+    def _make_chunks(items: Iterable[T], /, max_size) -> List[]:
+        return [it for it in items]
+
+    async def _fetch_orders2(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
+        gamekeys = await self._api.get_gamekeys()
+        not_cached_gamekeys = [x for x in gamekeys if x not in cached_gamekeys]
+        chunked = self._make_chunks(not_cached_gamekeys, max_size=35)
+        order_tasks = [self._api.get_orders_bulk_details(chunk) for chunk in chunked]
+        orders = await self.__gather_no_exceptions(order_tasks)
+        filtered_orders = self.__filter_out_not_game_bundles(orders)
+        return {order['gamekey']: order for order in filtered_orders}
 
     @staticmethod
     async def __gather_no_exceptions(tasks: Iterable[Coroutine]):
