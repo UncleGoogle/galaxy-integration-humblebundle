@@ -134,7 +134,7 @@ def test(c, target=None):
         c.run(f"{PYTHON} -m pytest tests/windows")
 
     if target:
-        modules = ['local', 'model', 'plugin.py', 'consts.py', 'humbledownloader.py', 'webservice.py', 'settings.py', 'library.py']
+        modules = ['local', 'model', 'plugin.py', 'consts.py', 'humbledownloader.py', 'webservice.py', 'settings.py', 'library.py', 'active_month_resolver.py']
         os.environ['MYPYPATH'] = str(Path(target) / THIRD_PARTY_RELATIVE_DEST)
         modules_full_path = [str(Path(target) / mod) for mod in modules]
         print(f'running mypy check for {str(Path(target))} directory')
@@ -195,7 +195,7 @@ def create_tag(c, tag=None):
 
 @task
 def release(c, automa=False):
-    tag = 'v' + __version__
+    tag = 'v9.5-dev1'
     if automa:
         print(f'Creating/updating release with assets for {PLATFORM} to version {tag}')
     else:
