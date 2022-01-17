@@ -195,7 +195,7 @@ def create_tag(c, tag=None):
 
 @task
 def release(c, automa=False):
-    tag = 'v9.5-dev1'
+    tag = 'v' + __version__
     if automa:
         print(f'Creating/updating release with assets for {PLATFORM} to version {tag}')
     else:
