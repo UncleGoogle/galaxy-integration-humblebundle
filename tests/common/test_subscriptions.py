@@ -5,6 +5,8 @@ from galaxy.api.types import Subscription
 from conftest import aiter
 import pytest
 
+from webservice import WebpackParseError
+
 
 pytestmark = pytest.mark.asyncio
 
@@ -49,6 +51,7 @@ async def test_get_subscriptions_never_subscribed(plugin, api_mock):
     """)
     api_mock.get_user_subscription_state.return_value = subscription_state
     api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter([]))
+    api_mock.get_subscriber_hub_data.side_effect = WebpackParseError()
 
     res = await plugin.get_subscriptions()
 
@@ -136,8 +139,8 @@ async def test_get_subscriptions_past_subscriber(api_mock, plugin):
     """
     Testcase: Currently no subscription but user was subscriber in the past
     Expected: owned months and additionally not owned active month
+    Note: I didn't check how exactly real subscription state json looks like in that case
     """
-    # TODO: check how real subscription state json looks like in that case
     subscription_state = json.loads("""
     {
       "canResubscribe": true,
@@ -154,6 +157,7 @@ async def test_get_subscriptions_past_subscriber(api_mock, plugin):
     ]
     api_mock.get_user_subscription_state.return_value = subscription_state
     api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
+    api_mock.get_subscriber_hub_data.side_effect = WebpackParseError()
 
     res = await plugin.get_subscriptions()
 

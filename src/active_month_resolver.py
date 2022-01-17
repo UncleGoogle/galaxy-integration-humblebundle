@@ -10,7 +10,8 @@ from model.types import Tier
 class ActiveMonthInfoByUser(t.NamedTuple):
     machine_name: str
     '''
-    Treats two bussines cases as True: owning active month content AND not owning yet, but having the payment scheduled
+    Treats two bussines cases the same way:
+    having active month content AND not owning yet, but having payment scheduled
     https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
     '''
     is_or_will_be_owned: bool
@@ -24,12 +25,11 @@ class _CantFetchActiveMonthInfo(Exception):
 
 
 class ActiveMonthResolver():
-    
     def __init__(self, has_active_subscription: bool) -> None:
         if has_active_subscription:
             fetch_strategy = _get_ami_from_subscriber_fallbacking_to_marketing
         else:
-            fetch_strategy = _get_ami_from_subscriber
+            fetch_strategy = _get_ami_from_marketing
         self._fetch_strategy: ActiveMonthInfoFetchStrategy = fetch_strategy
 
     async def resolve(self, api: AuthorizedHumbleAPI) -> ActiveMonthInfoByUser:
