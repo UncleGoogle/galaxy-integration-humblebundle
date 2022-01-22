@@ -12,7 +12,7 @@ import galaxy.http
 from galaxy.api.errors import UnknownBackendResponse
 
 from model.download import TroveDownload, DownloadStructItem
-from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth, UserSubscriptionPlan
+from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ def handle_exception():
             raise
 
 
-class Redirected(Exception):
+class WebpackParseError(UnknownBackendResponse):
     pass
 
 
@@ -40,6 +40,7 @@ class AuthorizedHumbleAPI:
     _ORDER_URL = "/api/v1/order/{}"
 
     TROVES_PER_CHUNK = 20
+    _MAIN_PAGE = ""
     _SUBSCRIPTION = 'subscription'
     _SUBSCRIPTION_HOME = 'subscription/home'
     _SUBSCRIPTION_TROVE = 'subscription/trove'
@@ -120,13 +121,57 @@ class AuthorizedHumbleAPI:
 
     async def get_subscription_products_with_gamekeys(self) -> t.AsyncGenerator[dict, None]:
         """
-        Yields list of subscription products (json) - historically backward subscriptions info
+        Yields list of subscription products - historically backward info
         for Humble Choice proceeded by Humble Monthly. Used by HumbleBundle in 
         `https://www.humblebundle.com/subscription/home`
 
         Every product includes only A FEW representative games from given subscription and other data.
-        For Choice: `gamekey` field presence means user has unlocked that month and made choices.
+        For Choice: `gamekey` field presence means user has unlocked that month to make choices;
+        `contentChoicesMade` field contain choosen games grouped by keys from "unlockedContentEvents".
         For Monhly: `download_url` field presence means user has subscribed this month.
+
+        Yields list of products - historically backward subscriptions info.
+        Choice products are in form of:
+        {
+            "contentChoiceData": {
+                "initial": {...},  # includes only 4 `ContentChoice`s
+                "extras": [...]
+            },
+            "gamekey": "wqheRstssFcHGcfP",  # when the month is unlocked already
+            "isActiveContent": false,       # is current month
+            "title": "May 2020",
+            "MAX_CHOICES": 9,
+            "productUrlPath": "may-2020",
+            "includesAnyUplayTpkds": false,
+            "unlockedContentEvents": [
+                "initial",
+                "chessultra"
+            ],
+            "downloadPageUrl": "/downloads?key=wqheRstssFcHGcfP",  # unlocked month
+            "contentChoicesMade": {
+                "initial": {
+                    "choices_made": [
+                        "chessultra"
+                    ]
+                }
+            },
+            "usesChoices": true
+            "canRedeemGames": true,
+            "productMachineName": "may_2020_choice"
+        }
+
+        Monthly products goes after all choices and are in form of:
+        {
+            "machine_name": "september_2019_monthly",
+            "highlights": [
+                "8 Games",
+                "$179.00 Value"
+            ],
+            "order_url": "/downloads?key=Ge882ERvybmawmWd",
+            "short_human_name": "September 2019",
+            "hero_image": "https://hb.imgix.net/a25aa69d4c827d42142d631a716b3fbd89c15733.jpg?auto=compress,format&fit=crop&h=600&w=1200&s=789fedc066299f3d3ed802f6f1e55b6f",
+            "early_unlock_string": "Slay the Spire and Squad (Early Access)"
+        }
         """
         cursor = ''
         while True:
@@ -172,21 +217,45 @@ class AuthorizedHumbleAPI:
         candidate = txt[json_start:].strip()
         try:
             parsed, _ = json.JSONDecoder().raw_decode(candidate)
-        except json.decoder.JSONDecodeError as e:
-            raise UnknownBackendResponse('cannot parse webpack data') from e
-        return parsed
-
-    async def get_subscription_plan(self) -> t.Optional[UserSubscriptionPlan]:
+            return parsed
+        except json.JSONDecodeError as e:
+            raise WebpackParseError() from e
+    
+    async def get_user_subscription_state(self) -> dict:
+        """
+        for not subscriber:
+        {"newestOwnedTier": null, "nextBilledPlan": "", "consecutiveContentDropCount": 0, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "inactive", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": null, "willReceiveFutureMonths": false, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": null, "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": null, "failedBillingMonths": 0, "wasPaused": false, "monthlyPurchasedAnyContent": false, "monthlyNewestOwnedContentEnd": null, "monthlyOwnsAnyContent": false}
+        ---
+        for subscriber with not unlocked active content:
+        {"newestOwnedTier": "basic", "nextBilledPlan": "monthly_v2_basic", "consecutiveContentDropCount": 12, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "active", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": "october_2021_choice", "willReceiveFutureMonths": true, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": "january_2021_choice", "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": "***", "failedBillingMonths": 0, "monthlyNewestSkippedContentEnd": "2021-02-05T18:00:00", "wasPaused": false, "monthlyPurchasedAnyContent": true, "monthlyNewestOwnedContentEnd": "2021-11-02T17:00:00", "monthlyOwnsAnyContent": true)}
+        ---
+        at the time of creating this method, this data is attached to every humble page
+        
+        """
+        return await self._get_window_models(self._MAIN_PAGE, "userSubscriptionState")
+    
+    async def _get_window_models(self, path: str, model_name: str) -> dict:
+        res = await self._request('GET', path)
+        txt = await res.text()
+        search = f'window.models.{model_name} = '
+        json_start = txt.find(search) + len(search)
+        candidate = txt[json_start:].strip()
         try:
-            sub_hub_data = await self.get_subscriber_hub_data()
-            return UserSubscriptionPlan(sub_hub_data["userSubscriptionPlan"])
-        except (UnknownBackendResponse, KeyError) as e:
-            logger.warning("Can't fetch userSubscriptionPlan details. %s", repr(e))
-            return None
-
+            parsed, _ = json.JSONDecoder().raw_decode(candidate)
+            return parsed
+        except json.JSONDecodeError as e:
+            raise WebpackParseError() from e
+        
     async def get_subscriber_hub_data(self) -> dict:
+        """
+        Raises `WebpackParseError` when user was never a subscriber
+        """
         webpack_id = "webpack-subscriber-hub-data"
-        return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
+        try:
+            return await self._get_webpack_data(self._SUBSCRIPTION_HOME, webpack_id)
+        except WebpackParseError:
+            logger.warning("Cannot get subscriber info: probably user has never been a subscriber")
+            raise
 
     async def get_montly_trove_data(self) -> dict:
         """Parses a subscription/trove page to find list of recently added games.
@@ -196,6 +265,10 @@ class AuthorizedHumbleAPI:
         """
         webpack_id = "webpack-monthly-trove-data"
         return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
+
+    async def get_main_page_webpack_data(self) -> dict:
+        webpack_id = "webpack-json-data"
+        return await self._get_webpack_data(self._MAIN_PAGE, webpack_id)
 
     async def get_choice_marketing_data(self) -> dict:
         """Parsing ~155K and fast response from server"""

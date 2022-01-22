@@ -6,6 +6,45 @@ from model.game import Key
 from model.types import HP, DeliveryMethod, Tier
 
 
+Timestamp = float
+
+
+def datetime_parse(dt: str) -> Timestamp:
+    return Timestamp(datetime.datetime.fromisoformat(dt).timestamp())
+
+
+def _now_time() -> Timestamp:
+    return Timestamp(datetime.datetime.now().timestamp())
+
+
+class UserSubscriptionInfo:
+    def __init__(self, data: dict) -> None:
+        self._data = data
+    
+    @property
+    def user_plan(self) -> "UserSubscriptionPlan":
+        return UserSubscriptionPlan(self._data["userSubscriptionPlan"])
+
+    @property
+    def pay_early_options(self) -> "PayEarlyOptions":
+        return PayEarlyOptions(self._data.get("payEarlyOptions", {}))
+
+    @property
+    def subcription_join_date(self) -> Timestamp:
+        return datetime_parse(self._data["subscriptionJoinDate|datetime"])
+
+    @property
+    def subscription_expires(self) -> Timestamp:
+        return datetime_parse(self._data["subscriptionExpires|datetime"])
+    
+    def subscription_expired(self) -> bool:
+        """
+        Due date of the last, already payed period.
+        Note that it may return False for user that hasn't used Early Unlock to get active month content.
+        """
+        return _now_time() > self.subscription_expires
+
+
 class UserSubscriptionPlan:
     """
     {
@@ -20,6 +59,19 @@ class UserSubscriptionPlan:
         self.tier = Tier(data['tier'])
         self.machine_name = data['machine_name']
         self.human_name = data['human_name']
+
+
+class PayEarlyOptions:
+    def __init__(self, data: dict) -> None:
+        self._data = data
+
+    @property
+    def active_content_product_machine_name(self) -> str:
+        return self._data["productMachineName"]
+
+    @property
+    def active_content_start(self) -> Timestamp:
+        return datetime_parse(self._data["activeContentStart|datetime"])
 
 
 class ChoiceMonth:
@@ -178,6 +230,23 @@ class ContentChoiceOptions:
         return self.MAX_CHOICES - len(self._content_choices_made)
 
 
+class ContentMonthlyOptions:
+    """
+    "machine_name": "september_2019_monthly",
+    "highlights": [
+        "8 Games",
+        "$179.00 Value"
+    ],
+    "order_url": "/downloads?key=Ge882ERvybaawmWd",
+    "short_human_name": "September 2019",
+    "hero_image": "https://hb.imgix.net/a25aa69d4c827d42142d631a716b3fbd89c15733.jpg?auto=compress,format&fit=crop&h=600&w=1200&s=789fedc066299f3d3ed802f6f1e55b6f",
+    "early_unlock_string": "Slay the Spire and Squad (Early Access)"
+    """
+    def __init__(self, data: dict):
+        for k, v in data.items():
+            setattr(self, k, v)
+
+
 class MontlyContentData:
     """
     "webpack_json": {
@@ -248,9 +317,9 @@ class ChoiceContentData:
         self.content_choice_options = ContentChoiceOptions(data['contentChoiceOptions'])
 
     @property
-    def active_content_start(self) -> t.Optional[datetime.datetime]:
+    def active_content_start(self) -> t.Optional[Timestamp]:
         try:
-            iso = self.pay_early_options['activeContentStart|datetime']
+            dt = self.pay_early_options['activeContentStart|datetime']
         except KeyError:
             return None
-        return datetime.datetime.fromisoformat(iso)
+        return datetime_parse(dt)

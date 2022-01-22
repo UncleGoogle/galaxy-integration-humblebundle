@@ -9,7 +9,8 @@ import json
 import calendar
 import typing as t
 from functools import partial
-from distutils.version import LooseVersion  # pylint: disable=no-name-in-module,import-error
+from contextlib import suppress
+from distutils.version import LooseVersion
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
 
@@ -22,13 +23,17 @@ from galaxy.api.errors import AuthenticationRequired, UnknownBackendResponse, Un
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
-from webservice import AuthorizedHumbleAPI
+from webservice import AuthorizedHumbleAPI, WebpackParseError
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
-from model.types import HP, Tier
+from model.types import HP
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
 from privacy import SensitiveFilter
+from active_month_resolver import (
+    ActiveMonthInfoByUser,
+    ActiveMonthResolver,
+)
 from utils.decorators import double_click_effect
 from gui.options import OPTIONS_MODE
 import guirunner as gui
@@ -112,7 +117,7 @@ class HumbleBundlePlugin(Plugin):
     
     async def _get_user_name(self) -> str:
         try:
-            marketing_data = await self._api.get_choice_marketing_data()
+            marketing_data = await self._api.get_main_page_webpack_data()
             return marketing_data['userOptions']['email'].split('@')[0]
         except (BackendError, KeyError, UnknownBackendResponse) as e:
             logger.error(repr(e))
@@ -182,56 +187,53 @@ class HumbleBundlePlugin(Plugin):
             'november': '11',
             'december': '12'
         }
-        month, year, type_ = machine_name.split('_')
+        try:
+            month, year, type_ = machine_name.split('_')
+        except Exception:
+            assert False, f"is {machine_name}"
         return f'Humble {type_.title()} {year}-{month_map[month]}'
 
     @staticmethod
     def _choice_name_to_slug(subscription_name: str):
-        _, type_, year_month = subscription_name.split(' ')
+        _, _, year_month = subscription_name.split(' ')
         year, month = year_month.split('-')
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
-    async def _get_active_month_machine_name(self) -> str:
-        marketing_data = await self._api.get_choice_marketing_data()
-        return marketing_data['activeContentMachineName']
-
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
-        current_plan = await self._api.get_subscription_plan()
-        active_content_unlocked = False
+        subscription_state = await self._api.get_user_subscription_state()
+        # perks are Trove and store discount; paused month makes perks "inactive"
+        has_active_subscription = subscription_state.get("perksStatus") == "active"
+        owns_active_content = subscription_state.get("monthlyOwnsActiveContent")
+
+        subscriptions.append(Subscription(
+            subscription_name = TROVE_SUBSCRIPTION_NAME,
+            owned = has_active_subscription
+        ))
 
         async for product in self._api.get_subscription_products_with_gamekeys():
             if 'contentChoiceData' not in product:
                 break  # all Humble Choice months already yielded
-
-            is_active = product.get('isActiveContent', False)
+            is_product_unlocked = 'gamekey' in product
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(product['productMachineName']),
-                owned='gamekey' in product
-            ))
-            active_content_unlocked |= is_active  # assuming there is only one "active" month at a time
-
-        if not active_content_unlocked:
-            '''
-            - for not subscribers as potential discovery of current choice games
-            - for subscribers who has not used "Early Unlock" yet:
-              https://support.humblebundle.com/hc/en-us/articles/217300487-Humble-Choice-Early-Unlock-Games
-            '''
-            active_month_machine_name = await self._get_active_month_machine_name()
-            subscriptions.append(Subscription(
-                self._normalize_subscription_name(active_month_machine_name),
-                owned = current_plan is not None and current_plan.tier != Tier.LITE,  # TODO: last month of not payed subs are still returned
-                end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+                owned = is_product_unlocked
             ))
 
-        subscriptions.append(Subscription(
-            subscription_name = TROVE_SUBSCRIPTION_NAME,
-            owned = current_plan is not None
-        ))
+        if not owns_active_content:
+            active_month_resolver = ActiveMonthResolver(has_active_subscription)
+            active_month_info: ActiveMonthInfoByUser = await active_month_resolver.resolve(self._api)
+            
+            if active_month_info.machine_name:
+                subscriptions.append(Subscription(
+                    self._normalize_subscription_name(active_month_info.machine_name),
+                    owned = active_month_info.is_or_will_be_owned,
+                    end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
+                ))
 
         return subscriptions
 
-    async def _get_trove_games(self):
+    async def _get_trove_games(self) -> t.AsyncGenerator[t.List[SubscriptionGame], None]:
         def parse_and_cache(troves):
             games: t.List[SubscriptionGame] = []
             for trove in troves:
@@ -243,12 +245,13 @@ class HumbleBundlePlugin(Plugin):
                     logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
             return games
 
-        newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
-        if newly_added:
-            yield parse_and_cache(newly_added)
+        with suppress(WebpackParseError):
+            newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
+            if newly_added:
+                yield parse_and_cache(newly_added)
         async for troves in self._api.get_trove_details():
             yield parse_and_cache(troves)
-
+    
     async def get_subscription_games(self, subscription_name, context):
         if subscription_name == TROVE_SUBSCRIPTION_NAME:
             async for troves in self._get_trove_games():

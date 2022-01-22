@@ -1,7 +1,8 @@
 ## Unreleased
 
 [Fixed]
-- error handling bug introduced in 0.9.5
+- Error handling bug introduced in 0.9.5
+- Rework getting subscriptions list #165 #167
 
 ## Version 0.9.5
 (!) WARNING: If you're Humble subscriber, plugin reconnection is needed to sync subscriptions again (!)
