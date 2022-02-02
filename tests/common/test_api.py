@@ -1,33 +1,46 @@
 import json
 from unittest.mock import patch, Mock
-from webservice import AuthorizedHumbleAPI
 
 from galaxy.api.errors import BackendError
 from galaxy.unittest.mock import async_raise, async_return_value
+from aioresponses import aioresponses
 import pytest
+
+from webservice import AuthorizedHumbleAPI
 
 
 @pytest.fixture
 def client_session():
-    with patch("aiohttp.ClientSession") as mock:
+    with patch("aiohttp.ClientSession", autospec=True) as mock:
         yield mock.return_value
 
 
-def test_filename_from_web_link():
+@pytest.fixture
+def aioresponse():
+    with aioresponses() as m:
+        yield m
+
+
+@pytest.fixture
+def api():
+    return AuthorizedHumbleAPI()
+
+
+def test_filename_from_web_link(api):
     web_link = 'https://dl.humble.com/Almost_There_Windows.zip?gamekey=AbR9TcsD4ecueNGw&ttl=1587335864&t=a04a9b4f6512b7958f6357cb7b628452'
     expected = 'Almost_There_Windows.zip'
-    assert expected == AuthorizedHumbleAPI._filename_from_web_link(web_link)
+    assert expected == api._filename_from_web_link(web_link)
 
 
 @pytest.mark.asyncio
-async def test_handle_exception(client_session):
+async def test_handle_exception(client_session, api):
     client_session.request.return_value = async_raise(BackendError)
     with pytest.raises(BackendError):
-        await AuthorizedHumbleAPI()._get_webpack_data("mock_path", "mock_webpack_id")
+        await api._get_webpack_data("mock_path", "mock_webpack_id")
 
 
 @pytest.mark.asyncio
-async def test_get_user_subscription_state(client_session):
+async def test_get_user_subscription_state(client_session, api):
     subscription_state_raw = '{"newestOwnedTier": "basic", "nextBilledPlan": "monthly_v2_basic", "consecutiveContentDropCount": 12, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "active", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": "october_2021_choice", "willReceiveFutureMonths": true, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": "january_2021_choice", "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": "xVr5VcHnrd4KFATZ", "failedBillingMonths": 0, "monthlyNewestSkippedContentEnd": "2021-02-05T18:00:00", "wasPaused": false, "monthlyPurchasedAnyContent": true, "monthlyNewestOwnedContentEnd": "2021-11-02T17:00:00", "monthlyOwnsAnyContent": true}'
     shorten_page_source = R"""
 <!doctype html>
@@ -208,6 +221,28 @@ if (window.models.userSubscriptionState.perksStatus === 'active') {
     response_mock.text = Mock(return_value=async_return_value(shorten_page_source))
     client_session.request.return_value = async_return_value(response_mock)
 
-    result = await AuthorizedHumbleAPI().get_user_subscription_state()
+    result = await api.get_user_subscription_state()
 
     assert result == json.loads(subscription_state_raw)
+
+
+@pytest.mark.parametrize('gamekeys, expected_url', [
+    pytest.param(
+        ["FIRST"],
+        "https://www.humblebundle.com/api/v1/orders?all_tpkds=true&gamekeys=FIRST",
+        id="one gamekey"
+    ),
+    pytest.param(
+        ["FIRST", "SECOND"],
+        "https://www.humblebundle.com/api/v1/orders?all_tpkds=true&gamekeys=FIRST&gamekeys=SECOND",
+        id="two gamekeys"
+    )
+])
+@pytest.mark.asyncio
+async def test_get_orders_bulk_details(api, aioresponse, gamekeys, expected_url):
+    stubbed_response = {"dummy": "json"}
+    aioresponse.get(expected_url, payload=stubbed_response)
+
+    result = await api.get_orders_bulk_details(gamekeys)
+
+    assert result == stubbed_response
