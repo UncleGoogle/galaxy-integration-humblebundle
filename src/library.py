@@ -1,16 +1,23 @@
+from functools import reduce
+from math import ceil
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple
+from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple, TypeVar
+import typing as t
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMMA_SPLIT_BLACKLIST
 from model.product import Product
 from model.game import HumbleGame, Subproduct, Key, KeyGame
 from model.types import GAME_PLATFORMS
 from settings import LibrarySettings
+from webservice import AuthorizedHumbleAPI
 
 
 logger = logging.getLogger(__name__)
+
+
+T = TypeVar('T')
 
 
 class KeyInfo(NamedTuple):
@@ -21,7 +28,13 @@ class KeyInfo(NamedTuple):
 class LibraryResolver:
     NEXT_FETCH_IN = 3600 * 24 * 14
 
-    def __init__(self, api, settings: LibrarySettings, save_cache_callback: Callable, cache: Dict[str, list]):
+    def __init__(
+        self, 
+        api: AuthorizedHumbleAPI,
+        settings: LibrarySettings,
+        save_cache_callback: Callable,
+        cache: Dict[str, list]
+    ):
         self._api = api
         self._save_cache = save_cache_callback
         self._settings = settings
@@ -74,6 +87,11 @@ class LibraryResolver:
         orders = await self.__gather_no_exceptions(order_tasks)
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
+
+    @staticmethod
+    def _make_chunks(items: Iterable[T], size: int) -> t.Generator[List[T], None, None]:
+        for i in range(ceil(len(items) / size)):
+            yield items[i * size: (i + 1) * size]
 
     @staticmethod
     async def __gather_no_exceptions(tasks: Iterable[Coroutine]):

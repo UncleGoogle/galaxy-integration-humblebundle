@@ -252,3 +252,15 @@ def test_get_key_info():
         KeyInfo(Key(key_data_2), 'bundle'),
         KeyInfo(Key(key_data_3), 'storefront'),
     ]
+
+
+@pytest.mark.parametrize("chunks, expected", [
+        ([], []),
+        ([1], [[1]]),
+        ([1,2,3,4], [[1,2,3],[4]]),
+        ([1,2,3,4,5,6], [[1,2,3], [4,5,6]]),
+        ([1,2,3,4,5,6,7,8,9,10,11], [[1,2,3],[4,5,6],[7,8,9],[10,11]])
+    ]
+)
+def test_make_chunks(chunks, expected):
+    assert expected == list(LibraryResolver._make_chunks(chunks, size=3))
