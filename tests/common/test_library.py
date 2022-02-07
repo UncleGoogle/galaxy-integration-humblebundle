@@ -1,7 +1,7 @@
 import pytest
 import time
 from functools import partial
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 from galaxy.api.errors import UnknownError
 
@@ -39,6 +39,17 @@ def get_torchlight(orders_keys):
     key = Key(torchlight_order['tpkd_dict']['all_tpks'][0])
     key_game = KeyGame(key, key.machine_name, key.human_name)
     return torchlight_order, drm_free, key_game
+
+
+@pytest.fixture
+def an_order(get_torchlight):
+    return get_torchlight[0]
+
+
+@pytest.fixture
+def an_order_games(get_torchlight):
+    return [get_torchlight[1], get_torchlight[2]]
+
 
 
 # ------ library: all info stored in cache ------
@@ -157,6 +168,50 @@ async def test_fetch_orders_filter_errors_one_404(plugin, create_resolver, caplo
     assert 'UnknownError' in caplog.text
     assert caplog.records[0].levelname == 'ERROR'
 
+
+@pytest.mark.asyncio
+class TestFetchOrdersViaBulkAPI:
+    ORDER_DETAILS_DUMMY1 = MagicMock()
+    ORDER_DETAILS_DUMMY2 = MagicMock()
+    
+    @pytest.fixture(autouse=True)
+    def resolver(self, create_resolver):
+        resolver = create_resolver(Mock())
+        cached_gamekeys = []
+        self.fetch = partial(resolver._fetch_orders2, cached_gamekeys)
+
+    @pytest.mark.parametrize('orders, expected', [
+        pytest.param(
+            {'key2': ORDER_DETAILS_DUMMY2, 'key1': ORDER_DETAILS_DUMMY1},
+            {'key2': ORDER_DETAILS_DUMMY2, 'key1': ORDER_DETAILS_DUMMY1},
+            id='small number'
+        ),
+        pytest.param(
+            {'key2': ORDER_DETAILS_DUMMY2, 'key1': None},
+            {'key2': ORDER_DETAILS_DUMMY2},
+            id='one unknown'
+        ),
+    ])
+    async def test_fetch_orders(self, api_mock, orders, expected): 
+        api_mock.get_gamekeys.return_value = ['key1', 'key2']
+        api_mock.get_orders_bulk_details.return_value = orders
+
+        result = await self.fetch()
+        assert result == expected
+
+    async def test_fetch_by_multiple_batches(self, api_mock): 
+        def fake_bulk_api_reponse(gamekeys):
+            return {gk: MagicMock(name=gk) for gk in gamekeys}
+        
+        mock_gamekeys = [f'key{i}' for i in range(82)]
+        api_mock.get_gamekeys.return_value = mock_gamekeys
+        api_mock.get_orders_bulk_details.side_effect = fake_bulk_api_reponse
+
+        result = await self.fetch()
+
+        assert len(result) == 82
+        assert api_mock.get_gamekeys.call_count == 1
+        assert api_mock.get_orders_bulk_details.call_count == 3
 
 # --------test splitting keys -------------------
 

@@ -45,6 +45,7 @@ def api_mock_raw():
     mock = MagicMock(spec=())
     mock.authenticate = AsyncMock()
     mock.get_order_details = AsyncMock()
+    mock.get_orders_bulk_details = AsyncMock()
     mock.get_gamekeys = AsyncMock()
     mock.get_montly_trove_data = AsyncMock()
     mock.get_trove_details = AsyncMock()

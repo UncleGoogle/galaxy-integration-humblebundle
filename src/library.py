@@ -88,6 +88,17 @@ class LibraryResolver:
         orders = self.__filter_out_not_game_bundles(orders)
         return {order['gamekey']: order for order in orders}
 
+    async def _fetch_orders2(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
+        gamekeys = await self._api.get_gamekeys()
+        not_cached_gamekeys = [x for x in gamekeys if x not in cached_gamekeys]
+        gamekeys_chunks = self._make_chunks(not_cached_gamekeys, size=35)
+        api_calls = [self._api.get_orders_bulk_details(chunk) for chunk in gamekeys_chunks]
+        call_results = await asyncio.gather(*api_calls)
+        orders = reduce(lambda cum, nxt: {**cum, **nxt}, call_results, {})
+        not_null_orders = {k: v for k, v in orders.items() if v is not None}
+        filtered_orders = self.__filter_out_not_game_bundles2(not_null_orders)
+        return filtered_orders
+
     @staticmethod
     def _make_chunks(items: Iterable[T], size: int) -> t.Generator[List[T], None, None]:
         for i in range(ceil(len(items) / size)):
@@ -124,6 +135,17 @@ class LibraryResolver:
                 return False
         return True
 
+    @staticmethod
+    def __filter_out_not_game_bundles2(orders: dict) -> dict:
+        game_bundles = {}
+        for gamekey, details in orders.items():
+            product = Product(details['product'])
+            if product.bundle_type in NON_GAME_BUNDLE_TYPES:
+                logger.info(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
+                continue
+            game_bundles[gamekey] = details
+        return game_bundles
+    
     @staticmethod
     def __filter_out_not_game_bundles(orders: list) -> list:
         filtered = []
