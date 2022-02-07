@@ -53,21 +53,18 @@ class LibraryResolver:
         return deduplicated
 
     async def _fetch_and_update_cache(self):
-        sources = self._settings.sources
-
-        if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
-            next_fetch_orders = self._cache.get('next_fetch_orders')
-            if next_fetch_orders is None or time.time() > next_fetch_orders:
-                logger.info('Refreshing all orders')
-                self._cache['orders'] = await self._fetch_orders([])
-                self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
-            else:
-                const_orders = {
-                    gamekey: order
-                    for gamekey, order in self._cache.get('orders', {}).items()
-                    if self.__is_const(order)
-                }
-                self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
+        next_fetch_orders = self._cache.get('next_fetch_orders')
+        if next_fetch_orders is None or time.time() > next_fetch_orders:
+            logger.info('Refreshing all orders')
+            self._cache['orders'] = await self._fetch_orders([])
+            self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
+        else:
+            const_orders = {
+                gamekey: order
+                for gamekey, order in self._cache.get('orders', {}).items()
+                if self.__is_const(order)
+            }
+            self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
         self._save_cache(self._cache)
 
