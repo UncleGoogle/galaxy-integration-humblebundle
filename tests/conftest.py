@@ -1,8 +1,10 @@
-import pytest
+from unittest.mock import MagicMock, Mock
+import typing as t
 import asyncio
 import pathlib
 import json
-from unittest.mock import MagicMock, Mock
+
+import pytest
 
 # workaround for vscode test discovery
 import sys
@@ -125,6 +127,11 @@ def origin_bundle_order(get_data):
 @pytest.fixture
 def overgrowth(get_data):
     return get_data('overgrowth.json')
+
+
+@pytest.fixture
+def bulk_api_orders(orders_keys) -> t.Dict[str, t.Any]:
+    return {o["gamekey"]: o for o in orders_keys} 
 
 
 @pytest.fixture

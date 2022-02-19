@@ -116,7 +116,7 @@ class AuthorizedHumbleAPI:
         })
         return await res.json()
     
-    async def get_orders_bulk_details(self, gamekeys: t.Iterable) -> t.List[dict]:
+    async def get_orders_bulk_details(self, gamekeys: t.Iterable) -> t.Dict[str, dict]:
         params = [('all_tpkds', 'true')] + [('gamekeys', gk) for gk in gamekeys]
         res = await self._request('get', self._ORDERS_BULK_URL, params=params)
         return await res.json()
