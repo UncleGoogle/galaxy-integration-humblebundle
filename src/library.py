@@ -3,7 +3,7 @@ from math import ceil
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple, TypeVar, Generator
+from typing import Callable, Dict, List, Sequence, Set, Iterable, Any, Coroutine, NamedTuple, TypeVar, Generator
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMMA_SPLIT_BLACKLIST
 from model.product import Product
@@ -87,13 +87,13 @@ class LibraryResolver:
         gamekey_chunks = self._make_chunks(not_cached_gamekeys, size=self.ORDERS_CHUNK_SIZE)
         api_calls = [self._api.get_orders_bulk_details(chunk) for chunk in gamekey_chunks]
         call_results = await asyncio.gather(*api_calls)
-        orders = reduce(lambda cum, nxt: {**cum, **nxt}, call_results, {})
+        orders: Dict[str, Any] = reduce(lambda cum, nxt: {**cum, **nxt}, call_results, {})
         not_null_orders = {k: v for k, v in orders.items() if v is not None}
         filtered_orders = self.__filter_out_not_game_bundles(not_null_orders)
         return filtered_orders
 
     @staticmethod
-    def _make_chunks(items: Iterable[T], size: int) -> Generator[List[T], None, None]:
+    def _make_chunks(items: Sequence[T],  size: int) -> Generator[Sequence[T], None, None]:
         for i in range(ceil(len(items) / size)):
             yield items[i * size: (i + 1) * size]
 

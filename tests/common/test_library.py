@@ -71,6 +71,35 @@ async def test_library_cache_key(create_resolver, get_torchlight):
 
 
 @pytest.mark.asyncio
+async def test_library_resolver_permanently_caches_const_orders(
+    api_mock, bulk_api_orders, create_resolver
+):
+    """
+    Test of legacy optimization feature
+    `bulk_api_orders` contains some 'const' orders --
+    that won't change anymore from plugin perspective
+    that is why resolver should not refresh them.
+    Probably to be removed as since fetching with orders bulk API
+    there is no point for such optimization
+    """
+    resolver = create_resolver(MagicMock())
+    api_mock.get_orders_bulk_details.return_value = bulk_api_orders
+    
+    # preparing cache
+    await resolver()
+    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
+    assert set(all_called_gamekeys) == set(bulk_api_orders.keys())
+    
+    api_mock.get_gamekeys.reset_mock()
+    api_mock.get_orders_bulk_details.reset_mock()
+
+    # after subsequent call
+    await resolver()
+    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
+    assert set(all_called_gamekeys) < set(bulk_api_orders.keys())
+
+
+@pytest.mark.asyncio
 class TestFetchOrdersViaBulkAPI:
     ORDER_DETAILS_DUMMY1 = MagicMock()
     ORDER_DETAILS_DUMMY2 = MagicMock()
@@ -223,7 +252,7 @@ def test_make_chunks(chunks, expected):
     assert expected == list(LibraryResolver._make_chunks(chunks, size=3))
 
 
-# integration tests
+# ----------integration tests with plugin-------------
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("only_cache", [True, False])
@@ -301,29 +330,3 @@ async def test_plugin_with_library_resovler_when_cache_is_invalidated_after_14_d
     assert api_mock.get_gamekeys.call_count == 1
     assert api_mock.get_orders_bulk_details.call_count >= 1
     assert len(result_before) == len(result_after) != 0
-
-
-@pytest.mark.asyncio
-async def test_library_resolver_permanently_caches_cost_orders(
-    api_mock, bulk_api_orders, create_resolver
-):
-    """
-    Test of legacy optimization feature
-    `bulk_api_orders` contains some 'const' orders --
-    that won't change anymore from plugin perspective
-    """
-    resolver = create_resolver(MagicMock())
-    api_mock.get_orders_bulk_details.return_value = bulk_api_orders
-    
-    # preparing cache
-    await resolver()
-    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
-    assert set(all_called_gamekeys) == set(bulk_api_orders.keys())
-    
-    api_mock.get_gamekeys.reset_mock()
-    api_mock.get_orders_bulk_details.reset_mock()
-
-    # after subsequent call
-    await resolver()
-    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
-    assert set(all_called_gamekeys) < set(bulk_api_orders.keys())
