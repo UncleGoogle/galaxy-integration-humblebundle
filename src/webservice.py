@@ -38,6 +38,7 @@ class AuthorizedHumbleAPI:
     _PROCESS_LOGIN = "processlogin"
     _ORDER_LIST_URL = "api/v1/user/order"
     _ORDER_URL = "/api/v1/order/{}"
+    _ORDERS_BULK_URL = "api/v1/orders"
 
     TROVES_PER_CHUNK = 20
     _MAIN_PAGE = ""
@@ -113,6 +114,11 @@ class AuthorizedHumbleAPI:
         res = await self._request('get', self._ORDER_URL.format(gamekey), params={
             'all_tpkds': 'true'
         })
+        return await res.json()
+    
+    async def get_orders_bulk_details(self, gamekeys: t.Iterable) -> t.Dict[str, dict]:
+        params = [('all_tpkds', 'true')] + [('gamekeys', gk) for gk in gamekeys]
+        res = await self._request('get', self._ORDERS_BULK_URL, params=params)
         return await res.json()
 
     async def _get_trove_details(self, chunk_index) -> list:
@@ -224,7 +230,7 @@ class AuthorizedHumbleAPI:
     async def get_user_subscription_state(self) -> dict:
         """
         for not subscriber:
-        {"newestOwnedTier": null, "nextBilledPlan": "", "consecutiveContentDropCount": 0, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "inactive", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": null, "willReceiveFutureMonths": false, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": null, "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": null, "failedBillingMonths": 0, "wasPaused": false, "monthlyPurchasedAnyContent": false, "monthlyNewestOwnedContentEnd": null, "monthlyOwnsAnyContent": false}
+        {"newestOwnedTier": null, "nextBilledPlan": "", "consecutiveContentDropCount": 0, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "inactive", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": null, "willReceiveFutureMonths": false, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": null, "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": null, "failedBillingMonths": 0, "wasPaused": false, "monthlyPurchasedAnyContent": false, "monthlyNewestOwnedContentEnd": null, "monthlyOwnsAnyContent": false, "monthlyNewestSkippedContentEnd": null}
         ---
         for subscriber with not unlocked active content:
         {"newestOwnedTier": "basic", "nextBilledPlan": "monthly_v2_basic", "consecutiveContentDropCount": 12, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "active", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": "october_2021_choice", "willReceiveFutureMonths": true, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": "january_2021_choice", "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": "***", "failedBillingMonths": 0, "monthlyNewestSkippedContentEnd": "2021-02-05T18:00:00", "wasPaused": false, "monthlyPurchasedAnyContent": true, "monthlyNewestOwnedContentEnd": "2021-11-02T17:00:00", "monthlyOwnsAnyContent": true)}

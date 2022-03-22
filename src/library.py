@@ -1,16 +1,22 @@
+from functools import reduce
+from math import ceil
 import time
 import logging
 import asyncio
-from typing import Callable, Dict, List, Set, Iterable, Any, Coroutine, NamedTuple
+from typing import Callable, Dict, List, Sequence, Set, Iterable, Any, Coroutine, NamedTuple, TypeVar, Generator
 
 from consts import SOURCE, NON_GAME_BUNDLE_TYPES, COMMA_SPLIT_BLACKLIST
 from model.product import Product
 from model.game import HumbleGame, Subproduct, Key, KeyGame
 from model.types import GAME_PLATFORMS
 from settings import LibrarySettings
+from webservice import AuthorizedHumbleAPI
 
 
 logger = logging.getLogger(__name__)
+
+
+T = TypeVar('T')
 
 
 class KeyInfo(NamedTuple):
@@ -20,8 +26,15 @@ class KeyInfo(NamedTuple):
 
 class LibraryResolver:
     NEXT_FETCH_IN = 3600 * 24 * 14
+    ORDERS_CHUNK_SIZE = 35
 
-    def __init__(self, api, settings: LibrarySettings, save_cache_callback: Callable, cache: Dict[str, list]):
+    def __init__(
+        self, 
+        api: AuthorizedHumbleAPI,
+        settings: LibrarySettings,
+        save_cache_callback: Callable,
+        cache: Dict[str, list]
+    ):
         self._api = api
         self._save_cache = save_cache_callback
         self._settings = settings
@@ -33,7 +46,7 @@ class LibraryResolver:
             await self._fetch_and_update_cache()
 
         # get all games in predefined order
-        orders = list(self._cache.get('orders', {}).values())  # type: ignore[union-attr] - orders is always a dict
+        orders = list(self._cache.get('orders', {}).values())  # type: ignore[union-attr]
         all_games: List[HumbleGame] = []
         for source in self._settings.sources:
             if source == SOURCE.DRM_FREE:
@@ -53,30 +66,36 @@ class LibraryResolver:
         return deduplicated
 
     async def _fetch_and_update_cache(self):
-        sources = self._settings.sources
-
-        if SOURCE.DRM_FREE in sources or SOURCE.KEYS in sources:
-            next_fetch_orders = self._cache.get('next_fetch_orders')
-            if next_fetch_orders is None or time.time() > next_fetch_orders:
-                logger.info('Refreshing all orders')
-                self._cache['orders'] = await self._fetch_orders([])
-                self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
-            else:
-                const_orders = {
-                    gamekey: order
-                    for gamekey, order in self._cache.get('orders', {}).items()
-                    if self.__is_const(order)
-                }
-                self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
+        next_fetch_orders = self._cache.get('next_fetch_orders')
+        if next_fetch_orders is None or time.time() > next_fetch_orders:
+            logger.info('Refreshing all orders')
+            self._cache['orders'] = await self._fetch_orders([])
+            self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
+        else:
+            const_orders = {
+                gamekey: order
+                for gamekey, order in self._cache.get('orders', {}).items()
+                if self.__is_const(order)
+            }
+            self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
 
         self._save_cache(self._cache)
 
     async def _fetch_orders(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
         gamekeys = await self._api.get_gamekeys()
-        order_tasks = [self._api.get_order_details(x) for x in gamekeys if x not in cached_gamekeys]
-        orders = await self.__gather_no_exceptions(order_tasks)
-        orders = self.__filter_out_not_game_bundles(orders)
-        return {order['gamekey']: order for order in orders}
+        not_cached_gamekeys = [x for x in gamekeys if x not in cached_gamekeys]
+        gamekey_chunks = self._make_chunks(not_cached_gamekeys, size=self.ORDERS_CHUNK_SIZE)
+        api_calls = [self._api.get_orders_bulk_details(chunk) for chunk in gamekey_chunks]
+        call_results = await asyncio.gather(*api_calls)
+        orders: Dict[str, Any] = reduce(lambda cum, nxt: {**cum, **nxt}, call_results, {})
+        not_null_orders = {k: v for k, v in orders.items() if v is not None}
+        filtered_orders = self.__filter_out_not_game_bundles(not_null_orders)
+        return filtered_orders
+
+    @staticmethod
+    def _make_chunks(items: Sequence[T],  size: int) -> Generator[Sequence[T], None, None]:
+        for i in range(ceil(len(items) / size)):
+            yield items[i * size: (i + 1) * size]
 
     @staticmethod
     async def __gather_no_exceptions(tasks: Iterable[Coroutine]):
@@ -110,16 +129,16 @@ class LibraryResolver:
         return True
 
     @staticmethod
-    def __filter_out_not_game_bundles(orders: list) -> list:
-        filtered = []
-        for details in orders:
+    def __filter_out_not_game_bundles(orders: dict) -> dict:
+        game_bundles = {}
+        for gamekey, details in orders.items():
             product = Product(details['product'])
             if product.bundle_type in NON_GAME_BUNDLE_TYPES:
                 logger.info(f'Ignoring {details["product"]["machine_name"]} due bundle type: {product.bundle_type}')
                 continue
-            filtered.append(details)
-        return filtered
-
+            game_bundles[gamekey] = details
+        return game_bundles
+    
     @staticmethod
     def _get_subproducts(orders: list) -> List[Subproduct]:
         subproducts = []

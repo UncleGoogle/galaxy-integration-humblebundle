@@ -17,7 +17,7 @@ with open('src/manifest.json') as f:
 
 
 REQUIREMENTS = 'requirements.txt'
-REQUIREMENTS_DEV = 'requirements-dev'
+REQUIREMENTS_DEV = 'requirements-dev.txt'
 CURRENT_VERSION_FILE = 'current_version.json'
 
 GALAXY_PATH = ''

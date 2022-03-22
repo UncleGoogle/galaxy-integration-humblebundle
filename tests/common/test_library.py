@@ -1,9 +1,8 @@
-import pytest
-import time
-from functools import partial
-from unittest.mock import Mock
+from functools import partial, reduce
+from unittest.mock import MagicMock, Mock, PropertyMock
 
-from galaxy.api.errors import UnknownError
+from freezegun import freeze_time
+import pytest
 
 from consts import SOURCE
 from settings import LibrarySettings
@@ -41,7 +40,17 @@ def get_torchlight(orders_keys):
     return torchlight_order, drm_free, key_game
 
 
-# ------ library: all info stored in cache ------
+@pytest.fixture
+def an_order(get_torchlight):
+    return get_torchlight[0]
+
+
+@pytest.fixture
+def an_order_games(get_torchlight):
+    return [get_torchlight[1], get_torchlight[2]]
+
+
+# ------ all info stored in cache ------
 
 @pytest.mark.asyncio
 async def test_library_cache_drm_free(create_resolver, get_torchlight):
@@ -61,102 +70,79 @@ async def test_library_cache_key(create_resolver, get_torchlight):
     assert {key.machine_name: key} == await library(only_cache=True)
 
 
-# ------ library: fetching info from API ---------
-
 @pytest.mark.asyncio
-async def test_library_cache_orders(plugin, get_torchlight, change_settings):
-    _, drm_free, key_game = get_torchlight
+async def test_library_resolver_permanently_caches_const_orders(
+    api_mock, bulk_api_orders, create_resolver
+):
+    """
+    Test of legacy optimization feature
+    `bulk_api_orders` contains some 'const' orders --
+    that won't change anymore from plugin perspective
+    that is why resolver should not refresh them.
+    Probably to be removed as since fetching with orders bulk API
+    there is no point for such optimization
+    """
+    resolver = create_resolver(MagicMock())
+    api_mock.get_orders_bulk_details.return_value = bulk_api_orders
+    
+    # preparing cache
+    await resolver()
+    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
+    assert set(all_called_gamekeys) == set(bulk_api_orders.keys())
+    
+    api_mock.get_gamekeys.reset_mock()
+    api_mock.get_orders_bulk_details.reset_mock()
 
-    change_settings(plugin, {'sources': ['drm-free'], 'show_revealed_keys': True})
-    result = await plugin._library_resolver()
-    assert result[drm_free.machine_name] == drm_free
-
-    plugin._api.get_gamekeys.reset_mock()
-    plugin._api.get_order_details.reset_mock()
-
-    change_settings(plugin, {'sources': ['keys']})
-    result = await plugin._library_resolver(only_cache=True)
-    assert result[key_game.machine_name] == key_game
-    assert drm_free.machine_name not in result
-    # no api calls if cache used
-    assert plugin._api.get_gamekeys.call_count == 0
-    assert plugin._api.get_order_details.call_count == 0
-
-
-@pytest.mark.asyncio
-async def test_library_fetch_with_cache_orders(plugin, get_torchlight, change_settings):
-    """Refresh reveals keys only if needed"""
-    torchlight, _, key = get_torchlight
-
-    change_settings(plugin, {'sources': ['keys'], 'show_revealed_keys': False})
-    result = await plugin._library_resolver()
-
-    # reveal all keys in torchlight order
-    for i in plugin._api.orders:
-        if i == torchlight:
-            for tpk in i['tpkd_dict']['all_tpks']:
-                tpk['redeemed_key_val'] = 'redeemed mock code'
-            break
-    # Get orders that has at least one unrevealed key
-    unrevealed_order_keys = []
-    for i in plugin._api.orders:
-        if any(('redeemed_key_val' not in x for x in i['tpkd_dict']['all_tpks'])):
-            unrevealed_order_keys.append(i['gamekey'])
-
-    # reset mocks
-    plugin._api.get_gamekeys.reset_mock()
-    plugin._api.get_order_details.reset_mock()
-
-    # cache "fetch_in" time has not passed:
-    # refresh only orders that may change - those with any unrevealed key
-    change_settings(plugin, {'sources': ['keys'], 'show_revealed_keys': False})
-    result = await plugin._library_resolver()
-    assert key.machine_name not in result  # revealed key should not be shown
-    assert plugin._api.get_gamekeys.call_count == 1
-    assert plugin._api.get_order_details.call_count == len(unrevealed_order_keys)
+    # after subsequent call
+    await resolver()
+    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
+    assert set(all_called_gamekeys) < set(bulk_api_orders.keys())
 
 
 @pytest.mark.asyncio
-async def test_library_cache_period(plugin, change_settings, orders_keys):
-    """Refresh reveals keys only if needed"""
-    change_settings(plugin, {'sources': ['keys'], 'show_revealed_keys': False})
+class TestFetchOrdersViaBulkAPI:
+    ORDER_DETAILS_DUMMY1 = MagicMock()
+    ORDER_DETAILS_DUMMY2 = MagicMock()
+    
+    @pytest.fixture(autouse=True)
+    def resolver(self, create_resolver):
+        resolver = create_resolver(Mock())
+        cached_gamekeys = []
+        self.fetch = partial(resolver._fetch_orders, cached_gamekeys)
 
-    # set expired next fetch
-    plugin._library_resolver._cache['next_fetch_orders'] = time.time() - 10
+    @pytest.mark.parametrize('orders, expected', [
+        pytest.param(
+            {'key2': ORDER_DETAILS_DUMMY2, 'key1': ORDER_DETAILS_DUMMY1},
+            {'key2': ORDER_DETAILS_DUMMY2, 'key1': ORDER_DETAILS_DUMMY1},
+            id='small number'
+        ),
+        pytest.param(
+            {'key2': ORDER_DETAILS_DUMMY2, 'key1': None},
+            {'key2': ORDER_DETAILS_DUMMY2},
+            id='one unknown'
+        ),
+    ])
+    async def test_fetch_orders(self, api_mock, orders, expected): 
+        api_mock.get_gamekeys.return_value = ['key1', 'key2']
+        api_mock.get_orders_bulk_details.return_value = orders
 
-    # cache "fetch_in" time has passed: refresh all
-    await plugin._library_resolver()
-    assert plugin._api.get_gamekeys.call_count == 1
-    assert plugin._api.get_order_details.call_count == len(orders_keys)
+        result = await self.fetch()
+        assert result == expected
 
+    async def test_fetch_by_multiple_batches(self, api_mock): 
+        def fake_bulk_api_reponse(gamekeys):
+            return {gk: MagicMock(name=gk) for gk in gamekeys}
+        
+        mock_gamekeys = [f'key{i}' for i in range(82)]
+        api_mock.get_gamekeys.return_value = mock_gamekeys
+        api_mock.get_orders_bulk_details.side_effect = fake_bulk_api_reponse
 
-# --------test fetching orders-------------------
+        result = await self.fetch()
 
-@pytest.mark.asyncio
-async def test_fetch_orders_filter_errors_ok(plugin, create_resolver):
-    resolver = create_resolver(Mock())
-    await resolver._fetch_orders([])
-
-@pytest.mark.asyncio
-async def test_fetch_orders_filter_errors_all_bad(plugin, create_resolver):
-    resolver = create_resolver(Mock())
-    plugin._api.get_gamekeys.return_value = ['this_will_give_UnknownError', 'this_too']
-    with pytest.raises(UnknownError):
-        await resolver._fetch_orders([])
-
-@pytest.mark.asyncio
-async def test_fetch_orders_filter_errors_one_404(plugin, create_resolver, caplog):
-    """404 for specific order key"""
-    resolver = create_resolver(Mock())
-    resolver = create_resolver(Mock())
-    real_gamekeys = await plugin._api.get_gamekeys()
-    plugin._api.get_gamekeys.return_value = [real_gamekeys[0], 'this_will_give_UnknownError']
-    caplog.clear()
-    orders = await resolver._fetch_orders([])
-    assert len(orders) == 1
-    assert 'UnknownError' in caplog.text
-    assert caplog.records[0].levelname == 'ERROR'
-
+        assert len(result) == 82
+        assert api_mock.get_gamekeys.call_count == 1
+        assert api_mock.get_orders_bulk_details.call_count == 3
+    
 
 # --------test splitting keys -------------------
 
@@ -252,3 +238,95 @@ def test_get_key_info():
         KeyInfo(Key(key_data_2), 'bundle'),
         KeyInfo(Key(key_data_3), 'storefront'),
     ]
+
+
+@pytest.mark.parametrize("chunks, expected", [
+        ([], []),
+        ([1], [[1]]),
+        ([1,2,3,4], [[1,2,3],[4]]),
+        ([1,2,3,4,5,6], [[1,2,3], [4,5,6]]),
+        ([1,2,3,4,5,6,7,8,9,10,11], [[1,2,3],[4,5,6],[7,8,9],[10,11]])
+    ]
+)
+def test_make_chunks(chunks, expected):
+    assert expected == list(LibraryResolver._make_chunks(chunks, size=3))
+
+
+# ----------integration tests with plugin-------------
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("only_cache", [True, False])
+async def test_plugin_with_library_returns_proper_games_depending_on_choosen_settings(
+    plugin, api_mock, get_torchlight, change_settings, only_cache,
+):
+    torchlight_order, drm_free, key_game = get_torchlight
+    change_settings(plugin, {'sources': ['drm-free'], 'show_revealed_keys': True})
+    api_mock.get_orders_bulk_details.return_value = {torchlight_order['gamekey']: torchlight_order}
+
+    # before
+    result = await plugin._library_resolver()
+    assert result[drm_free.machine_name] == drm_free
+
+    # after
+    change_settings(plugin, {'sources': ['keys']})
+    result = await plugin._library_resolver(only_cache=only_cache)
+    
+    assert result[key_game.machine_name] == key_game
+    assert drm_free.machine_name not in result
+
+
+@pytest.mark.asyncio
+async def test_plugin_with_library_orders_cached_uses_cache(
+    plugin, api_mock, bulk_api_orders,
+):
+    api_mock.get_orders_bulk_details.return_value = bulk_api_orders
+
+    # before
+    await plugin._library_resolver()
+
+    api_mock.get_gamekeys.reset_mock()
+    api_mock.get_orders_bulk_details.reset_mock()
+
+    # after
+    await plugin._library_resolver(only_cache=True)
+    
+    assert api_mock.get_gamekeys.call_count == 0
+    assert api_mock.get_orders_bulk_details.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_plugin_with_library_orders_cached_fetches_again_when_called_with_skip_cache(
+    plugin, api_mock, bulk_api_orders,
+):
+    api_mock.get_orders_bulk_details.return_value = bulk_api_orders
+
+    # before
+    await plugin._library_resolver()
+
+    api_mock.get_gamekeys.reset_mock()
+    api_mock.get_orders_bulk_details.reset_mock()
+
+    # after
+    await plugin._library_resolver(only_cache=False)
+    
+    assert api_mock.get_gamekeys.call_count == 1
+    assert api_mock.get_orders_bulk_details.call_count >= 1
+
+
+@pytest.mark.asyncio
+async def test_plugin_with_library_resovler_when_cache_is_invalidated_after_14_days(
+    plugin, api_mock, bulk_api_orders
+):
+    type(api_mock).is_authenticated = PropertyMock(return_value=True)
+    api_mock.get_orders_bulk_details.return_value = bulk_api_orders
+    with freeze_time('2020-12-01') as frozen_time:
+        result_before = await plugin.get_owned_games()
+        api_mock.get_gamekeys.reset_mock()
+        api_mock.get_orders_bulk_details.reset_mock()
+
+        frozen_time.move_to('2020-12-15')
+        result_after = await plugin.get_owned_games()
+    
+    assert api_mock.get_gamekeys.call_count == 1
+    assert api_mock.get_orders_bulk_details.call_count >= 1
+    assert len(result_before) == len(result_after) != 0
