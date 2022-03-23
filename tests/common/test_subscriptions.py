@@ -57,7 +57,6 @@ async def test_get_subscriptions_never_subscribed(plugin, api_mock):
 
     assert sorted(res, key=lambda x: x.subscription_name) == [
         Subscription("Humble Choice 2020-05", owned=False),
-        Subscription("Humble Trove", owned=False),
     ]
     api_mock.get_choice_marketing_data.assert_called_once()
 
@@ -93,7 +92,6 @@ async def test_get_subscriptions_multiple_where_one_paused(plugin, api_mock):
         Subscription("Humble Choice 2020-03", owned=False),  # paused month
         Subscription("Humble Choice 2020-04", owned=True),
         Subscription("Humble Choice 2020-05", owned=True),
-        Subscription("Humble Trove", owned=True),
     ]
 
 
@@ -131,7 +129,6 @@ async def test_get_subscriptions_humble_choice_and_humble_monthly(api_mock, plug
     assert sorted(res, key=lambda x: x.subscription_name) == [
         Subscription("Humble Choice 2019-12", owned=True),
         Subscription("Humble Choice 2020-01", owned=True),
-        Subscription("Humble Trove", owned=True),
     ]
 
 
@@ -165,7 +162,6 @@ async def test_get_subscriptions_past_subscriber(api_mock, plugin):
         Subscription("Humble Choice 2020-02", owned=True),
         Subscription("Humble Choice 2020-03", owned=True),
         Subscription("Humble Choice 2020-05", owned=False),  # active month
-        Subscription("Humble Trove", owned=False),
     ]
 
 
@@ -183,8 +179,6 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(
     But for user convenience plugin marks month as owned if it *is going to* be unloacked (if not cancelled untill last Friday).
     Without this, Galaxy won't display games until user manualy select current month as owned.
     This would be annoying, as a new subscription month happen... well every month.
-    ---
-    Test checks also logic for Trove ownership base on subscription status.
     """
     subscription_state = json.loads("""
     {
@@ -244,7 +238,6 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(
     assert sorted(res, key=lambda x: x.subscription_name) == [
         Subscription("Humble Choice 2020-04", owned=True),
         Subscription("Humble Choice 2020-05", owned=has_choices),
-        Subscription("Humble Trove", owned=True),
     ]
     assert api_mock.get_choice_marketing_data.call_count == 0
 
@@ -280,6 +273,5 @@ async def test_get_subscriptions_current_month_not_unlocked_yet__cant_fetch_earl
     assert sorted(res, key=lambda x: x.subscription_name) == [
         Subscription("Humble Choice 2020-04", owned=True),
         Subscription("Humble Choice 2020-05", owned=False),
-        Subscription("Humble Trove", owned=True),
     ]
     assert api_mock.get_choice_marketing_data.call_count == 1
