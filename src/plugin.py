@@ -51,7 +51,8 @@ def setup_sentry():
         event_level=logging.ERROR
     )
     sentry_sdk.init(
-        dsn="https://76abb44bffbe45998dd304898327b718@sentry.io/1764525",
+        dns="https://40919944b74b4cc49bf94c482f013533@o284798.ingest.sentry.io/3976593",
+        traces_sample_rate=0.1,
         integrations=[sentry_logging],
         release=f"hb-galaxy@{__version__}"
     )
