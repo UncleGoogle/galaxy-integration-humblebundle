@@ -11,7 +11,7 @@ import yarl
 import galaxy.http
 from galaxy.api.errors import UnknownBackendResponse
 
-from model.download import TroveDownload, DownloadStructItem
+from model.download import  DownloadStructItem
 from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth
 
 
@@ -44,10 +44,8 @@ class AuthorizedHumbleAPI:
     _MAIN_PAGE = ""
     _SUBSCRIPTION = 'subscription'
     _SUBSCRIPTION_HOME = 'subscription/home'
-    _SUBSCRIPTION_TROVE = 'subscription/trove'
     _SUBSCRIPTION_PRODUCTS = 'api/v1/subscriptions/humble_monthly/subscription_products_with_gamekeys'
     _SUBSCRIPTION_HISTORY = 'api/v1/subscriptions/humble_monthly/history?from_product={}'
-    _TROVE_CHUNK_URL = 'api/v1/trove/chunk?property=popularity&direction=desc&index={}'
     _DOWNLOAD_SIGN = 'api/v1/user/download/sign'
     _HUMBLER_REDEEM_DOWNLOAD = 'humbler/redeemdownload'
 
@@ -119,10 +117,6 @@ class AuthorizedHumbleAPI:
     async def get_orders_bulk_details(self, gamekeys: t.Iterable) -> t.Dict[str, dict]:
         params = [('all_tpkds', 'true')] + [('gamekeys', gk) for gk in gamekeys]
         res = await self._request('get', self._ORDERS_BULK_URL, params=params)
-        return await res.json()
-
-    async def _get_trove_details(self, chunk_index) -> list:
-        res = await self._request('get', self._TROVE_CHUNK_URL.format(chunk_index))
         return await res.json()
 
     async def get_subscription_products_with_gamekeys(self) -> t.AsyncGenerator[dict, None]:
@@ -236,7 +230,10 @@ class AuthorizedHumbleAPI:
         {"newestOwnedTier": "basic", "nextBilledPlan": "monthly_v2_basic", "consecutiveContentDropCount": 12, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "active", "billDate": "2021-11-30T18:00:00", "monthlyNewestOwnedContentMachineName": "october_2021_choice", "willReceiveFutureMonths": true, "monthlyOwnsActiveContent": false, "unpauseDt": "2021-12-07T18:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": "january_2021_choice", "contentEndDateAfterBillDate": "2021-12-07T18:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": "***", "failedBillingMonths": 0, "monthlyNewestSkippedContentEnd": "2021-02-05T18:00:00", "wasPaused": false, "monthlyPurchasedAnyContent": true, "monthlyNewestOwnedContentEnd": "2021-11-02T17:00:00", "monthlyOwnsAnyContent": true)}
         ---
         at the time of creating this method, this data is attached to every humble page
-        
+        {}
+        ---
+        for subscriber at 2022-03:
+        {"newestOwnedTier": "premium", "nextBilledPlan": "monthly_v2_premium", "consecutiveContentDropCount": 1, "canResubscribe": false, "currentlySkippingContentHumanName": null, "perksStatus": "active", "billDate": "2022-04-26T17:00:00", "monthlyNewestOwnedContentMachineName": "march_2022_choice", "willReceiveFutureMonths": true, "monthlyOwnsActiveContent": true, "unpauseDt": "2022-05-03T17:00:00", "creditsRemaining": 0, "currentlySkippingContentMachineName": null, "canBeConvertedFromGiftSubToPayingSub": false, "lastSkippedContentMachineName": null, "contentEndDateAfterBillDate": "2022-05-03T17:00:00", "isPaused": false, "monthlyNewestOwnedContentGamekey": "***", "failedBillingMonths": 0, "monthlyNewestSkippedContentEnd": null, "wasPaused": false, "monthlyPurchasedAnyContent": true, "monthlyNewestOwnedContentEnd": "2022-04-05T17:00:00", "monthlyOwnsAnyContent": true}
         """
         return await self._get_window_models(self._MAIN_PAGE, "userSubscriptionState")
     
@@ -262,15 +259,6 @@ class AuthorizedHumbleAPI:
         except WebpackParseError:
             logger.warning("Cannot get subscriber info: probably user has never been a subscriber")
             raise
-
-    async def get_montly_trove_data(self) -> dict:
-        """Parses a subscription/trove page to find list of recently added games.
-        Returns json containing "newlyAdded" trove games and "standardProducts" that is
-        the same like output from api/v1/trove/chunk/index=0
-        "standardProducts" may not contain "newlyAdded" sometimes
-        """
-        webpack_id = "webpack-monthly-trove-data"
-        return await self._get_webpack_data(self._SUBSCRIPTION_TROVE, webpack_id)
 
     async def get_main_page_webpack_data(self) -> dict:
         webpack_id = "webpack-json-data"
@@ -299,26 +287,13 @@ class AuthorizedHumbleAPI:
         data = await self._get_webpack_data(url, webpack_id)
         return MontlyContentData(data)
 
-    async def get_trove_details(self, from_chunk: int=0):
-        index = from_chunk
-        while True:
-            chunk_details = await self._get_trove_details(index)
-            if type(chunk_details) != list:
-                logger.debug(f'chunk_details: {chunk_details}')
-                raise UnknownBackendResponse("Unrecognized trove chunks structure")
-            elif len(chunk_details) == 0:
-                logger.debug('No more chunk pages')
-                return
-            yield chunk_details
-            index += 1
-
     async def sign_download(self, machine_name: str, filename: str):
         res = await self._request('post', self._DOWNLOAD_SIGN, params={
             'machine_name': machine_name,
             'filename': filename
         })
         return await res.json()
-
+    
     async def _reedem_download(self, download_machine_name: str, custom_data: dict):
         """Unknown purpose - humble http client do this after post for signed_url
         Response should be text with {'success': True} if everything is OK
@@ -345,17 +320,6 @@ class AuthorizedHumbleAPI:
         try:
             await self._reedem_download(
                 download_machine_name, {'download_url_file': filename})
-        except Exception as e:
-            logger.error(repr(e) + '. Error ignored')
-        return urls
-
-    async def sign_url_trove(self, download: TroveDownload, product_machine_name: str):
-        if download.web is None:
-            raise RuntimeError(f'No download web link in download struct item {download}')
-        urls = await self.sign_download(download.machine_name, download.web)
-        try:
-            await self._reedem_download(
-                download.machine_name, {'product': product_machine_name})
         except Exception as e:
             logger.error(repr(e) + '. Error ignored')
         return urls

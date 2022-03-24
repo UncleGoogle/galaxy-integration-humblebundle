@@ -9,7 +9,6 @@ import json
 import calendar
 import typing as t
 from functools import partial
-from contextlib import suppress
 from distutils.version import LooseVersion
 
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent / 'modules'))
@@ -18,7 +17,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility
-from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
 from galaxy.api.errors import AuthenticationRequired, UnknownBackendResponse, UnknownError, BackendError
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
@@ -68,7 +67,7 @@ class HumbleBundlePlugin(Plugin):
         self._library_resolver = None
 
         self._owned_games: t.Dict[str, HumbleGame] = {}
-        self._trove_games: t.Dict[str, TroveGame] = {}
+        self._trove_games: t.Dict[str, TroveGame] = {}  # legacy - for loading already existing cache
         self._choice_games: t.Dict[str, ChoiceGame] = {}
 
         self._local_games = {}
@@ -202,14 +201,8 @@ class HumbleBundlePlugin(Plugin):
     async def get_subscriptions(self):
         subscriptions: t.List[Subscription] = []
         subscription_state = await self._api.get_user_subscription_state()
-        # perks are Trove and store discount; paused month makes perks "inactive"
-        has_active_subscription = subscription_state.get("perksStatus") == "active"
+        has_active_perks = subscription_state.get("perksStatus") == "active"
         owns_active_content = subscription_state.get("monthlyOwnsActiveContent")
-
-        subscriptions.append(Subscription(
-            subscription_name = TROVE_SUBSCRIPTION_NAME,
-            owned = has_active_subscription
-        ))
 
         async for product in self._api.get_subscription_products_with_gamekeys():
             if 'contentChoiceData' not in product:
@@ -221,7 +214,7 @@ class HumbleBundlePlugin(Plugin):
             ))
 
         if not owns_active_content:
-            active_month_resolver = ActiveMonthResolver(has_active_subscription)
+            active_month_resolver = ActiveMonthResolver(has_active_perks)
             active_month_info: ActiveMonthInfoByUser = await active_month_resolver.resolve(self._api)
             
             if active_month_info.machine_name:
@@ -232,31 +225,10 @@ class HumbleBundlePlugin(Plugin):
                 ))
 
         return subscriptions
-
-    async def _get_trove_games(self) -> t.AsyncGenerator[t.List[SubscriptionGame], None]:
-        def parse_and_cache(troves):
-            games: t.List[SubscriptionGame] = []
-            for trove in troves:
-                try:
-                    trove_game = TroveGame(trove)
-                    games.append(trove_game.in_galaxy_format())
-                    self._trove_games[trove_game.machine_name] = trove_game
-                except Exception as e:
-                    logging.warning(f"Error while parsing trove {repr(e)}: {trove}", extra={'data': trove})
-            return games
-
-        with suppress(WebpackParseError):
-            newly_added = (await self._api.get_montly_trove_data()).get('newlyAdded', [])
-            if newly_added:
-                yield parse_and_cache(newly_added)
-        async for troves in self._api.get_trove_details():
-            yield parse_and_cache(troves)
     
     async def get_subscription_games(self, subscription_name, context):
         if subscription_name == TROVE_SUBSCRIPTION_NAME:
-            async for troves in self._get_trove_games():
-                yield troves
-            return
+            raise UnknownError("Plugin does not support Trove games any longer")
 
         choice_slug = self._choice_name_to_slug(subscription_name)
         choice_data = await self._api.get_choice_content_data(choice_slug)
@@ -276,7 +248,6 @@ class HumbleBundlePlugin(Plugin):
         yield [game.in_galaxy_format() for game in choice_games.values()]
 
     def subscription_games_import_complete(self):
-        self._save_cache('trove_games', [game.serialize() for game in self._trove_games.values()])
         self._save_cache('choice_games', [game.serialize() for game in self._choice_games.values()])
 
     async def get_local_games(self):
@@ -329,15 +300,6 @@ class HumbleBundlePlugin(Plugin):
                 chosen_download_struct = self._download_resolver(curr_os_download)
                 urls = await self._api.sign_url_subproduct(chosen_download_struct, curr_os_download.machine_name)
                 webbrowser.open(urls['signed_url'])
-
-            if isinstance(game, TroveGame):
-                try:
-                    urls = await self._api.sign_url_trove(curr_os_download, game.machine_name)
-                except AuthenticationRequired:
-                    logging.info('Looks like your Humble Monthly subscription has expired.')
-                    webbrowser.open('https://www.humblebundle.com/subscription/home')
-                else:
-                    webbrowser.open(urls['signed_url'])
 
         except Exception as e:
             logging.error(e, extra={'game': game})

@@ -8,8 +8,6 @@ from galaxy.api.types import GameLibrarySettings
 from consts import IS_WINDOWS, IS_MAC
 from local.localgame import LocalHumbleGame
 from model.game import Subproduct, KeyGame, TroveGame, ChoiceGame
-from model.download import TroveDownload
-from model.types import HP
 
 from conftest import AsyncMock
 
@@ -48,22 +46,6 @@ async def test_install_game_drm_free(api_mock, plugin, overgrowth):
     plugin._owned_games = { id_: game }
     expected_url = "https://dl.humble.com/wolfiregames/overgrowth-1.4.0_build-5584-win64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=7f2263e7f3360f3beb112e58521145a0"
     api_mock.sign_url_subproduct.return_value = {
-        "signed_url": expected_url
-    }
-
-    with patch('webbrowser.open') as browser_open:
-        await plugin.install_game(id_)
-        browser_open.assert_called_once_with(expected_url)
-
-
-@pytest.mark.asyncio
-async def test_install_game_trove(api_mock, plugin):
-    id_ = 'trove_game'
-    platform = HP.WINDOWS if IS_WINDOWS else HP.MAC
-    game = Mock(spec=TroveGame, downloads={platform: Mock(spec=TroveDownload)})
-    plugin._owned_games = { id_: game }
-    expected_url = "https://dl.humble.com/developer/trove_game_012_build-5584-win64.zip?gamekey=XrCTukcAFwsh&ttl=1563893021&t=7f2263e7f3360f3beb112e58521145a0"
-    api_mock.sign_url_trove.return_value = {
         "signed_url": expected_url
     }
 

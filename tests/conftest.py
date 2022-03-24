@@ -49,9 +49,6 @@ def api_mock_raw():
     mock.get_order_details = AsyncMock()
     mock.get_orders_bulk_details = AsyncMock()
     mock.get_gamekeys = AsyncMock()
-    mock.get_montly_trove_data = AsyncMock()
-    mock.get_trove_details = AsyncMock()
-    mock.sign_url_trove = AsyncMock()
     mock.sign_url_subproduct = AsyncMock()
     mock.close_session = AsyncMock()
     mock.get_choice_content_data = AsyncMock()
@@ -66,7 +63,7 @@ def api_mock_raw():
 
 
 @pytest.fixture
-def api_mock(api_mock_raw, orders_keys, get_troves):
+def api_mock(api_mock_raw, orders_keys):
     mock = api_mock_raw
     mock.orders = orders_keys
 
@@ -77,10 +74,8 @@ def api_mock(api_mock_raw, orders_keys, get_troves):
         print('got 404 for gamekey: ' + gamekey)
         raise UnknownError()
 
-    mock.TROVES_PER_CHUNK = 20
     mock.get_gamekeys.return_value = [i['gamekey'] for i in mock.orders]
     mock.get_order_details.side_effect = get_details
-    mock.get_trove_details.side_effect = lambda from_chunk: get_troves(from_chunk)
 
     return mock
 
@@ -132,13 +127,3 @@ def overgrowth(get_data):
 @pytest.fixture
 def bulk_api_orders(orders_keys) -> t.Dict[str, t.Any]:
     return {o["gamekey"]: o for o in orders_keys} 
-
-
-@pytest.fixture
-def get_troves(get_data):
-    def fn(from_index=0):
-        troves = []
-        for i in range(from_index, 4):
-            troves.extend(get_data(f'troves_{i + 1}.json'))
-        return troves
-    return fn
