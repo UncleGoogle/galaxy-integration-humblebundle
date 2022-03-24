@@ -149,13 +149,7 @@ class Section():
 
 class ContentChoice:
     """
-    Unexposed:
-    - genres: List[str]
-    - description: str
-    - developers: List[str]
-    - msrp|money: object
-    - image: str (link)
-    - carousel_content: object
+    Note: there is also more unexposed game-related fields.
     """
     def __init__(self, id: str, data: dict):
         self.id = id
@@ -187,6 +181,8 @@ class ContentChoiceOptions:
         self.gamekey: t.Optional[str] = data.get('gamekey')
         self.is_active_content: bool = data['isActiveContent']
         self.product_url_path: str = data['productUrlPath']
+        self.uses_choices: t.Optional[bool] = data.get("usesChoices")
+        self.product_is_choiceless: t.Optional[bool] = data.get("productIsChoiceless")
         self.includes_any_uplay_tpkds: t.Optional[bool] = data.get('includesAnyUplayTpkds')
         self.is_choice_tier: t.Optional[bool] = data.get('isChoiceTier')  # no in active month
         self.product_machine_name: str = data['productMachineName']
@@ -196,20 +192,23 @@ class ContentChoiceOptions:
 
         content_choice_data = data['contentChoiceData']
 
-        # Since August 2020 there is no simple 'initial' key, games may be stored under different keys:
-        # 'initial-without-order'  # for not yet unlocked months
-        # 'initial-classic',       # classic plan
-        # 'initial-basic'          # XXX to be confirmed
-        # 'initial-premium'        # XXX to be confirmed
-        try:
-            initial_key = next(filter(lambda x: x.startswith('initial'), content_choice_data))
-        except StopIteration:
-            raise KeyError('initial key or similar not found in contentChoiceData')
-        initial = content_choice_data[initial_key]
+        # since Martch 2022 when choices are dropped again, there is 'game_data' (can't confirm if API responses for older data has changed)
+        if 'game_data' in content_choice_data:  # or as in js public client -> if not self.uses_choices:
+            game_data = content_choice_data['game_data']
+        else:
+            # Since August 2020 there is no simple 'initial' key, games may be stored under different keys eg.:
+            # 'initial-without-order'  # for not yet unlocked months
+            # 'initial-classic',       # classic plan
+            try:
+                initial_key = next(filter(lambda x: x.startswith('initial'), content_choice_data))
+            except StopIteration:
+                raise KeyError('initial key or similar not found in contentChoiceData')
+            initial = content_choice_data[initial_key]
+            game_data = initial['content_choices']
 
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c) for id, c
-            in initial['content_choices'].items()
+            in game_data.items()
         ]
         self.extrases: t.List[Extras] = [
             Extras(extras) for extras
@@ -224,7 +223,11 @@ class ContentChoiceOptions:
         return []
 
     @property
-    def remained_choices(self) -> int:
+    def remaining_choices(self) -> t.Optional[int]:
+        """Returned amount of remaining user choices or None if not applicable for this product"""
+        if not self.uses_choices or self.product_is_choiceless:
+            return None
+        
         if self._content_choices_made is None:
             return self.MAX_CHOICES
         return self.MAX_CHOICES - len(self._content_choices_made)

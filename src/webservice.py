@@ -43,7 +43,7 @@ class AuthorizedHumbleAPI:
     TROVES_PER_CHUNK = 20
     _MAIN_PAGE = ""
     _SUBSCRIPTION = 'subscription'
-    _SUBSCRIPTION_HOME = 'subscription/home'
+    _SUBSCRIPTION_HOME = 'subscription/home'  # redirect to membership/home
     _SUBSCRIPTION_PRODUCTS = 'api/v1/subscriptions/humble_monthly/subscription_products_with_gamekeys'
     _SUBSCRIPTION_HISTORY = 'api/v1/subscriptions/humble_monthly/history?from_product={}'
     _DOWNLOAD_SIGN = 'api/v1/user/download/sign'
@@ -53,11 +53,11 @@ class AuthorizedHumbleAPI:
         "Accept": "application/json",
         "Accept-Charset": "utf-8",
         "Keep-Alive": "true",
-        "User-Agent": "HumbleBundle plugin for GOG Galaxy 2.0"
     }
 
-    def __init__(self):
-        self._session = galaxy.http.create_client_session(headers=self._DEFAULT_HEADERS)
+    def __init__(self, headers: t.Dict[str, t.Any]):
+        headers={**self._DEFAULT_HEADERS, **headers}
+        self._session = galaxy.http.create_client_session(headers=headers)
 
     @property
     def is_authenticated(self) -> bool:
@@ -210,7 +210,7 @@ class AuthorizedHumbleAPI:
             from_product = prev_month['machine_name']
 
     async def _get_webpack_data(self, path: str, webpack_id: str) -> dict:
-        res = await self._request('GET', path, allow_redirects=False)
+        res = await self._request('GET', path)
         txt = await res.text()
         search = f'<script id="{webpack_id}" type="application/json">'
         json_start = txt.find(search) + len(search)
