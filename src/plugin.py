@@ -22,7 +22,7 @@ from galaxy.api.errors import AuthenticationRequired, UnknownBackendResponse, Un
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
 from settings import Settings
-from webservice import AuthorizedHumbleAPI, WebpackParseError
+from webservice import AuthorizedHumbleAPI
 from model.game import TroveGame, Key, Subproduct, HumbleGame, ChoiceGame
 from model.types import HP
 from humbledownloader import HumbleDownloadResolver
@@ -60,7 +60,8 @@ def setup_sentry():
 class HumbleBundlePlugin(Plugin):
     def __init__(self, reader, writer, token):
         super().__init__(Platform.HumbleBundle, __version__, reader, writer, token)
-        self._api = AuthorizedHumbleAPI()
+        headers = {"User-Agent": f"HumbleBundle plugin for GOG Galaxy 2.0 v{__version__}"}
+        self._api = AuthorizedHumbleAPI(headers=headers)
         self._download_resolver = HumbleDownloadResolver()
         self._app_finder = AppFinder()
         self._settings = Settings()
@@ -202,18 +203,19 @@ class HumbleBundlePlugin(Plugin):
         subscriptions: t.List[Subscription] = []
         subscription_state = await self._api.get_user_subscription_state()
         has_active_perks = subscription_state.get("perksStatus") == "active"
-        owns_active_content = subscription_state.get("monthlyOwnsActiveContent")
 
+        active_content_checked = False
         async for product in self._api.get_subscription_products_with_gamekeys():
             if 'contentChoiceData' not in product:
                 break  # all Humble Choice months already yielded
             is_product_unlocked = 'gamekey' in product
+            active_content_checked |= product.get('isActiveContent', False)
             subscriptions.append(Subscription(
                 self._normalize_subscription_name(product['productMachineName']),
                 owned = is_product_unlocked
             ))
 
-        if not owns_active_content:
+        if not active_content_checked:
             active_month_resolver = ActiveMonthResolver(has_active_perks)
             active_month_info: ActiveMonthInfoByUser = await active_month_resolver.resolve(self._api)
             
@@ -233,7 +235,7 @@ class HumbleBundlePlugin(Plugin):
         choice_slug = self._choice_name_to_slug(subscription_name)
         choice_data = await self._api.get_choice_content_data(choice_slug)
         cco = choice_data.content_choice_options
-        show_all = cco.remained_choices > 0
+        show_all = cco.remaining_choices != 0
 
         choice_games: t.Dict[str, ChoiceGame] = {
             ch.id: ChoiceGame(ch.id, ch.title, choice_slug)

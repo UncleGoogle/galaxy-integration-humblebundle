@@ -23,7 +23,7 @@ def aioresponse():
 
 @pytest.fixture
 def api():
-    return AuthorizedHumbleAPI()
+    return AuthorizedHumbleAPI(headers={})
 
 
 def test_filename_from_web_link(api):

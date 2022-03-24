@@ -33,7 +33,7 @@ async def test_trove_load_from_persistent_cache(plugin):
 
 @pytest.fixture
 def cco():
-    return Mock(spec=ContentChoiceOptions)
+    return Mock(spec=ContentChoiceOptions, name='cco')
 
 
 @pytest.fixture
@@ -44,10 +44,20 @@ def choice_data(cco):
 
 
 @pytest.mark.asyncio
-async def test_choice_month_has_remained_choices(api_mock, plugin, cco, choice_data):
-    """Show all month games if they can be chosen."""
-    cco.remained_choices = 5
-    cco.content_choices_made = ['a', 'c']
+@pytest.mark.parametrize("remaining_choices", [
+    pytest.param(None, id="choices unlimited or unaplicable"),
+    pytest.param(5, id="some remaining choices left"),
+])
+async def test_humble_monthly_v2_sufficient_condition_to_show_all_games(
+    api_mock,
+    plugin,
+    cco,
+    choice_data,
+    remaining_choices,
+):
+    """Show all possible games to be aquired in case there is no choice limit."""
+    cco.remaining_choices = remaining_choices
+    cco.content_choices_made = ['c']
     cco.content_choices = [
         Mock(**{'id': 'a', 'title': 'A'}),
         Mock(**{'id': 'b', 'title': 'B'}),
@@ -73,10 +83,11 @@ async def test_choice_month_has_remained_choices(api_mock, plugin, cco, choice_d
     }
 
 
+
 @pytest.mark.asyncio
-async def test_choice_month_no_remained_choices(api_mock, plugin, cco, choice_data):
+async def test_choice_month_no_remaining_choices(api_mock, plugin, cco, choice_data):
     """Show only chosen games if no more choices left."""
-    cco.remained_choices = 0
+    cco.remaining_choices = 0
     cco.content_choices_made = ['c']
     cco.content_choices = [
         Mock(**{'id': 'a', 'title': 'A'}),
