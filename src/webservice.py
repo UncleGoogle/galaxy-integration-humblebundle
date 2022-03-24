@@ -42,8 +42,8 @@ class AuthorizedHumbleAPI:
 
     TROVES_PER_CHUNK = 20
     _MAIN_PAGE = ""
-    _SUBSCRIPTION = 'subscription'
-    _SUBSCRIPTION_HOME = 'subscription/home'  # redirect to membership/home
+    _SUBSCRIPTION = 'membership'
+    _SUBSCRIPTION_HOME = 'membership/home'
     _SUBSCRIPTION_PRODUCTS = 'api/v1/subscriptions/humble_monthly/subscription_products_with_gamekeys'
     _SUBSCRIPTION_HISTORY = 'api/v1/subscriptions/humble_monthly/history?from_product={}'
     _DOWNLOAD_SIGN = 'api/v1/user/download/sign'
@@ -123,7 +123,7 @@ class AuthorizedHumbleAPI:
         """
         Yields list of subscription products - historically backward info
         for Humble Choice proceeded by Humble Monthly. Used by HumbleBundle in 
-        `https://www.humblebundle.com/subscription/home`
+        `https://www.humblebundle.com/membership/home`
 
         Every product includes only A FEW representative games from given subscription and other data.
         For Choice: `gamekey` field presence means user has unlocked that month to make choices;
@@ -273,7 +273,7 @@ class AuthorizedHumbleAPI:
         """Parsing ~220K
         product_url_path: last element of choice subscripiton url for example 'february-2020'
         """
-        url = 'subscription/' + product_url_path
+        url = self._SUBSCRIPTION + '/' + product_url_path
         webpack_id = 'webpack-monthly-product-data'
         data = await self._get_webpack_data(url, webpack_id)
         return ChoiceContentData(data)
