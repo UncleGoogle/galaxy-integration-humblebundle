@@ -225,7 +225,7 @@ class ContentChoiceOptions:
     @property
     def remaining_choices(self) -> t.Optional[int]:
         """Returned amount of remaining user choices or None if not applicable for this product"""
-        if not self.uses_choices or self.product_is_choiceless:
+        if self.uses_choices is False or self.product_is_choiceless is True:
             return None
         
         if self._content_choices_made is None:
