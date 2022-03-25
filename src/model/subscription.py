@@ -187,6 +187,7 @@ class ContentChoiceOptions:
         self.is_choice_tier: t.Optional[bool] = data.get('isChoiceTier')  # no in active month
         self.product_machine_name: str = data['productMachineName']
         self.title: str = data['title']
+        self.total_choices: t.Optional[int] = None
 
         self.unlocked_content_events: t.Optional[t.List[str]] = data.get('unlockedContentEvents')
 
@@ -205,6 +206,7 @@ class ContentChoiceOptions:
                 raise KeyError('initial key or similar not found in contentChoiceData')
             initial = content_choice_data[initial_key]
             game_data = initial['content_choices']
+            self.total_choices = initial['total_choices']
 
         self.content_choices: t.List[ContentChoice] = [
             ContentChoice(id, c) for id, c
@@ -225,12 +227,9 @@ class ContentChoiceOptions:
     @property
     def remaining_choices(self) -> t.Optional[int]:
         """Returned amount of remaining user choices or None if not applicable for this product"""
-        if self.uses_choices is False or self.product_is_choiceless is True:
+        if self.total_choices is None:
             return None
-        
-        if self._content_choices_made is None:
-            return self.MAX_CHOICES
-        return self.MAX_CHOICES - len(self._content_choices_made)
+        return self.total_choices - len(self.content_choices_made)
 
 
 class ContentMonthlyOptions:
