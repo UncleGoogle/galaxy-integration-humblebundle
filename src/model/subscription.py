@@ -212,7 +212,7 @@ class ContentChoiceOptions:
         ]
         self.extrases: t.List[Extras] = [
             Extras(extras) for extras
-            in content_choice_data['extras']
+            in content_choice_data.get('extras', [])
         ]
         self._content_choices_made = data.get('contentChoicesMade')
 

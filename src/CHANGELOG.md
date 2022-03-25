@@ -5,6 +5,7 @@
 - Rework getting subscriptions list #165 #167
 - Adjust to new Choice subscription model introduced on March 2022 #172 
 - Update and re-set sentry sdk
+- Bug when parsing games from Humble Choice 12-2021
 
 [Changed]
 - Use new bulk API for fetching orders list #168 
