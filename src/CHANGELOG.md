@@ -1,8 +1,16 @@
-## Unreleased
+## Version 0.10.0
 
 [Fixed]
 - Error handling bug introduced in 0.9.5
 - Rework getting subscriptions list #165 #167
+- Adjust to new Choice subscription model introduced on March 2022 #172 
+- Update and re-set sentry sdk
+
+[Changed]
+- Use new bulk API for fetching orders list #168 
+
+[Removed]
+- Trove support (Humble Choice Collection suppport is planned in the future
 
 ## Version 0.9.5
 (!) WARNING: If you're Humble subscriber, plugin reconnection is needed to sync subscriptions again (!)

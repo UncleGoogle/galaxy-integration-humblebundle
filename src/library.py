@@ -25,7 +25,6 @@ class KeyInfo(NamedTuple):
 
 
 class LibraryResolver:
-    NEXT_FETCH_IN = 3600 * 24 * 14
     ORDERS_CHUNK_SIZE = 35
 
     def __init__(
@@ -66,25 +65,13 @@ class LibraryResolver:
         return deduplicated
 
     async def _fetch_and_update_cache(self):
-        next_fetch_orders = self._cache.get('next_fetch_orders')
-        if next_fetch_orders is None or time.time() > next_fetch_orders:
-            logger.info('Refreshing all orders')
-            self._cache['orders'] = await self._fetch_orders([])
-            self._cache['next_fetch_orders'] = time.time() + self.NEXT_FETCH_IN
-        else:
-            const_orders = {
-                gamekey: order
-                for gamekey, order in self._cache.get('orders', {}).items()
-                if self.__is_const(order)
-            }
-            self._cache.setdefault('orders', {}).update(await self._fetch_orders(const_orders))
-
+        logger.info('Refreshing all orders')
+        self._cache['orders'] = await self._fetch_orders()
         self._save_cache(self._cache)
 
-    async def _fetch_orders(self, cached_gamekeys: Iterable[str]) -> Dict[str, dict]:
+    async def _fetch_orders(self) -> Dict[str, dict]:
         gamekeys = await self._api.get_gamekeys()
-        not_cached_gamekeys = [x for x in gamekeys if x not in cached_gamekeys]
-        gamekey_chunks = self._make_chunks(not_cached_gamekeys, size=self.ORDERS_CHUNK_SIZE)
+        gamekey_chunks = self._make_chunks(gamekeys, size=self.ORDERS_CHUNK_SIZE)
         api_calls = [self._api.get_orders_bulk_details(chunk) for chunk in gamekey_chunks]
         call_results = await asyncio.gather(*api_calls)
         orders: Dict[str, Any] = reduce(lambda cum, nxt: {**cum, **nxt}, call_results, {})
@@ -117,16 +104,6 @@ class LibraryResolver:
         if err and len(err) != len(items):
             logger.error(f'Exception(s) occured: [{err}].\nSkipping and going forward')
         return ok
-
-    @staticmethod
-    def __is_const(order):
-        """Tells if this order can be safly cached or may change its content in the future"""
-        if 'choices_remaining' in order and order['choices_remaining'] != 0:
-            return False
-        for key in order['tpkd_dict']['all_tpks']:
-            if 'redeemed_key_val' not in key:
-                return False
-        return True
 
     @staticmethod
     def __filter_out_not_game_bundles(orders: dict) -> dict:

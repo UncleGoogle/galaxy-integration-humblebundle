@@ -1,4 +1,4 @@
-from functools import partial, reduce
+from functools import partial
 from unittest.mock import MagicMock, Mock, PropertyMock
 
 from freezegun import freeze_time
@@ -71,35 +71,6 @@ async def test_library_cache_key(create_resolver, get_torchlight):
 
 
 @pytest.mark.asyncio
-async def test_library_resolver_permanently_caches_const_orders(
-    api_mock, bulk_api_orders, create_resolver
-):
-    """
-    Test of legacy optimization feature
-    `bulk_api_orders` contains some 'const' orders --
-    that won't change anymore from plugin perspective
-    that is why resolver should not refresh them.
-    Probably to be removed as since fetching with orders bulk API
-    there is no point for such optimization
-    """
-    resolver = create_resolver(MagicMock())
-    api_mock.get_orders_bulk_details.return_value = bulk_api_orders
-    
-    # preparing cache
-    await resolver()
-    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
-    assert set(all_called_gamekeys) == set(bulk_api_orders.keys())
-    
-    api_mock.get_gamekeys.reset_mock()
-    api_mock.get_orders_bulk_details.reset_mock()
-
-    # after subsequent call
-    await resolver()
-    all_called_gamekeys = reduce(lambda x, y: x + y[0][0], api_mock.get_orders_bulk_details.call_args_list, [])
-    assert set(all_called_gamekeys) < set(bulk_api_orders.keys())
-
-
-@pytest.mark.asyncio
 class TestFetchOrdersViaBulkAPI:
     ORDER_DETAILS_DUMMY1 = MagicMock()
     ORDER_DETAILS_DUMMY2 = MagicMock()
@@ -107,8 +78,7 @@ class TestFetchOrdersViaBulkAPI:
     @pytest.fixture(autouse=True)
     def resolver(self, create_resolver):
         resolver = create_resolver(Mock())
-        cached_gamekeys = []
-        self.fetch = partial(resolver._fetch_orders, cached_gamekeys)
+        self.fetch = resolver._fetch_orders
 
     @pytest.mark.parametrize('orders, expected', [
         pytest.param(
@@ -314,7 +284,7 @@ async def test_plugin_with_library_orders_cached_fetches_again_when_called_with_
 
 
 @pytest.mark.asyncio
-async def test_plugin_with_library_resovler_when_cache_is_invalidated_after_14_days(
+async def test_plugin_with_library_resovler_when_calling_after_a_day(
     plugin, api_mock, bulk_api_orders
 ):
     type(api_mock).is_authenticated = PropertyMock(return_value=True)
@@ -324,7 +294,7 @@ async def test_plugin_with_library_resovler_when_cache_is_invalidated_after_14_d
         api_mock.get_gamekeys.reset_mock()
         api_mock.get_orders_bulk_details.reset_mock()
 
-        frozen_time.move_to('2020-12-15')
+        frozen_time.move_to('2020-12-02')
         result_after = await plugin.get_owned_games()
     
     assert api_mock.get_gamekeys.call_count == 1

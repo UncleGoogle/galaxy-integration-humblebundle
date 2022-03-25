@@ -115,6 +115,8 @@ class HumbleBundlePlugin(Plugin):
         self._last_version = self._load_cache('last_version', default=None)
         self._trove_games = {g['machine_name']: TroveGame(g) for g in self._load_cache('trove_games', [])}
         self._choice_games = {g['id']: ChoiceGame(**g) for g in self._load_cache('choice_games', [])}
+        # cleanup from v0.10.0
+        self.persistent_cache.pop('next_fetch_orders', None)
     
     async def _get_user_name(self) -> str:
         try:
