@@ -223,7 +223,7 @@ class HumbleBundlePlugin(Plugin):
             active_month_info: ActiveMonthInfoByUser = await active_month_resolver.resolve(self._api)
             
             if active_month_info.machine_name:
-                subscriptions.append(Subscription(
+                subscriptions.insert(0, Subscription(
                     self._normalize_subscription_name(active_month_info.machine_name),
                     owned = active_month_info.is_or_will_be_owned,
                     end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None

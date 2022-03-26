@@ -5,13 +5,14 @@
 - Rework getting subscriptions list #165 #167
 - Adjust to new Choice subscription model introduced on March 2022 #172 
 - Update and re-set sentry sdk
-- Bug when parsing games from Humble Choice 12-2021
+- Not showing choice month games if there was no extras list (eg. Humble Choice 12-2021)
 
 [Changed]
 - Use new bulk API for fetching orders list #168 
+- Move the last Choice month to the top of subscription list in Galaxy Settings>Features window
 
 [Removed]
-- Trove support (Humble Choice Collection suppport is planned in the future
+- Trove support (Humble Choice Collection suppport is planned in the future)
 
 ## Version 0.9.5
 (!) WARNING: If you're Humble subscriber, plugin reconnection is needed to sync subscriptions again (!)
