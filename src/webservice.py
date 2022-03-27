@@ -127,8 +127,8 @@ class AuthorizedHumbleAPI:
 
         Every product includes only A FEW representative games from given subscription and other data.
         For Choice: `gamekey` field presence means user has unlocked that month to make choices;
-        `contentChoicesMade` field contain choosen games grouped by keys from "unlockedContentEvents".
-        For Monhly: `download_url` field presence means user has subscribed this month.
+        `contentChoicesMade` field contain chosen games grouped by keys from "unlockedContentEvents".
+        For Monthly: `download_url` field presence means user has subscribed this month.
 
         Yields list of products - historically backward subscriptions info.
         Choice products are in form of:
