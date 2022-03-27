@@ -220,9 +220,10 @@ class ContentChoiceOptions:
 
     @property
     def content_choices_made(self) -> t.List[str]:
-        if self._content_choices_made:
+        try:
             return self._content_choices_made['initial']['choices_made']
-        return []
+        except (KeyError, TypeError):
+            return []
 
     @property
     def remaining_choices(self) -> t.Optional[int]:
