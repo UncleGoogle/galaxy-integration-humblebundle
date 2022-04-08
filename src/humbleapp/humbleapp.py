@@ -1,15 +1,20 @@
 import json
+import sys
 import enum
 import os
 import pathlib
+import logging
 import typing as t
-from dataclasses import dataclass
 import webbrowser
+from dataclasses import dataclass
 
-from consts import WIN
+IS_WINDOWS = sys.platform == 'win32'
 
-if WIN:
+if IS_WINDOWS:
     import winreg
+
+
+logger = logging.getLogger(__name__)
 
 
 Json = t.Dict[str, t.Any]
@@ -62,14 +67,14 @@ class UserInfo:
 
 
 @dataclass
-class Settings:
+class  Settings:
     download_location: pathlib.Path
 
 
 @dataclass
 class HumbleAppConfig:
     settings: Settings
-    game_collection: t.Dict[GameMachineName, VaultGame]
+    game_collection: t.List[VaultGame]
 
 
 class FileWatcher:
@@ -81,8 +86,12 @@ class FileWatcher:
     def path(self) -> pathlib.PurePath:
         return self._path
     
-    def has_changed(self) -> bool:
-        last_mtime = os.stat(self._path).st_mtime
+    def has_changed(self) -> t.Optional[bool]:
+        try:
+            last_mtime = os.stat(self._path).st_mtime
+        except OSError:
+            self._prev_mtime = None
+            return None
         changed = last_mtime != self._prev_mtime
         self._prev_mtime = last_mtime
         return changed
@@ -107,10 +116,7 @@ def parse_humble_app_config(path: pathlib.PurePath)  -> HumbleAppConfig:
     with open(path, encoding="utf-8") as f:
         content = json.load(f)
         
-    games = {}
-    for g_raw in content['game-collection-4']:
-        g = parse_game(g_raw)
-        games[g.machine_name] = g
+    games = [parse_game(g) for g in content['game-collection-4']]
 
     return HumbleAppConfig(
         settings=Settings(
@@ -120,8 +126,11 @@ def parse_humble_app_config(path: pathlib.PurePath)  -> HumbleAppConfig:
     )
 
     
-def is_uri_handler_installed(protocol: str):
+def get_app_path_for_uri_handler(protocol: str) -> t.Optional[str]:
     """Source: https://github.com/FriendsOfGalaxy/galaxy-integration-origin/blob/master/src/uri_scheme_handler.py"""
+
+    if not IS_WINDOWS:
+        return None
 
     def _get_path_from_cmd_template(cmd_template: str) -> str:
         return cmd_template.replace("\"", "").partition("%")[0].strip()
@@ -131,10 +140,9 @@ def is_uri_handler_installed(protocol: str):
             winreg.HKEY_CLASSES_ROOT, r"{}\shell\open\command".format(protocol)
         ) as key:
             executable_template = winreg.QueryValue(key, None)
-            path = _get_path_from_cmd_template(executable_template)
-            return os.path.exists(path)
+            return _get_path_from_cmd_template(executable_template)
     except OSError:
-        return False
+        return None
     
 
 class HumbleAppClient:
@@ -144,12 +152,24 @@ class HumbleAppClient:
     def _open(cls, cmd: str, arg: str):
         webbrowser.open(f"{cls.PROTOCOL}://{cmd}/{arg}")
 
-    def is_installed(self):
-        return self.is_uri_handler_installed(self.PROTOCOL)
+    def get_exe_path(self) -> t.Optional[str]:
+        return get_app_path_for_uri_handler(self.PROTOCOL)
 
-    def launch_game(self, game_id: GameMachineName):
+    def is_installed(self):
+        path = self.get_exe_path()
+        if path:
+            if os.path.exists(path):
+                return True
+            else:
+                logger.debug(f"{path} does not exists")
+        return False
+
+    def launch(self, game_id: GameMachineName):
         self._open("launch", game_id)
     
-    def install_game(self, game_id: GameMachineName):
+    def install(self, game_id: GameMachineName):
         self._open("install", game_id)
+
+    def uninstall(self, game_id: GameMachineName):
+        self._open("uninstall", game_id)
 

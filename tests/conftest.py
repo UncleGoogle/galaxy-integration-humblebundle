@@ -4,15 +4,16 @@ import asyncio
 import pathlib
 import json
 
-import pytest
-
 # workaround for vscode test discovery
 import sys
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'src'))
 
+import pytest
 from galaxy.api.errors import UnknownError
+
 from plugin import HumbleBundlePlugin
 from settings import Settings
+from local.humbleapp_adapter import HumbleAppClient
 
 
 class AsyncMock(MagicMock):
@@ -81,9 +82,16 @@ def api_mock(api_mock_raw, orders_keys):
 
 
 @pytest.fixture
-async def plugin(api_mock, settings, mocker):
+def humbleapp_client_mock():
+    mock = MagicMock(spec=HumbleAppClient)
+    return mock
+
+
+@pytest.fixture
+async def plugin(api_mock, settings, humbleapp_client_mock, mocker):
     mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
     mocker.patch('settings.Settings', return_value=settings)
+    mocker.patch('plugin.HumbleAppClient', return_value=humbleapp_client_mock)
     plugin = HumbleBundlePlugin(Mock(), Mock(), "handshake_token")
     plugin.push_cache = Mock(spec=())
 
