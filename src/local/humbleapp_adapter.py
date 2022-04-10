@@ -4,8 +4,10 @@ import os
 import typing as t
 
 from galaxy.api.types import SubscriptionGame, LocalGame, LocalGameState
+from galaxy.api.consts import OSCompatibility
 from humbleapp.humbleapp import FileWatcher, GameStatus, TroveCategory, VaultGame, GameMachineName, HumbleAppConfig, parse_humble_app_config
 from humbleapp.humbleapp import HumbleAppClient as _HumbleAppClient
+from model.game import HumbleGame
 
 
 class HumbleAppGameCategory(enum.Enum):
@@ -64,6 +66,10 @@ class HumbleAppClient:
             _vault_to_galaxy_local_game(vg)
             for vg in self._games.values()
         ]
+    
+    @property
+    def os_compatibility(self):
+        return OSCompatibility.Windows
 
     def refresh_game_list(self) -> None:
         config = self._parse_config()
@@ -92,3 +98,4 @@ class HumbleAppClient:
     # TODO get os compatibility
 
     # TODO reconsider inheriting over HumbleGame instance to keep current convention
+    

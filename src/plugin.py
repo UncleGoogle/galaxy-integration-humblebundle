@@ -388,7 +388,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_os_compatibility(self, game_id: str, context: t.Any) -> t.Optional[OSCompatibility]:
         if game_id in self._humbleapp_client:
-            return OSCompatibility.Windows
+            return self._humbleapp_client.os_compatibility
         
         try:
             game = self._humble_games[game_id]

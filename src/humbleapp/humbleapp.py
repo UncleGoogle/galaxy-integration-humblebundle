@@ -150,7 +150,9 @@ class HumbleAppClient:
 
     @classmethod
     def _open(cls, cmd: str, arg: str):
-        webbrowser.open(f"{cls.PROTOCOL}://{cmd}/{arg}")
+        cmd = f"{cls.PROTOCOL}://{cmd}/{arg}"
+        logger.info(f"Opening {cmd}")
+        webbrowser.open(cmd)
 
     def get_exe_path(self) -> t.Optional[str]:
         return get_app_path_for_uri_handler(self.PROTOCOL)
@@ -168,7 +170,7 @@ class HumbleAppClient:
         self._open("launch", game_id)
     
     def install(self, game_id: GameMachineName):
-        self._open("install", game_id)
+        self._open("download", game_id)
 
     def uninstall(self, game_id: GameMachineName):
         self._open("uninstall", game_id)
