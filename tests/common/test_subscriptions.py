@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, Mock
+import typing as t
 import json
 
 from galaxy.api.types import Subscription
@@ -9,6 +10,13 @@ from webservice import WebpackParseError
 
 
 pytestmark = pytest.mark.asyncio
+
+
+def assert_contains(alist: t.List, elements: t.Iterable):
+    for i in elements:
+        if i in alist:
+            break
+        assert False, f"{i} not found in {alist}"
 
 
 @pytest.fixture
@@ -55,9 +63,7 @@ async def test_get_subscriptions_never_subscribed(plugin, api_mock):
 
     res = await plugin.get_subscriptions()
 
-    assert sorted(res, key=lambda x: x.subscription_name) == [
-        Subscription("Humble Choice 2020-05", owned=False),
-    ]
+    assert_contains(res, [Subscription("Humble Choice 2020-05", owned=False)])
     api_mock.get_choice_marketing_data.assert_called_once()
 
 
@@ -78,21 +84,19 @@ async def test_get_subscriptions_multiple_where_one_paused(plugin, api_mock):
     """)
     content_choice_options = [
         {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'may_2020_choice', 'isActiveContent': True},
-        {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'april_2020_choice', 'isActiveContent': False},
-        {'contentChoiceData': Mock(dict), 'productMachineName': 'march_2020_choice', 'isActiveContent': False},  # paused month
-        {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'february_2020_choice', 'isActiveContent': False},
+        {'contentChoiceData': Mock(dict), 'productMachineName': 'april_2020_choice', 'isActiveContent': False},  # paused month
+        {'contentChoiceData': Mock(dict), 'gamekey': Mock(str), 'productMachineName': 'march_2020_choice', 'isActiveContent': False},
     ]
     api_mock.get_user_subscription_state.return_value = subscription_state
     api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
 
     res = await plugin.get_subscriptions()
 
-    assert sorted(res, key=lambda x: x.subscription_name) == [
-        Subscription("Humble Choice 2020-02", owned=True),
-        Subscription("Humble Choice 2020-03", owned=False),  # paused month
-        Subscription("Humble Choice 2020-04", owned=True),
+    assert_contains(res, [
+        Subscription("Humble Choice 2020-03", owned=True),
+        Subscription("Humble Choice 2020-04", owned=False),  # paused month
         Subscription("Humble Choice 2020-05", owned=True),
-    ]
+    ])
 
 
 async def test_get_subscriptions_humble_choice_and_humble_monthly(api_mock, plugin):
@@ -126,10 +130,10 @@ async def test_get_subscriptions_humble_choice_and_humble_monthly(api_mock, plug
 
     res = await plugin.get_subscriptions()
 
-    assert sorted(res, key=lambda x: x.subscription_name) == [
+    assert_contains(res, [
         Subscription("Humble Choice 2019-12", owned=True),
         Subscription("Humble Choice 2020-01", owned=True),
-    ]
+    ])
 
 
 async def test_get_subscriptions_past_subscriber(api_mock, plugin):
@@ -158,11 +162,11 @@ async def test_get_subscriptions_past_subscriber(api_mock, plugin):
 
     res = await plugin.get_subscriptions()
 
-    assert sorted(res, key=lambda x: x.subscription_name) == [
+    assert_contains(res, [
         Subscription("Humble Choice 2020-02", owned=True),
         Subscription("Humble Choice 2020-03", owned=True),
         Subscription("Humble Choice 2020-05", owned=False),  # active month
-    ]
+    ])
 
 
 @pytest.mark.parametrize('subscription_plan_tier,has_choices', [
@@ -235,10 +239,10 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(
 
     res = await plugin.get_subscriptions()
 
-    assert sorted(res, key=lambda x: x.subscription_name) == [
+    assert_contains(res, [
         Subscription("Humble Choice 2020-04", owned=True),
         Subscription("Humble Choice 2020-05", owned=has_choices),
-    ]
+    ])
     assert api_mock.get_choice_marketing_data.call_count == 0
 
 
@@ -270,8 +274,31 @@ async def test_get_subscriptions_current_month_not_unlocked_yet__cant_fetch_earl
     api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
     
     res = await plugin.get_subscriptions()
-    assert sorted(res, key=lambda x: x.subscription_name) == [
+    assert_contains(res, [
         Subscription("Humble Choice 2020-04", owned=True),
         Subscription("Humble Choice 2020-05", owned=False),
-    ]
+    ])
     assert api_mock.get_choice_marketing_data.call_count == 1
+
+
+async def test_get_subscription_perks(plugin, api_mock):
+    subscription_state_excerpt = json.loads("""
+    {
+      "perksStatus": "active",
+      "monthlyNewestOwnedContentMachineName": "march_2020_choice",
+      "monthlyOwnsAnyContent": true
+    }
+    """)
+    content_choice_options = [
+        # hack: have active month there to avoid ActiveMonthResolver checks
+        {'contentChoiceData': Mock(dict), 'productMachineName': 'april_2020_choice', 'isActiveContent': True}
+    ]
+    api_mock.get_user_subscription_state.return_value = subscription_state_excerpt
+    api_mock.get_subscription_products_with_gamekeys = MagicMock(return_value=aiter(content_choice_options))
+
+    res = await plugin.get_subscriptions()
+
+    assert_contains(res, [
+        Subscription("Humble Games Collection", owned=True),
+        Subscription("Humble Vault", owned=True),
+    ])

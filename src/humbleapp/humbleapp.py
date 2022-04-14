@@ -169,7 +169,7 @@ class HumbleAppClient:
     def launch(self, game_id: GameMachineName):
         self._open("launch", game_id)
     
-    def install(self, game_id: GameMachineName):
+    def download(self, game_id: GameMachineName):
         self._open("download", game_id)
 
     def uninstall(self, game_id: GameMachineName):

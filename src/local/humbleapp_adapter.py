@@ -80,12 +80,16 @@ class HumbleAppClient:
         if self._config.has_changed():
             return parse_humble_app_config(str(self.CONFIG_PATH))
         return None
+    
+    def get_local_size(self):
+        # TODO
+        return None
 
     def is_installed(self) -> bool:
         return self._client.is_installed()
     
-    def install(self, game_id: str) -> None:
-        self._client.install(game_id)
+    def install(self,  game_id: str) -> None:
+        self._client.download(game_id)
 
     def uninstall(self, game_id: str) -> None:
         self._client.uninstall(game_id)

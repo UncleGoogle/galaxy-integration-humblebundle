@@ -206,18 +206,16 @@ class HumbleBundlePlugin(Plugin):
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
     async def get_subscriptions(self):
-        subscriptions: t.List[Subscription] = []
+        choice_months: t.List[Subscription] = []
         subscription_state = await self._api.get_user_subscription_state()
         has_active_perks = subscription_state.get("perksStatus") == "active"
         
-        if has_active_perks:
-            subscriptions.extend([
-                Subscription(
-                    subscription_name=game_group_category.value,
-                    owned=True,
-                    subscription_discovery=SubscriptionDiscovery.AUTOMATIC,
-                ) for game_group_category in HumbleAppGameCategory
-            ])
+        choice_perks: t.List[Subscription] = [
+            Subscription(
+                subscription_name=game_group_category.value,
+                owned=has_active_perks,
+            ) for game_group_category in HumbleAppGameCategory
+        ]
 
         active_content_checked = False
         async for product in self._api.get_subscription_products_with_gamekeys():
@@ -225,7 +223,7 @@ class HumbleBundlePlugin(Plugin):
                 break  # all Humble Choice months already yielded
             is_product_unlocked = 'gamekey' in product
             active_content_checked |= product.get('isActiveContent', False)
-            subscriptions.append(Subscription(
+            choice_months.append(Subscription(
                 self._normalize_subscription_name(product['productMachineName']),
                 owned = is_product_unlocked
             ))
@@ -235,13 +233,13 @@ class HumbleBundlePlugin(Plugin):
             active_month_info: ActiveMonthInfoByUser = await active_month_resolver.resolve(self._api)
             
             if active_month_info.machine_name:
-                subscriptions.insert(0, Subscription(
+                choice_months.insert(0, Subscription(
                     self._normalize_subscription_name(active_month_info.machine_name),
                     owned = active_month_info.is_or_will_be_owned,
                     end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
                 ))
 
-        return subscriptions
+        return choice_perks + choice_months
 
     async def prepare_subscription_games_context(self, subscription_names: t.List[str]) -> None:
         if any(name in subscription_names for name in HumbleAppGameCategory):

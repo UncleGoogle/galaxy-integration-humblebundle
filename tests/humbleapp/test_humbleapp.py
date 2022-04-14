@@ -106,7 +106,7 @@ class TestHumbleAppClient:
         with patch.object(self.client, "get_exe_path", Mock(return_value=path)):
             assert self.client.is_installed() == exe_exists
     
-    @pytest.mark.parametrize("method", ["launch", "install", "uninstall"])
+    @pytest.mark.parametrize("method", ["launch", "download", "uninstall"])
     def test_command_handler(self, method: str):
         game_id = GameMachineName("game_machine_name")
         with patch("webbrowser.open") as m:
