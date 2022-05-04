@@ -77,17 +77,17 @@ class HumbleAppClient:
         
     def _parse_config(self) -> t.Optional[HumbleAppConfig]:
         if self._config.has_changed():
-            return parse_humble_app_config(str(self.CONFIG_PATH))
+            return parse_humble_app_config(self.CONFIG_PATH)
         return None
     
     def get_local_size(self, game_id: str) -> t.Optional[int]:
         game = self._games.get(game_id)
         if game is None:
             return None
-        if os.path.exists(game.file_path):
-            return game.file_size
-        else:
+        if game.file_path and not os.path.exists(game.file_path):
             return 0
+        else:
+            return game.file_size
 
     def is_installed(self) -> bool:
         return self._client.is_installed()

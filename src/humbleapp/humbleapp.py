@@ -51,6 +51,7 @@ class VaultGame:
     def full_executable_path(self) -> t.Optional[pathlib.Path]:
         if self.file_path and self.executable_path:
             return pathlib.Path(self.file_path) / self.executable_path
+        return None
     
 
 @dataclass
@@ -90,7 +91,7 @@ class FileWatcher:
         try:
             last_mtime = os.stat(self._path).st_mtime
         except OSError:
-            self._prev_mtime = None
+            self._prev_mtime = 0.0
             return None
         changed = last_mtime != self._prev_mtime
         self._prev_mtime = last_mtime
