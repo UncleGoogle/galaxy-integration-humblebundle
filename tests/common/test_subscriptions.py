@@ -290,7 +290,7 @@ async def test_get_subscription_perks(plugin, api_mock):
     }
     """)
     content_choice_options = [
-        # hack: have active month there to avoid ActiveMonthResolver checks
+        # hack: define an active month here to avoid mocking ActiveMonthResolver
         {'contentChoiceData': Mock(dict), 'productMachineName': 'april_2020_choice', 'isActiveContent': True}
     ]
     api_mock.get_user_subscription_state.return_value = subscription_state_excerpt

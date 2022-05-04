@@ -141,3 +141,28 @@ async def test_local_size(plugin):
     }
     ctx = await plugin.prepare_local_size_context(['loc'])
     assert await plugin.get_local_size('loc', ctx) == 100200300
+
+
+@pytest.mark.asyncio
+async def test_local_size_for_humbleapp_game(plugin, humbleapp_client_mock):
+    game_id = 'loc'
+    humbleapp_client_mock.__contains__.side_effect = lambda x: x == game_id
+    humbleapp_client_mock.get_local_size.return_value = 1000
+    ctx = await plugin.prepare_local_size_context([game_id])
+    assert await plugin.get_local_size(game_id, ctx) == 1000
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('plugin_action, humbleapp_client_action', [
+    ('install_game', 'install'),
+    ('launch_game', 'launch'),
+    ('uninstall_game', 'uninstall')
+])
+async def test_local_game_action_from_humbleapp(
+    plugin, humbleapp_client_mock,
+    plugin_action, humbleapp_client_action
+):
+    game_id = 'xxx'
+    humbleapp_client_mock.__contains__.side_effect = lambda x: x == game_id
+    await getattr(plugin, plugin_action)(game_id)
+    getattr(humbleapp_client_mock, humbleapp_client_action).assert_called_once_with(game_id)

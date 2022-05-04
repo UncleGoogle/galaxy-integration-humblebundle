@@ -375,7 +375,7 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_local_size(self, game_id, context) -> t.Optional[int]:
         if game_id in self._humbleapp_client:
-            self._humbleapp_client.get_local_size(game_id)
+            return self._humbleapp_client.get_local_size(game_id)
         else:
             try:
                 game = self._local_games[game_id]

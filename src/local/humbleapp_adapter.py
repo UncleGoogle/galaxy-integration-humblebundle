@@ -7,7 +7,6 @@ from galaxy.api.types import SubscriptionGame, LocalGame, LocalGameState
 from galaxy.api.consts import OSCompatibility
 from humbleapp.humbleapp import FileWatcher, GameStatus, TroveCategory, VaultGame, GameMachineName, HumbleAppConfig, parse_humble_app_config
 from humbleapp.humbleapp import HumbleAppClient as _HumbleAppClient
-from model.game import HumbleGame
 
 
 class HumbleAppGameCategory(enum.Enum):
@@ -81,9 +80,14 @@ class HumbleAppClient:
             return parse_humble_app_config(str(self.CONFIG_PATH))
         return None
     
-    def get_local_size(self):
-        # TODO
-        return None
+    def get_local_size(self, game_id: str) -> t.Optional[int]:
+        game = self._games.get(game_id)
+        if game is None:
+            return None
+        if os.path.exists(game.file_path):
+            return game.file_size
+        else:
+            return 0
 
     def is_installed(self) -> bool:
         return self._client.is_installed()
@@ -96,10 +100,3 @@ class HumbleAppClient:
 
     def launch(self, game_id: str) -> None:
         self._client.launch(game_id)
-
-    # TODO get local game size
-    
-    # TODO get os compatibility
-
-    # TODO reconsider inheriting over HumbleGame instance to keep current convention
-    
