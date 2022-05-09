@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, create_autospec
 import typing as t
 import asyncio
 import pathlib
@@ -83,7 +83,7 @@ def api_mock(api_mock_raw, orders_keys):
 
 @pytest.fixture
 def humbleapp_client_mock():
-    mock = MagicMock(spec=HumbleAppClient)
+    mock = create_autospec(HumbleAppClient)
     return mock
 
 

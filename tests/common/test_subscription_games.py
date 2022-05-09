@@ -158,3 +158,4 @@ async def test_humble_app_games(
     
     async for games_batch in plugin.get_subscription_games(subscription_name, ctx):
         assert games_batch == expected
+    humbleapp_client_mock.refresh_game_list.assert_called_once()
