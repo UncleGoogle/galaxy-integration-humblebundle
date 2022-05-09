@@ -82,6 +82,7 @@ class HumbleBundlePlugin(Plugin):
         self._owned_check: asyncio.Task = asyncio.create_task(asyncio.sleep(8))
         self._statuses_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
         self._installed_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
+        self._humbleapp_config_check: asyncio.Task = asyncio.create_task(asyncio.sleep(0))
 
         self._rescan_needed = True
         self._under_installation = set()
@@ -241,10 +242,6 @@ class HumbleBundlePlugin(Plugin):
 
         return choice_perks + choice_months
 
-    async def prepare_subscription_games_context(self, subscription_names: t.List[str]) -> None:
-        if any(name.value in subscription_names for name in HumbleAppGameCategory):
-            self._humbleapp_client.refresh_game_list()
-    
     async def get_subscription_games(self, subscription_name: str, context: None) -> t.AsyncGenerator[t.List[SubscriptionGame], None]:
         if subscription_name in [n.value for n in HumbleAppGameCategory]:
             yield self._humbleapp_client.get_subscription_games(HumbleAppGameCategory(subscription_name))
@@ -350,7 +347,6 @@ class HumbleBundlePlugin(Plugin):
             gls.tags = []  # remove redundant tags since Galaxy support for subscripitons
         return gls
 
-    # @double_click_effect(timeout=0.4, effect='_launch_directly')
     async def launch_game(self, game_id):
         if game_id in self._humbleapp_client:
             self._humbleapp_client.launch(game_id)
@@ -458,6 +454,10 @@ class HumbleBundlePlugin(Plugin):
             self.update_local_game_status(LocalGame(game.id, state))
             self._cached_game_states[game.id] = state
         await asyncio.sleep(0.5)
+    
+    async def _check_humbleapp(self):
+        self._humbleapp_client.refresh_game_list()
+        await asyncio.sleep(1)
 
     def tick(self):
         self._settings.reload_config_if_changed()
@@ -473,11 +473,15 @@ class HumbleBundlePlugin(Plugin):
 
         if self._statuses_check.done():
             self._statuses_check = asyncio.create_task(self._check_statuses())
+        
+        if self._humbleapp_config_check.done():
+            self._humbleapp_config_check = asyncio.create_task(self._check_humbleapp())
 
     async def shutdown(self):
         self._owned_check.cancel()
         self._statuses_check.cancel()
         self._installed_check.cancel()
+        self._humbleapp_config_check.cancel()
         await self._api.close_session()
 
 
