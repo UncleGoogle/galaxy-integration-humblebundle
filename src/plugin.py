@@ -242,7 +242,7 @@ class HumbleBundlePlugin(Plugin):
 
         return choice_perks + choice_months
 
-    async def get_subscription_games(self, subscription_name: str, context: None) -> t.AsyncGenerator[t.List[SubscriptionGame], None]:
+    async def get_subscription_games(self, subscription_name: str, context: None) -> t.AsyncGenerator[t.List[SubscriptionGame], None]:  # type: ignore
         if subscription_name in [n.value for n in HumbleAppGameCategory]:
             yield self._humbleapp_client.get_subscription_games(HumbleAppGameCategory(subscription_name))
             return
