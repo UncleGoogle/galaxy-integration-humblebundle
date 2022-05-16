@@ -17,7 +17,7 @@ import sentry_sdk
 from sentry_sdk.integrations.logging import LoggingIntegration
 from galaxy.api.plugin import Plugin, create_and_run_plugin
 from galaxy.api.consts import Platform, OSCompatibility
-from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription
+from galaxy.api.types import Authentication, NextStep, LocalGame, GameLibrarySettings, Subscription, SubscriptionGame
 from galaxy.api.errors import AuthenticationRequired, UnknownBackendResponse, UnknownError, BackendError
 
 from consts import IS_WINDOWS, TROVE_SUBSCRIPTION_NAME
@@ -28,6 +28,8 @@ from model.types import HP
 from humbledownloader import HumbleDownloadResolver
 from library import LibraryResolver
 from local import AppFinder
+from local.localgame import LocalHumbleGame
+from local.humbleapp_adapter import HumbleAppGameCategory, HumbleAppClient
 from privacy import SensitiveFilter
 from active_month_resolver import (
     ActiveMonthInfoByUser,
@@ -67,18 +69,20 @@ class HumbleBundlePlugin(Plugin):
         self._app_finder = AppFinder()
         self._settings = Settings()
         self._library_resolver = None
+        self._humbleapp_client = HumbleAppClient()
 
         self._owned_games: t.Dict[str, HumbleGame] = {}
         self._trove_games: t.Dict[str, TroveGame] = {}  # legacy - for loading already existing cache
         self._choice_games: t.Dict[str, ChoiceGame] = {}
 
-        self._local_games = {}
+        self._local_games: t.Dict[str, LocalHumbleGame] = {}
         self._cached_game_states = {}
 
         self._getting_owned_games = asyncio.Lock()
         self._owned_check: asyncio.Task = asyncio.create_task(asyncio.sleep(8))
         self._statuses_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
         self._installed_check: asyncio.Task = asyncio.create_task(asyncio.sleep(4))
+        self._humbleapp_config_check: asyncio.Task = asyncio.create_task(asyncio.sleep(0))
 
         self._rescan_needed = True
         self._under_installation = set()
@@ -203,9 +207,16 @@ class HumbleBundlePlugin(Plugin):
         return f'{calendar.month_name[int(month)]}-{year}'.lower()
 
     async def get_subscriptions(self):
-        subscriptions: t.List[Subscription] = []
+        choice_months: t.List[Subscription] = []
         subscription_state = await self._api.get_user_subscription_state()
         has_active_perks = subscription_state.get("perksStatus") == "active"
+        
+        choice_perks: t.List[Subscription] = [
+            Subscription(
+                subscription_name=game_group_category.value,
+                owned=has_active_perks,
+            ) for game_group_category in HumbleAppGameCategory
+        ]
 
         active_content_checked = False
         async for product in self._api.get_subscription_products_with_gamekeys():
@@ -213,7 +224,7 @@ class HumbleBundlePlugin(Plugin):
                 break  # all Humble Choice months already yielded
             is_product_unlocked = 'gamekey' in product
             active_content_checked |= product.get('isActiveContent', False)
-            subscriptions.append(Subscription(
+            choice_months.append(Subscription(
                 self._normalize_subscription_name(product['productMachineName']),
                 owned = is_product_unlocked
             ))
@@ -223,15 +234,19 @@ class HumbleBundlePlugin(Plugin):
             active_month_info: ActiveMonthInfoByUser = await active_month_resolver.resolve(self._api)
             
             if active_month_info.machine_name:
-                subscriptions.insert(0, Subscription(
+                choice_months.insert(0, Subscription(
                     self._normalize_subscription_name(active_month_info.machine_name),
                     owned = active_month_info.is_or_will_be_owned,
                     end_time = None  # #117: get_last_friday.timestamp() if user_plan not in [None, Lite] else None
                 ))
 
-        return subscriptions
-    
-    async def get_subscription_games(self, subscription_name, context):
+        return choice_perks + choice_months
+
+    async def get_subscription_games(self, subscription_name: str, context: None) -> t.AsyncGenerator[t.List[SubscriptionGame], None]:  # type: ignore
+        if subscription_name in [n.value for n in HumbleAppGameCategory]:
+            yield self._humbleapp_client.get_subscription_games(HumbleAppGameCategory(subscription_name))
+            return
+
         if subscription_name == TROVE_SUBSCRIPTION_NAME:
             raise UnknownError("Plugin does not support Trove games any longer")
 
@@ -255,9 +270,12 @@ class HumbleBundlePlugin(Plugin):
     def subscription_games_import_complete(self):
         self._save_cache('choice_games', [game.serialize() for game in self._choice_games.values()])
 
-    async def get_local_games(self):
+    async def get_local_games(self) -> t.List[LocalGame]:
         self._rescan_needed = True
-        return [g.in_galaxy_format() for g in self._local_games.values()]
+        self._humbleapp_client.refresh_game_list()
+        humble_app_games = self._humbleapp_client.get_local_games()
+        other_detected_installed_games = [g.in_galaxy_format() for g in self._local_games.values()]
+        return humble_app_games + other_detected_installed_games
 
     def _open_config(self, mode: OPTIONS_MODE=OPTIONS_MODE.NORMAL):
         """Synchonious wrapper for self._open_config_async"""
@@ -278,6 +296,10 @@ class HumbleBundlePlugin(Plugin):
 
         self._under_installation.add(game_id)
         try:
+            if game_id in self._humbleapp_client:
+                self._humbleapp_client.install(game_id)
+                return
+
             game = self._humble_games.get(game_id)
             if game is None:
                 logging.error(f'Install game: game {game_id} not found. Humble games: {self._humble_games.keys()}')
@@ -314,6 +336,8 @@ class HumbleBundlePlugin(Plugin):
 
     async def get_game_library_settings(self, game_id: str, context: t.Any) -> GameLibrarySettings:
         gls = GameLibrarySettings(game_id, None, None)
+        if game_id in self._humbleapp_client:
+            return gls
         game = self._humble_games[game_id]
         if isinstance(game, Key):
             gls.tags = ['Key']
@@ -324,30 +348,42 @@ class HumbleBundlePlugin(Plugin):
         return gls
 
     async def launch_game(self, game_id):
-        try:
-            game = self._local_games[game_id]
-        except KeyError as e:
-            logging.error(e, extra={'local_games': self._local_games})
+        if game_id in self._humbleapp_client:
+            self._humbleapp_client.launch(game_id)
         else:
-            game.run()
+            try:
+                game = self._local_games[game_id]
+            except KeyError as e:
+                logging.error(e, extra={'local_games': self._local_games})
+            else:
+                game.run()
 
     async def uninstall_game(self, game_id):
-        try:
-            game = self._local_games[game_id]
-        except KeyError as e:
-            logging.error(e, extra={'local_games': self._local_games})
+        if game_id in self._humbleapp_client:
+            self._humbleapp_client.uninstall(game_id)
         else:
-            game.uninstall()
+            try:
+                game = self._local_games[game_id]
+            except KeyError as e:
+                logging.error(e, extra={'local_games': self._local_games})
+            else:
+                game.uninstall()
 
     async def get_local_size(self, game_id, context) -> t.Optional[int]:
-        try:
-            game = self._local_games[game_id]
-        except KeyError as e:
-            logging.error(e, extra={'local_games': self._local_games})
-            return None
-        return await game.get_size()
+        if game_id in self._humbleapp_client:
+            return self._humbleapp_client.get_local_size(game_id)
+        else:
+            try:
+                game = self._local_games[game_id]
+            except KeyError as e:
+                logging.error(e, extra={'local_games': self._local_games})
+                return None
+            return await game.get_size()
 
     async def get_os_compatibility(self, game_id: str, context: t.Any) -> t.Optional[OSCompatibility]:
+        if game_id in self._humbleapp_client:
+            return self._humbleapp_client.os_compatibility
+        
         try:
             game = self._humble_games[game_id]
         except KeyError as e:
@@ -418,6 +454,10 @@ class HumbleBundlePlugin(Plugin):
             self.update_local_game_status(LocalGame(game.id, state))
             self._cached_game_states[game.id] = state
         await asyncio.sleep(0.5)
+    
+    async def _check_humbleapp(self):
+        self._humbleapp_client.refresh_game_list()
+        await asyncio.sleep(1)
 
     def tick(self):
         self._settings.reload_config_if_changed()
@@ -433,11 +473,15 @@ class HumbleBundlePlugin(Plugin):
 
         if self._statuses_check.done():
             self._statuses_check = asyncio.create_task(self._check_statuses())
+        
+        if self._humbleapp_config_check.done():
+            self._humbleapp_config_check = asyncio.create_task(self._check_humbleapp())
 
     async def shutdown(self):
         self._owned_check.cancel()
         self._statuses_check.cancel()
         self._installed_check.cancel()
+        self._humbleapp_config_check.cancel()
         await self._api.close_session()
 
 

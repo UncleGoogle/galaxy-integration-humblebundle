@@ -11,3 +11,4 @@ pytest-mock==1.10.4
 freezegun==1.2.1
 PyGithub==1.53
 fog.buildtools~=1.0
+types-toml==0.10.7

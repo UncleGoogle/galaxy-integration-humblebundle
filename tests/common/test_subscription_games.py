@@ -5,6 +5,7 @@ from conftest import AsyncMock
 
 from galaxy.api.types import SubscriptionGame
 from galaxy.api.errors import UnknownError
+from local.humbleapp_adapter import HumbleAppGameCategory
 from model.game import TroveGame, ChoiceGame
 from model.subscription import ChoiceContentData, ContentChoiceOptions
 from consts import TROVE_SUBSCRIPTION_NAME
@@ -83,7 +84,6 @@ async def test_humble_monthly_v2_sufficient_condition_to_show_all_games(
     }
 
 
-
 @pytest.mark.asyncio
 async def test_choice_month_no_remaining_choices(api_mock, plugin, cco, choice_data):
     """Show only chosen games if no more choices left."""
@@ -136,3 +136,25 @@ async def test_choice_load_from_persistent_cache(plugin):
         'c': ChoiceGame(id='c', title='C', slug='may-2020', is_extras=False),
         'e': ChoiceGame(id='e', title='E', slug='may-2020', is_extras=True),
     }
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("category", HumbleAppGameCategory)
+async def test_humble_app_games(
+    plugin,
+    humbleapp_client_mock,
+    category,
+):
+    subscription_name = category.value
+    expected = [SubscriptionGame(game_title='A', game_id='a')]
+
+    def fake_get_sub_games(game_cat: HumbleAppGameCategory) :
+        if game_cat is category:
+            return expected
+        return []
+
+    humbleapp_client_mock.get_subscription_games.side_effect = fake_get_sub_games
+
+    ctx = await plugin.prepare_subscription_games_context([subscription_name])
+    
+    async for games_batch in plugin.get_subscription_games(subscription_name, ctx):
+        assert games_batch == expected

@@ -221,7 +221,7 @@ class ContentChoiceOptions:
     @property
     def content_choices_made(self) -> t.List[str]:
         try:
-            return self._content_choices_made['initial']['choices_made']
+            return self._content_choices_made['initial']['choices_made']  # type: ignore
         except (KeyError, TypeError):
             return []
 
