@@ -9,6 +9,7 @@ import sys
 sys.path.insert(0, str(pathlib.PurePath(__file__).parent.parent / 'src'))
 
 import pytest
+from aioresponses import aioresponses
 from galaxy.api.errors import UnknownError
 
 from plugin import HumbleBundlePlugin
@@ -33,6 +34,12 @@ def delayed_fn():
         await asyncio.sleep(delay)
         await awaitable(*args, **kwargs)
     return fn
+
+
+@pytest.fixture
+def aioresponse():
+    with aioresponses() as m:
+        yield m
 
 
 @pytest.fixture
@@ -87,18 +94,33 @@ def humbleapp_client_mock():
     return mock
 
 
-@pytest.fixture
-async def plugin(api_mock, settings, humbleapp_client_mock, mocker):
-    mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
-    mocker.patch('settings.Settings', return_value=settings)
-    mocker.patch('plugin.HumbleAppClient', return_value=humbleapp_client_mock)
+def _initialize_plugin() -> HumbleBundlePlugin: 
     plugin = HumbleBundlePlugin(Mock(), Mock(), "handshake_token")
     plugin.push_cache = Mock(spec=())
 
     plugin._installed_check.cancel()
     plugin._statuses_check.cancel()
     plugin.handshake_complete()
+    return plugin
 
+
+@pytest.fixture
+async def plugin_with_api(settings, humbleapp_client_mock, mocker):
+    mocker.patch('settings.Settings', return_value=settings)
+    mocker.patch('plugin.HumbleAppClient', return_value=humbleapp_client_mock)
+
+    plugin = _initialize_plugin()
+    yield plugin
+    await plugin.shutdown()
+
+
+@pytest.fixture
+async def plugin(api_mock, settings, humbleapp_client_mock, mocker):
+    mocker.patch('plugin.AuthorizedHumbleAPI', return_value=api_mock)
+    mocker.patch('settings.Settings', return_value=settings)
+    mocker.patch('plugin.HumbleAppClient', return_value=humbleapp_client_mock)
+
+    plugin = _initialize_plugin()
     yield plugin
     await plugin.shutdown()
 

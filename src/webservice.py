@@ -83,13 +83,13 @@ class AuthorizedHumbleAPI:
                 raise
         return True
 
-    def _decode_user_id(self, _simpleauth_sess):
+    def _decode_user_id(self, _simpleauth_sess) -> str:
         info = _simpleauth_sess.split('|')[0]
         info += '=='  # ensure full padding
         decoded = json.loads(base64.b64decode(info))
         return decoded['user_id']
 
-    async def authenticate(self, auth_cookie: dict) -> t.Optional[str]:
+    async def authenticate(self, auth_cookie: dict) -> str:
         # recreate original cookie
         cookie = SimpleCookie()
         cookie_val = bytes(auth_cookie['value'], "utf-8").decode("unicode_escape")
@@ -99,7 +99,12 @@ class AuthorizedHumbleAPI:
         cookie[auth_cookie['name']] = cookie_val
 
         self._session.cookie_jar.update_cookies(cookie)
+        await self._verify_authentication()
         return self._decode_user_id(cookie_val)
+
+    async def _verify_authentication(self) -> None:
+        """Raises `galaxy.api.errors.AuthenticationRequired` if the auth cookie is invalid"""
+        await self.get_gamekeys()
 
     async def get_gamekeys(self) -> t.List[str]:
         res = await self._request('get', self._ORDER_LIST_URL)
