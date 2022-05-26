@@ -3,7 +3,6 @@ from unittest.mock import patch, Mock
 
 from galaxy.api.errors import BackendError
 from galaxy.unittest.mock import async_raise, async_return_value
-from aioresponses import aioresponses
 import pytest
 
 from webservice import AuthorizedHumbleAPI
@@ -13,12 +12,6 @@ from webservice import AuthorizedHumbleAPI
 def client_session():
     with patch("aiohttp.ClientSession", autospec=True) as mock:
         yield mock.return_value
-
-
-@pytest.fixture
-def aioresponse():
-    with aioresponses() as m:
-        yield m
 
 
 @pytest.fixture
