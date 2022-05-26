@@ -9,7 +9,7 @@ import logging
 
 import yarl
 import galaxy.http
-from galaxy.api.errors import UnknownBackendResponse
+from galaxy.api.errors import UnknownBackendResponse, AuthenticationRequired
 
 from model.download import  DownloadStructItem
 from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth
@@ -69,19 +69,13 @@ class AuthorizedHumbleAPI:
         with handle_exception():
             return await self._session.request(method, url, *args, **kwargs)
 
-    async def _is_session_valid(self):
-        """Simply asks about order list to know if session is valid.
-        galaxy.api.errors instances cannot be catched so galaxy.http.handle_excpetion
-        is the final check with all the logic under its context.
-        """
+    async def _validate_authentication(self) -> None:
+        """Raises galaxy.api.errors.AuthenticationRequired when session got invalidated."""
         with handle_exception():
-            try:
-                await self._session.request('get', self._AUTHORITY + self._ORDER_LIST_URL)
-            except aiohttp.ClientResponseError as e:
-                if e.status == HTTPStatus.UNAUTHORIZED:
-                    return False
-                raise
-        return True
+            response = await self._request('get', self._ORDER_LIST_URL, raise_for_status=False)
+            if response.status in (401, 403):
+                raise AuthenticationRequired()
+            response.raise_for_status()
 
     def _decode_user_id(self, _simpleauth_sess) -> str:
         info = _simpleauth_sess.split('|')[0]
@@ -99,12 +93,8 @@ class AuthorizedHumbleAPI:
         cookie[auth_cookie['name']] = cookie_val
 
         self._session.cookie_jar.update_cookies(cookie)
-        await self._verify_authentication()
+        await self._validate_authentication()
         return self._decode_user_id(cookie_val)
-
-    async def _verify_authentication(self) -> None:
-        """Raises `galaxy.api.errors.AuthenticationRequired` if the auth cookie is invalid"""
-        await self.get_gamekeys()
 
     async def get_gamekeys(self) -> t.List[str]:
         res = await self._request('get', self._ORDER_LIST_URL)
