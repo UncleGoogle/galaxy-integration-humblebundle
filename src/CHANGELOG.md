@@ -1,4 +1,11 @@
-## Version 0.10.1
+## Version 0.11.0
+[Added]
+- Humble App Support - install, launch, uninstall, getting game size andinstallation state
+
+Collection and Vault games are shown under Subscriptions tab in separate categories.
+How to set bookmark, see:
+https://github.com/UncleGoogle/galaxy-integration-humblebundle/#recommended-humble-choice-view
+
 [Fixed]
 - Adjusting to humble API changes in May 2022 #183
 - Error handling in case of authorisation cookie invalidation #179
