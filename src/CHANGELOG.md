@@ -1,3 +1,8 @@
+## Version 0.10.1
+[Fixed]
+- Adjusting to humble API changes in May 2022 #183
+- Error handling in case of authorisation cookie invalidation #179
+
 ## Version 0.10.0
 
 [Fixed]
