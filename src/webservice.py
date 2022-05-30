@@ -135,7 +135,7 @@ class AuthorizedHumbleAPI:
             "gamekey": "wqheRstssFcHGcfP",  # when the month is unlocked already
             "isActiveContent": false,       # is current month
             "title": "May 2020",
-            "MAX_CHOICES": 9,
+            "MAX_CHOICES": 9,               # dropped after 05.2022
             "productUrlPath": "may-2020",
             "includesAnyUplayTpkds": false,
             "unlockedContentEvents": [
