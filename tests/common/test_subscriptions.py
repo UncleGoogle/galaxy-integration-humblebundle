@@ -220,12 +220,11 @@ async def test_get_subscriptions_current_month_not_unlocked_yet(
             "productMachineName": "may_2020_choice"
         },
         "contentChoiceOptions": {
-            "contentChoiceData": "{}",  # removed a big object
+            "contentChoiceData": "{}",  # redacted a big object
             "isActiveContent": True,
             "title": "May 2020",
-            "MAX_CHOICES": 10,
             "productUrlPath": "may-2020",
-            "usesChoices": True,  # 
+            "usesChoices": True,
             "canRedeemGames": True,
             "productMachineName": "may_2020_choice"
         }

@@ -177,10 +177,9 @@ class Extras:
 
 class ContentChoiceOptions:
     def __init__(self, data: dict):
-        self.MAX_CHOICES: int = data['MAX_CHOICES']
         self.gamekey: t.Optional[str] = data.get('gamekey')
-        self.is_active_content: bool = data['isActiveContent']
-        self.product_url_path: str = data['productUrlPath']
+        self.is_active_content: t.Optional[bool] = data.get('isActiveContent')
+        self.product_url_path: t.Optional[str] = data.get('productUrlPath')
         self.uses_choices: t.Optional[bool] = data.get("usesChoices")
         self.product_is_choiceless: t.Optional[bool] = data.get("productIsChoiceless")
         self.includes_any_uplay_tpkds: t.Optional[bool] = data.get('includesAnyUplayTpkds')
@@ -193,8 +192,8 @@ class ContentChoiceOptions:
 
         content_choice_data = data['contentChoiceData']
 
-        # since Martch 2022 when choices are dropped again, there is 'game_data' (can't confirm if API responses for older data has changed)
-        if 'game_data' in content_choice_data:  # or as in js public client -> if not self.uses_choices:
+        # since Martch 2022 when choices are dropped again, there is 'game_data'
+        if not self.uses_choices:
             game_data = content_choice_data['game_data']
         else:
             # Since August 2020 there is no simple 'initial' key, games may be stored under different keys eg.:
