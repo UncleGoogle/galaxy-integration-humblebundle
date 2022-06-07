@@ -5,7 +5,7 @@ import typing as t
 
 from galaxy.api.types import SubscriptionGame, LocalGame, LocalGameState
 from galaxy.api.consts import OSCompatibility
-from humbleapp.humbleapp import FileWatcher, GameStatus, TroveCategory, VaultGame, GameMachineName, HumbleAppConfig, parse_humble_app_config
+from humbleapp.humbleapp import FileWatcher, GameStatus, TroveCategory, VaultGame, GameMachineName, HumbleAppConfig, load_humble_app_config, parse_humble_app_config
 from humbleapp.humbleapp import HumbleAppClient as _HumbleAppClient
 
 
@@ -77,7 +77,8 @@ class HumbleAppClient:
         
     def _parse_config(self) -> t.Optional[HumbleAppConfig]:
         if self._config.has_changed():
-            return parse_humble_app_config(self.CONFIG_PATH)
+            content = load_humble_app_config(self.CONFIG_PATH)
+            return parse_humble_app_config(content)
         return None
     
     def get_local_size(self, game_id: str) -> t.Optional[int]:

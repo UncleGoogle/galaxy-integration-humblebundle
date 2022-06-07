@@ -1,6 +1,10 @@
+## Unreleased
+
+- Fix parsing of Humble App config when game meta is not fully populated
+
 ## Version 0.11.0
 [Added]
-- Humble App Support - install, launch, uninstall, getting game size andinstallation state
+- Humble App Support - install, launch, uninstall & show game size
 
 Collection and Vault games are shown under Subscriptions tab in separate categories.
 How to set bookmark, see:

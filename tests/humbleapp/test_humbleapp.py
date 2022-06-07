@@ -1,8 +1,7 @@
-from functools import partial
 import pathlib
 import sys
 from unittest.mock import Mock, patch
-from humbleapp.humbleapp import FileWatcher, GameMachineName, GameStatus, HumbleAppClient, VaultGame, parse_humble_app_config
+from humbleapp.humbleapp import FileWatcher, GameMachineName, GameStatus, HumbleAppClient, VaultGame, load_humble_app_config, parse_humble_app_config
 
 import pytest
 
@@ -53,21 +52,48 @@ class TestFileWatcher:
 
 class TestHumbleAppConfigParser():
     @pytest.fixture(autouse=True)
-    def setup(self, config_path):
+    def setup(self):
+        self.loader = load_humble_app_config
         self.parser = parse_humble_app_config
-        self.parse = partial(self.parser, config_path)
     
     @pytest.fixture(scope="class")
     def config_path(self) -> pathlib.Path:
         return pathlib.Path(__file__).parents[1] / "data" / "humble_app_config.json"
+
+    def test_load_config(self, config_path):
+        result = self.loader(config_path)
+        assert type(result) == dict
+        assert 'settings' in result
     
-    def test_settings(self):
-        result = self.parse()
+    @pytest.fixture()
+    def config(self, config_path) -> dict:
+        return self.loader(config_path)
+
+    def test_parse_settings(self, config):
+        result = self.parser(config)
         s = result.settings
         assert s.download_location == pathlib.Path("C:/Games/Humbleapp")
+    
+    def test_parse_game_with_partial_info(self, config: dict):
+        config['game-collection-4'] = [
+            {
+              "downloadedVersion": None, 
+              "downloadEta": '', 
+              "downloadPercentage": 0, 
+              "downloads": {}, 
+              "downloadSpeed": '', 
+              "gameName": 'Botanicula',  
+              "imagePath": 'https://hb.imgix.net/c6eb0608eac19b849327254ded93998d5cff3b7d.jpeg?auto=compress,format&fit=crop&h=353&w=616&s=7622335b43052a0080f3f69d09e67b2a', 
+              "latestBuildVersion": 1, 
+              "machineName": 'botanicula', 
+              "status": 'available'
+            }
+        ]
+        result = self.parser(config)
+        assert result.game_collection == []
 
-    def test_parse_installed_game(self):
-        result = self.parse()
+    def test_parse_installed_game(self, config):
+        result = self.parser(config)
         assert len(result.game_collection) > 0
         for g in result.game_collection:
             if g.machine_name == 'forager_collection':

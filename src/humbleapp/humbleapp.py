@@ -98,7 +98,11 @@ class FileWatcher:
         return changed
 
 
-def parse_humble_app_config(path: pathlib.PurePath)  -> HumbleAppConfig:
+def load_humble_app_config(path: t.Union[str, pathlib.PurePath]) -> dict:
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+def parse_humble_app_config(content: dict)  -> HumbleAppConfig:
     def parse_game(raw):
         return VaultGame(
             machine_name=raw["machineName"],
@@ -113,11 +117,14 @@ def parse_humble_app_config(path: pathlib.PurePath)  -> HumbleAppConfig:
             file_path=raw.get("filePath"),
             executable_path=raw.get("executablePath"),
         )
-    
-    with open(path, encoding="utf-8") as f:
-        content = json.load(f)
-        
-    games = [parse_game(g) for g in content['game-collection-4']]
+     
+    games: t.List[VaultGame] = []
+    for g in content['game-collection-4']:
+        try: 
+            games.append(parse_game(g))
+        except (KeyError, ValueError) as e:
+            logging.warning(f"Ignoring unexpected game format {g}")
+            continue
 
     return HumbleAppConfig(
         settings=Settings(
