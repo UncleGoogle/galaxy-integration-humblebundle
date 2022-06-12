@@ -1,6 +1,6 @@
 ## Unreleased
 
-- Fix parsing of Humble App config when game meta is not fully populated
+- Fix parsing of Humble App config by ignoring games from bundles (for now)
 
 ## Version 0.11.0
 [Added]

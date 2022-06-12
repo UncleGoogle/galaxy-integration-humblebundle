@@ -120,10 +120,13 @@ def parse_humble_app_config(content: dict)  -> HumbleAppConfig:
      
     games: t.List[VaultGame] = []
     for g in content['game-collection-4']:
+        if 'gamekey' in g or 'troveCategory' not in g:
+            # exclude bundle owned games
+            continue
         try: 
             games.append(parse_game(g))
         except (KeyError, ValueError) as e:
-            logging.warning(f"Ignoring unexpected game format {g}")
+            logging.warning(f"Ignoring unexpected game format {json.dumps(g)}")
             continue
 
     return HumbleAppConfig(
