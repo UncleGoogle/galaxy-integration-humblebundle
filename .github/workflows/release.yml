@@ -30,3 +30,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: inv release --automa
+      - name: VirusTotal GitHub Action
+        uses: crazy-max/ghaction-virustotal@v3.0.0
+        with: ...
