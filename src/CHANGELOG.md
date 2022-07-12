@@ -1,6 +1,7 @@
 ## Unreleased
 
 - Fix parsing of Humble App config by ignoring games from bundles (for now)
+- Fix error handling in case of authorisation cookie invalidation #179
 
 ## Version 0.11.0
 [Added]

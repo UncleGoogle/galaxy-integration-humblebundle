@@ -1,5 +1,4 @@
 from http.cookies import SimpleCookie
-from http import HTTPStatus
 from contextlib import contextmanager
 import typing as t
 import aiohttp
@@ -9,7 +8,7 @@ import logging
 
 import yarl
 import galaxy.http
-from galaxy.api.errors import UnknownBackendResponse, AuthenticationRequired
+from galaxy.api.errors import UnknownBackendResponse, InvalidCredentials
 
 from model.download import  DownloadStructItem
 from model.subscription import MontlyContentData, ChoiceContentData, ChoiceMonth
@@ -70,11 +69,11 @@ class AuthorizedHumbleAPI:
             return await self._session.request(method, url, *args, **kwargs)
 
     async def _validate_authentication(self) -> None:
-        """Raises galaxy.api.errors.AuthenticationRequired when session got invalidated."""
+        """Raises galaxy.api.errors.InvalidCredentials when session got invalidated."""
         with handle_exception():
             response = await self._request('get', self._ORDER_LIST_URL, raise_for_status=False)
             if response.status in (401, 403):
-                raise AuthenticationRequired()
+                raise InvalidCredentials()
             response.raise_for_status()
 
     def _decode_user_id(self, _simpleauth_sess) -> str:

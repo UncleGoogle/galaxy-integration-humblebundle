@@ -2,7 +2,8 @@
 """
 
 import pytest
-from galaxy.api.errors import AuthenticationRequired
+
+from galaxy.api.errors import InvalidCredentials
 
 
 @pytest.fixture()
@@ -23,7 +24,7 @@ def auth_cookie():
 async def test_authentication_401(plugin_with_api, aioresponse, auth_cookie):
     url = "https://www.humblebundle.com/api/v1/user/order"
     aioresponse.get(url, status=401)
-    with pytest.raises(AuthenticationRequired):
+    with pytest.raises(InvalidCredentials):
         await plugin_with_api.authenticate(auth_cookie)
 
 
